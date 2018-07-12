@@ -26,9 +26,7 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (default Debug)" FORCE)
 endif()
 
-set(CMAKE_MODULE_PATH
-    ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
-)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # Configure C++.
@@ -37,11 +35,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS        YES)
 set(CMAKE_CXX_FLAGS             "-Wall -Werror -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS_DEBUG       "-O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE     "-O3 -finline-functions -march=native")
-
-# Find packages.
-find_package(GoogleTest 1.8.0)
-include_directories(${GTEST_INCLUDE_DIRS})
+set(CMAKE_CXX_FLAGS_RELEASE     "-O3 -funroll-loops -march=native")
 
 # Configure CPack.
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "moat")
@@ -54,7 +48,9 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.TXT")
 include(CPack)
 
 include_directories(src)
-
-# Subdirectories.
 add_subdirectory(src)
-add_subdirectory(test)
+
+option(MOAT_INCLUDE_TESTS "Generate build targets for the Moat unit tests." ON)
+if(MOAT_INCLUDE_TESTS)
+    add_subdirectory(test)
+endif()
