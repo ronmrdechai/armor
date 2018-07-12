@@ -45,15 +45,23 @@ public:
     using const_pointer   = const mapped_type*;
 
     struct node_type {
-        std::array<node_type*, R> children;
-        node_type*                parent;
-        mapped_type*              value;
+        std::array<node_type*, R> children = { nullptr };
+        node_type*                parent = nullptr;
+        mapped_type*              value = nullptr;
 
-        void deallocate(allocator_type& allocator) {
-            for (auto& child : children) {
-                if (child != nullptr) child->deallocate(allocator);
+        void destroy(allocator_type& allocator) {
+            if (value != nullptr) {
+                allocator.deallocate(value, 1);
+                value = nullptr;
             }
-            if (value != nullptr) allocator.deallocate(value, 1);
+
+            for (auto& child : children) {
+                if (child != nullptr) {
+                    child->destroy(allocator);
+                    delete child;
+                    child = nullptr;
+                }
+            }
         }
     };
 
@@ -63,18 +71,18 @@ public:
 
     radix_trie(allocator_type allocator) : allocator_(std::move(allocator)) {}
 
-    ~radix_trie() { root_->deallocate(allocator_); }
+    ~radix_trie() { root_.destroy(allocator_); }
 
     mapped_type& operator[](const key_type& key) {
-        insert_key(root_, nullptr, key.begin(), key.end());
-        return *find_key<false>(root_, key.begin(), key.end());
+        insert_key(&root_, nullptr, key.begin(), key.end());
+        return *find_key<false>(&root_, key.begin(), key.end());
     }
 
     mapped_type& at(const key_type& key) {
-        return *find_key<true>(root_, key.begin(), key.end());
+        return *find_key<true>(&root_, key.begin(), key.end());
     }
     const mapped_type& at(const key_type& key) const {
-        return *find_key<true>(root_, key.begin(), key.end());
+        return *find_key<true>(&root_, key.begin(), key.end());
     }
 
     /* using iterator = ...; */
@@ -97,26 +105,29 @@ public:
 
     bool empty() const {
         return std::all_of(
-            root_->begin(),
-            root_->end(),
+            root_.children.begin(),
+            root_.children.end(),
             [](node_type* child) { return child == nullptr; }
         );
     }
 
     size_type size() const {
         size_type c = 0;
-        count_keys(root_, c);
+        count_keys(&root_, c);
         return c;
     }
 
     void clear() {
-        for (auto& child : root_->children) {
-            if (child != nullptr) child->deallocate(allocator_);
-        }
+        root_.destroy(allocator_);
     }
 
-    size_type count(const std::string& key) const {
-        return find_key<false>(root_, key.begin(), key.end()) == nullptr;
+    size_type count(const key_type& key) const {
+        try {
+            find_key<true>(&root_, key.begin(), key.end());
+            return 1;
+        } catch (std::out_of_range&) {
+            return 0;
+        }
     }
 
     // TODO:
@@ -139,8 +150,8 @@ private:
             root->parent = parent;
         }
 
-        if (cur == last && root->value == nullptr) {
-            root->value = allocator_.allocate(1);
+        if (cur == last) {
+            if (root->value == nullptr) root->value = allocator_.allocate(1);
         } else {
             auto& child = root->children[F(*cur)];
             child = insert_key(child, root, ++cur, last);
@@ -151,32 +162,39 @@ private:
 
     template <bool SAFE>
     static mapped_type* find_key(
-        node_type* root,
+        const node_type* root,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) {
         if constexpr (SAFE) {
-            if (root == nullptr || root->value == nullptr) {
+            if (root == nullptr) {
                 throw std::out_of_range("moat::radix_trie::at");
             }
         }
 
-        if (cur == last) return root->value;
+        if (cur == last) {
+            if constexpr (SAFE) {
+                if (root->value == nullptr) {
+                    throw std::out_of_range("moat::radix_trie::at");
+                }
+            }
+            return root->value;
+        }
 
         auto& child = root->children[F(*cur)];
         return find_key<SAFE>(child, ++cur, last);
     }
 
-    static void count_keys(node_type* root, size_type& count) {
+    static void count_keys(const node_type* root, size_type& count) {
         for (auto& child : root->children) {
             if (child != nullptr) {
                 count_keys(child, count);
-                count += 1;
+                if (child->value != nullptr) count += 1;
             }
         }
     }
 
-    node_type*     root_;
+    node_type      root_;
     allocator_type allocator_;
 };
 
