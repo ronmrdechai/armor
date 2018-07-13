@@ -3,31 +3,71 @@
 #include <iterator>
 #include <stdexcept>
 #include <string>
-#include <tuple>
+#include <stack>
 
 namespace moat {
+
+namespace trie {
+
+template <typename T>
+struct identity { T operator()(T v) const { return v; } };
+template <typename T, T S>
+struct count_from { T operator()(T v) const { return v - S; } };
+
+namespace detail {
+
+template <typename T, T N, T V, T... Vs>
+struct indexed_helper {
+    T operator()(T v) {
+        if (v == V) return N;
+        return indexed_helper<T, N + 1, Vs...>{}(v);
+    }
+};
+
+template <typename T, T N, T V>
+struct indexed_helper<T, N, V> {
+    T operator()(T v) {
+        if (v == V) return N;
+        return v;
+    }
+};
+
+} // namespace detail
+
+template <typename T, T... Vs>
+struct indexed {
+    T operator()(T v) const {
+        return detail::indexed_helper<T, 0, Vs...>{}(v);
+    }
+};
+
+} // namespace trie
 
 /**
  * An implementation of an R-way Trie.
  * A Trie is an insertion efficient string-based associative container.
  * Insertion is linearly dependent on the size of the key. Tries also support
- * prefix-based queries such as `all keys with prefix' or `key with longest
+ * prefix-based queries such as 'all keys with prefix' or 'key with longest
  * prefix of'.
  *
- * @tparam T  The value of keys contained in this Trie.
- * @tparam R  The radix of this trie's strings.
- * @tparam F  A function to map from a key character to a value in the range
- *            (0, R].
+ * @tparam T          The value of keys contained in this Trie.
+ * @tparam R          The radix of this trie's strings.
+ * @tparam F          A functor to map from a key character to a value within
+ *                    the range (0, R].
+ * @tparam Key        The type of map keys.
+ * @tparam Allocator  An allocator to type use when inserting or removing
+ *                    values.
  *
- * For examples of radix_trie template parameters, see the following aliases:
- * - ascii_trie
- * - lowercase_trie
- * - uppercase_trie
+ * Examples of radix_trie instantiations are:
+ * - using ascii_trie = radix_trie<T, 127;
+ * - using lowercase_trie = radix_trie<T, 26, moat::count_from<char, 'a'>;
+ * - using uppercase_trie = radix_trie<T, 26, moat::count_from<char, 'A'>;
+ * - using dna_trie = radix_trie<T, 4, moat::indexed<char, 'A', 'C', 'G', 'T'>;
  */
 template <
     typename T,
     std::size_t R,
-    std::size_t (&F)(std::size_t),
+    typename F = trie::identity<std::size_t>,
     typename Key = std::string,
     typename Allocator = std::allocator<T>
 >
@@ -38,6 +78,7 @@ public:
     using mapped_type     = T;
     using size_type       = std::size_t;
     using difference_type = std::ptrdiff_t;
+    using key_map         = F;
     using allocator_type  = Allocator;
     using reference       = mapped_type&;
     using const_reference = const mapped_type&;
@@ -65,7 +106,7 @@ public:
         }
     };
 
-    radix_trie() = default;
+    radix_trie() { base_.children[0] = &root_; }
     radix_trie(radix_trie&&) = default;
     radix_trie& operator=(radix_trie&&) = default;
 
@@ -85,20 +126,83 @@ public:
         return *find_key<true>(&root_, key.begin(), key.end());
     }
 
-    /* using iterator = ...; */
-    /* using reverse_iterator = std::reverse_iterator<iterator>; */
-    /* using const_iterator = ...; */
-    /* using const_reverse_iterator = std::reverse_iterator<const_iterator>; */
+    template <typename NodeT>
+    class generic_iterator {
+    public:
+        generic_iterator(NodeT* node, std::stack<size_type> positions) :
+            node_(node), positions_(std::move(positions))
+        {}
+        generic_iterator(const generic_iterator&) = default;
+        generic_iterator& operator=(const generic_iterator&) = default;
 
-    /* iterator begin(); */
-    /* const_iterator begin() const; */
-    /* const_iterator cbegin() const; */
+        generic_iterator& operator++() {
+            do {
+                *this = next(std::move(*this));
+            } while(this->node_->value == nullptr);
+            return *this;
+        }
+
+        generic_iterator operator++(int) {
+            generic_iterator it = next(*this);
+            while (it.node_->value == nullptr) {
+                it = next(it);
+            }
+            return it;
+        }
+
+        reference operator*() const {
+            return *(node_->value);
+        }
+
+        pointer operator->() const {
+            return node_->value;
+        }
+
+        bool operator==(const generic_iterator& other) {
+            return (node_ == other.node_) && (positions_ == other.positions_);
+        }
+
+        bool operator!=(const generic_iterator& other) {
+            return !(*this == other);
+        }
+        // friend void swap(generic_iterator& lhs, generic_iterator& rhs);
+
+    private:
+        static generic_iterator next(generic_iterator cur);
+
+        NodeT*                node_;
+        std::stack<size_type> positions_;
+    };
+
+    using iterator = generic_iterator<node_type>;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_iterator = generic_iterator<const node_type>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+    iterator begin() {
+        if (empty()) return end();
+        return iterator(&base_, { 0 });
+    }
+    const_iterator begin() const {
+        return cbegin();
+    }
+    const_iterator cbegin() const {
+        if (empty()) return cend();
+        return const_iterator(&base_, { 0 });
+    }
     /* reverse_iterator rbegin(); */
     /* reverse_const_iterator rbegin() const; */
     /* reverse_const_iterator crbegin() const; */
-    /* iterator end(); */
-    /* const_iterator end() const; */
-    /* const_iterator cend() const; */
+
+    iterator end() {
+        return iterator(&base_, { });
+    }
+    const_iterator end() const {
+        return cend();
+    }
+    const_iterator cend() const {
+        return const_iterator(&base_, { });
+    }
     /* reverse_iterator rend(); */
     /* reverse_const_iterator rend() const; */
     /* reverse_const_iterator crend() const; */
@@ -123,7 +227,7 @@ public:
 
     size_type count(const key_type& key) const {
         try {
-            find_key<true>(&root_, key.begin(), key.end());
+            at(key);
             return 1;
         } catch (std::out_of_range&) {
             return 0;
@@ -153,7 +257,7 @@ private:
         if (cur == last) {
             if (root->value == nullptr) root->value = allocator_.allocate(1);
         } else {
-            auto& child = root->children[F(*cur)];
+            auto& child = root->children[key_map_(*cur)];
             child = insert_key(child, root, ++cur, last);
         }
 
@@ -161,11 +265,11 @@ private:
     }
 
     template <bool SAFE>
-    static mapped_type* find_key(
+    mapped_type* find_key(
         const node_type* root,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
-    ) {
+    ) const {
         if constexpr (SAFE) {
             if (root == nullptr) {
                 throw std::out_of_range("moat::radix_trie::at");
@@ -181,7 +285,7 @@ private:
             return root->value;
         }
 
-        auto& child = root->children[F(*cur)];
+        auto& child = root->children[key_map_(*cur)];
         return find_key<SAFE>(child, ++cur, last);
     }
 
@@ -194,28 +298,22 @@ private:
         }
     }
 
+    node_type      base_;
     node_type      root_;
     allocator_type allocator_;
+    key_map        key_map_;
 };
-
-namespace trie {
-
-constexpr std::size_t identity(std::size_t n) { return n; }
-template <char S>
-constexpr std::size_t count_from(std::size_t n) { return n - S; }
-
-} // namespace trie
 
 /// A Trie mapping strings of ASCII characters only.
 template <typename T>
-using ascii_trie = radix_trie<T, 127, trie::identity>;
+using ascii_trie = radix_trie<T, 127>;
 
 /// A Trie mapping strings of lowercase letters only.
 template <typename T>
-using lowercase_trie = radix_trie<T, 26, trie::count_from<'a'>>;
+using lowercase_trie = radix_trie<T, 26, trie::count_from<std::size_t, 'a'>>;
 
 /// A Trie mapping strings of uppercase letters only.
 template <typename T>
-using uppercase_trie = radix_trie<T, 26, trie::count_from<'A'>>;
+using uppercase_trie = radix_trie<T, 26, trie::count_from<std::size_t, 'A'>>;
 
 } // namespace moat

@@ -2,7 +2,7 @@
 
 #include <moat/datastruct/radix_trie.h>
 
-using radix_trie = moat::radix_trie<int, 127, moat::trie::identity>;
+using radix_trie = moat::ascii_trie<int>;
 
 TEST(radix_trie, insertion_and_access) {
     radix_trie rt;
