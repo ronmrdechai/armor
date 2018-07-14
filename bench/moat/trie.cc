@@ -2,7 +2,7 @@
 
 #include <moat/trie.h>
 
-using trie = moat::ascii_trie<int>;
+using trie = moat::trie<int, 127>;
 
 static void BM_trie_insertion(benchmark::State& state) {
     trie t;

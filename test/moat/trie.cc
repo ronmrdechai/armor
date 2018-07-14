@@ -2,7 +2,7 @@
 
 #include <moat/trie.h>
 
-using trie = moat::ascii_trie<int>;
+using trie = moat::trie<int, 127>;
 
 TEST(trie, insertion_and_access) {
     trie t;
@@ -74,4 +74,14 @@ TEST(trie, count_increase_after_write) {
     trie t;
     t["foo"] = 1;
     EXPECT_EQ(1u, t.count("foo"));
+}
+
+TEST(trie, read_iteration) {
+    trie t;
+    t["foo"] = 1;
+    t["bar"] = 2;
+    t["baz"] = 3;
+    for (auto& [key, value] : t) {
+        std::cout << key << "=" << value << std::endl;
+    }
 }

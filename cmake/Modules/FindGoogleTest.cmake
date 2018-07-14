@@ -13,7 +13,7 @@ ExternalProject_Add(googletest
       INSTALL_COMMAND ""
       CMAKE_ARGS      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                      -DCMAKE_BUILD_TYPE=Release
       LOG_DOWNLOAD    ON
       LOG_CONFIGURE   ON
       LOG_BUILD       ON
