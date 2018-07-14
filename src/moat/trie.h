@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iterator>
+#include <initializer_list>
 #include <stdexcept>
 #include <string>
 #include <stack>
@@ -74,27 +75,61 @@ public:
         }
     };
 
-    trie() {
-        root_.parent = &base_;
-        base_.children[0] = &root_;
-    }
-    trie(trie&&) = default;
-    trie(allocator_type allocator) : allocator_(std::move(allocator)) {}
+    trie() { init_base_root(); }
+    explicit trie(key_map f, allocator_type allocator = allocator_type()) :
+        key_map_(std::move(f)), allocator_(std::move(allocator))
+    { init_base_root(); }
+    explicit trie(allocator_type allocator) :
+        allocator_(std::move(allocator)) 
+    { init_base_root(); }
 
-    trie& operator=(trie&&) = default;
+    trie(trie&&) = default;
+    trie(trie&& other, allocator_type allocator) :
+        base_(std::move(other.base_)),
+        root_(std::move(other.root_)),
+        allocator_(std::move(allocator)),
+        key_map_(std::move(other.key_map_))
+    {}
+
+    template <typename InputIterator>
+    trie(
+        InputIterator first,
+        InputIterator last,
+        key_map f = key_type(),
+        allocator_type allocator = allocator_type()
+    ) : 
+        key_map_(std::move(f)), allocator_(std::move(allocator))
+    {
+        init_base_root();
+        for (auto cur = first; cur != last; ++cur) insert(*cur);
+    }
+
+    trie(
+        std::initializer_list<value_type> init,
+        key_map f = key_type(),
+        allocator_type allocator = allocator_type()
+    ) : trie(init.begin(), init.end(), std::move(f), std::move(allocator)) {}
+    trie(std::initializer_list<value_type> init, allocator_type allocator) :
+        trie(init.begin(), init.end(), key_map(), std::move(allocator))
+    {}
 
     ~trie() { root_.destroy(allocator_); }
 
     mapped_type& operator[](const key_type& key) {
-        insert_key(&root_, nullptr, key);
-        return find_key<false>(&root_, key.begin(), key.end())->second;
+        insert_key(&root_, &base_, key, 0);
+        iterator it = find(key);
+        return it->second;
     }
 
     mapped_type& at(const key_type& key) {
-        return find_key<true>(&root_, key.begin(), key.end())->second;
+        iterator it = find(key);
+        if (it == end()) throw std::out_of_range("moat::trie::at");
+        return it->second;
     }
     const mapped_type& at(const key_type& key) const {
-        return find_key<true>(&root_, key.begin(), key.end())->second;
+        const_iterator it = find(key);
+        if (it == end()) throw std::out_of_range("moat::trie::at");
+        return it->second;
     }
 
     template <typename NodeT>
@@ -134,11 +169,11 @@ public:
             return node_->value;
         }
 
-        bool operator==(const generic_iterator& other) {
+        bool operator==(const generic_iterator& other) const {
             return (node_ == other.node_) && (positions_ == other.positions_);
         }
 
-        bool operator!=(const generic_iterator& other) {
+        bool operator!=(const generic_iterator& other) const {
             return !(*this == other);
         }
 
@@ -148,6 +183,9 @@ public:
         }
 
     private:
+        NodeT*                node_;
+        std::stack<size_type> positions_;
+
         static std::pair<generic_iterator, bool>
         step_down(generic_iterator it) {
             for (size_type pos = 0; pos < R; ++pos) {
@@ -197,8 +235,7 @@ public:
             return it;
         }
 
-        NodeT*                node_;
-        std::stack<size_type> positions_;
+        friend class trie;
     };
 
     using iterator = generic_iterator<node_type>;
@@ -209,28 +246,16 @@ public:
         iterator it(&base_);
         return ++it;
     }
-
-    const_iterator begin() const {
-        return cbegin();
-    }
-
+    const_iterator begin() const { return cbegin(); }
     const_iterator cbegin() const {
         if (empty()) return cend();
         const_iterator it(&base_);
         return ++it;
     }
 
-    iterator end() {
-        return iterator(&base_);
-    }
-
-    const_iterator end() const {
-        return cend();
-    }
-
-    const_iterator cend() const {
-        return const_iterator(&base_);
-    }
+    iterator end() { return iterator(&base_); }
+    const_iterator end() const { return cend(); }
+    const_iterator cend() const { return const_iterator(&base_); }
 
     bool empty() const {
         return std::all_of(
@@ -259,14 +284,55 @@ public:
         }
     }
 
+    iterator find(const key_type& key) {
+        return find_key<true>(
+            root_iterator(), end(), key_map_, key.begin(), key.end()
+        );
+    }
+    const_iterator find(const key_type& key) const {
+        return find_key<true>(
+            root_iterator(), end(), key_map_, key.begin(), key.end()
+        );
+    }
+
+    std::pair<iterator, bool> insert(const value_type& value) {
+        iterator it = find(value.first);
+        if (it != end()) return {it, false};
+
+        insert_key(&root_, &base_, value.first, 0);
+        it = find(value.first);
+        it->second = value.second;
+        return {it, true};
+    }
+    template <typename InputIt>
+    void insert(InputIt first, InputIt last) {
+        for (auto it = first; it != last; ++it) insert(*it);
+    }
+    void insert(std::initializer_list<value_type> init) {
+        insert(init.begin(), init.end());
+    }
+
+
     // TODO:
-    // - copy constructor
+    // - copy constructors
+    // - assignment
+    // - all inserts
     // - prefix search
     // - longest matching prefix
-    // - insert, insert_or_assign, emplace, try_emplace, erase, swap, extract, merge
+    // - insert_or_assign, emplace, try_emplace, erase, swap, extract, merge
     // - operator==, operator!=, operator<, operator<=, operator>, operator>=
 
 private:
+    node_type      base_;
+    node_type      root_;
+    allocator_type allocator_;
+    key_map        key_map_;
+
+    void init_base_root() {
+        root_.parent = &base_;
+        base_.children[0] = &root_;
+    }
+
     value_type* allocate_value(const key_type& key) {
         value_type* value = allocator_traits::allocate(allocator_, 1);
         allocator_traits::construct(
@@ -283,7 +349,7 @@ private:
         node_type* root,
         node_type* parent,
         const key_type& key,
-        typename key_type::size_type index = 0
+        typename key_type::size_type index
     ) {
         if (root == nullptr) {
             root = new node_type{};
@@ -300,29 +366,33 @@ private:
         return root;
     }
 
-    template <bool SAFE>
-    value_type* find_key(
-        const node_type* root,
+    iterator root_iterator() {
+        iterator it(&root_);
+        it.positions_.push(0);
+        return it;
+    }
+
+    const_iterator root_iterator() const {
+        const_iterator it(&root_);
+        it.positions_.push(0);
+        return it;
+    }
+
+    template <bool SAFE, typename It>
+    static It find_key(
+        It it,
+        It end,
+        const key_map& f,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
-    ) const {
-        if constexpr (SAFE) {
-            if (root == nullptr) {
-                throw std::out_of_range("moat::trie::at");
-            }
-        }
+    ) {
+        if (SAFE && it.node_ == nullptr) return end;
+        if (cur == last) return it;
 
-        if (cur == last) {
-            if constexpr (SAFE) {
-                if (root->value == nullptr) {
-                    throw std::out_of_range("moat::trie::at");
-                }
-            }
-            return root->value;
-        }
-
-        auto& child = root->children[key_map_(*cur)];
-        return find_key<SAFE>(child, ++cur, last);
+        size_type index = f(*cur);
+        it.node_ = it.node_->children[index];
+        it.positions_.push(index);
+        return find_key<SAFE>(std::move(it), std::move(end), f, ++cur, last);
     }
 
     static void count_keys(const node_type* root, size_type& count) {
@@ -333,11 +403,6 @@ private:
             }
         }
     }
-
-    node_type      base_;
-    node_type      root_;
-    allocator_type allocator_;
-    key_map        key_map_;
 };
 
 } // namespace moat

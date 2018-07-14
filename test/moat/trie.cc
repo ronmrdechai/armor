@@ -97,3 +97,63 @@ TEST(trie, write_iteration) {
     for (auto& [_, value] : t) value = 0;
     for (std::string& s : strings) EXPECT_EQ(0, t[s]);
 }
+
+TEST(trie, find_existant) {
+    trie t;
+    t["foo"] = 1;
+    auto it = t.find("foo");
+    EXPECT_EQ(t.begin(), it);
+}
+
+TEST(trie, find_non_existant) {
+    trie t;
+    EXPECT_EQ(t.end(), t.find("foo"));
+}
+
+TEST(trie, insert_and_access) {
+    trie t;
+    t.insert( {"foo", 1} );
+    EXPECT_EQ(1, t["foo"]);
+}
+
+TEST(trie, insert_twice) {
+    trie t;
+
+    bool inserted;
+    typename trie::iterator it1, it2;
+    std::tie(it1, inserted) = t.insert( {"foo", 1} );
+    EXPECT_TRUE(inserted);
+    std::tie(it2, inserted) = t.insert( {"foo", 1} );
+    EXPECT_FALSE(inserted);
+    EXPECT_EQ(it1, it2);
+}
+
+TEST(trie, insert_range) {
+    trie t;
+    std::vector<typename trie::value_type> v{
+        {"bar", 1}, {"baz", 2}, {"foo", 3}
+    };
+    t.insert(v.begin(), v.end());
+
+    std::size_t i = 0;
+    for (auto& [key, value] : t) {
+        EXPECT_EQ(v[i].first, key);
+        EXPECT_EQ(v[i].second, value);
+        ++i;
+    }
+}
+
+TEST(trie, insert_list) {
+    trie t;
+    std::vector<typename trie::value_type> v{
+        {"bar", 1}, {"baz", 2}, {"foo", 3}
+    };
+    t.insert({ {"bar", 1}, {"baz", 2}, {"foo", 3} });
+
+    std::size_t i = 0;
+    for (auto& [key, value] : t) {
+        EXPECT_EQ(v[i].first, key);
+        EXPECT_EQ(v[i].second, value);
+        ++i;
+    }
+}
