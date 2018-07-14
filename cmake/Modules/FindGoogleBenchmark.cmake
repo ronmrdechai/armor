@@ -13,6 +13,7 @@ ExternalProject_Add(googlebenchmark
       INSTALL_COMMAND ""
       CMAKE_ARGS      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                       -DBENCHMARK_ENABLE_TESTING:BOOL=OFF
       LOG_DOWNLOAD    ON
       LOG_CONFIGURE   ON
@@ -21,7 +22,7 @@ ExternalProject_Add(googlebenchmark
 set(BENCHMARK_VERSION_STRING ${PACKAGE_FIND_VERSION})
 
 ExternalProject_Get_Property(googlebenchmark source_dir)
-set(BENCHMARK_INCLUDE_DIRS ${source_dir}/benchmark/include)
+set(BENCHMARK_INCLUDE_DIRS ${source_dir}/include)
 
 ExternalProject_Get_Property(googlebenchmark binary_dir)
 set(BENCHMARK_LIBRARY_PATH ${binary_dir}/src/${CMAKE_FIND_LIBRARY_PREFIXES}benchmark.a)
@@ -30,7 +31,7 @@ add_library(${BENCHMARK_LIBRARY} UNKNOWN IMPORTED)
 set_target_properties(${BENCHMARK_LIBRARY} PROPERTIES
     IMPORTED_LOCATION ${BENCHMARK_LIBRARY_PATH}
 )
-add_dependencies(${BENCHMARK_LIBRARY} benchmark)
+add_dependencies(${BENCHMARK_LIBRARY} googlebenchmark)
 
 set(BENCHMARK_MAIN_LIBRARY_PATH ${binary_dir}/src/${CMAKE_FIND_LIBRARY_PREFIXES}benchmark_main.a)
 set(BENCHMARK_MAIN_LIBRARY benchmark_main)
@@ -38,7 +39,7 @@ add_library(${BENCHMARK_MAIN_LIBRARY} UNKNOWN IMPORTED)
 set_target_properties(${BENCHMARK_MAIN_LIBRARY} PROPERTIES
     IMPORTED_LOCATION ${BENCHMARK_MAIN_LIBRARY_PATH}
 )
-add_dependencies(${BENCHMARK_MAIN_LIBRARY} benchmark)
+add_dependencies(${BENCHMARK_MAIN_LIBRARY} googlebenchmark)
 set(BENCHMARK_BOTH_LIBRARIES ${BENCHMARK_LIBRARY} ${BENCHMARK_MAIN_LIBRARY})
 
 include(FindPackageHandleStandardArgs)

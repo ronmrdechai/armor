@@ -54,3 +54,8 @@ option(MOAT_INCLUDE_TESTS "Generate build targets for the Moat unit tests." ON)
 if(MOAT_INCLUDE_TESTS)
     add_subdirectory(test)
 endif()
+
+option(MOAT_INCLUDE_BENCHMARKS "Generate build targets for the Moat benchmarks." ON)
+if(MOAT_INCLUDE_BENCHMARKS)
+    add_subdirectory(bench)
+endif()
