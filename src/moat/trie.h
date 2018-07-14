@@ -283,12 +283,12 @@ public:
     }
 
     iterator find(const key_type& key) {
-        return find_key<true>(
+        return find_key(
             root_iterator(), end(), key_map_, key.begin(), key.end()
         );
     }
     const_iterator find(const key_type& key) const {
-        return find_key<true>(
+        return find_key(
             root_iterator(), end(), key_map_, key.begin(), key.end()
         );
     }
@@ -375,7 +375,7 @@ private:
         return it;
     }
 
-    template <bool SAFE, typename It>
+    template <typename It>
     static It find_key(
         It it,
         It end,
@@ -383,13 +383,13 @@ private:
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) {
-        if (SAFE && it.node_ == nullptr) return end;
+        if (it.node_ == nullptr) return end;
         if (cur == last) return it;
 
         size_type index = f(*cur);
         it.node_ = it.node_->children[index];
         it.positions_.push(index);
-        return find_key<SAFE>(std::move(it), std::move(end), f, ++cur, last);
+        return find_key(std::move(it), std::move(end), f, ++cur, last);
     }
 
     static void count_keys(const node_type* root, size_type& count) {
