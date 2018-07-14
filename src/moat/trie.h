@@ -7,7 +7,7 @@
 
 namespace moat {
 
-namespace functors {
+namespace utility {
 
 template <typename T>
 struct identity { T operator()(T v) const { return v; } };
@@ -41,7 +41,7 @@ struct indexed {
     }
 };
 
-} // namespace functors
+} // namespace utility
 
 /**
  * An implementation of an R-way Trie.
@@ -67,7 +67,7 @@ struct indexed {
 template <
     typename T,
     std::size_t R,
-    typename F = functors::identity<std::size_t>,
+    typename F = utility::identity<std::size_t>,
     typename Key = std::string,
     typename Allocator = std::allocator<T>
 >
@@ -295,10 +295,10 @@ using ascii_trie = trie<T, 127>;
 
 /// A Trie mapping strings of lowercase letters only.
 template <typename T>
-using lowercase_trie = trie<T, 26, functors::count_from<std::size_t, 'a'>>;
+using lowercase_trie = trie<T, 26, utility::count_from<std::size_t, 'a'>>;
 
 /// A Trie mapping strings of uppercase letters only.
 template <typename T>
-using uppercase_trie = trie<T, 26, functors::count_from<std::size_t, 'A'>>;
+using uppercase_trie = trie<T, 26, utility::count_from<std::size_t, 'A'>>;
 
 } // namespace moat
