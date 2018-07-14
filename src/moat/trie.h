@@ -7,7 +7,7 @@
 
 namespace moat {
 
-namespace trie {
+namespace utility {
 
 template <typename T>
 struct identity { T operator()(T v) const { return v; } };
@@ -41,7 +41,7 @@ struct indexed {
     }
 };
 
-} // namespace trie
+} // namespace utility
 
 /**
  * An implementation of an R-way Trie.
@@ -58,20 +58,20 @@ struct indexed {
  * @tparam Allocator  An allocator to type use when inserting or removing
  *                    values.
  *
- * Examples of radix_trie instantiations are:
- * - using ascii_trie = radix_trie<T, 127;
- * - using lowercase_trie = radix_trie<T, 26, moat::count_from<char, 'a'>;
- * - using uppercase_trie = radix_trie<T, 26, moat::count_from<char, 'A'>;
- * - using dna_trie = radix_trie<T, 4, moat::indexed<char, 'A', 'C', 'G', 'T'>;
+ * Examples of trie instantiations are:
+ * - using ascii_trie = trie<T, 127;
+ * - using lowercase_trie = trie<T, 26, moat::count_from<char, 'a'>;
+ * - using uppercase_trie = trie<T, 26, moat::count_from<char, 'A'>;
+ * - using dna_trie = trie<T, 4, moat::indexed<char, 'A', 'C', 'G', 'T'>;
  */
 template <
     typename T,
     std::size_t R,
-    typename F = trie::identity<std::size_t>,
+    typename F = utility::identity<std::size_t>,
     typename Key = std::string,
     typename Allocator = std::allocator<T>
 >
-class radix_trie {
+class trie {
 public:
     using key_type        = Key;
     using char_type       = typename key_type::value_type;
@@ -106,13 +106,13 @@ public:
         }
     };
 
-    radix_trie() { base_.children[0] = &root_; }
-    radix_trie(radix_trie&&) = default;
-    radix_trie& operator=(radix_trie&&) = default;
+    trie() = default;
+    trie(trie&&) = default;
+    trie& operator=(trie&&) = default;
 
-    radix_trie(allocator_type allocator) : allocator_(std::move(allocator)) {}
+    trie(allocator_type allocator) : allocator_(std::move(allocator)) {}
 
-    ~radix_trie() { root_.destroy(allocator_); }
+    ~trie() { root_.destroy(allocator_); }
 
     mapped_type& operator[](const key_type& key) {
         insert_key(&root_, nullptr, key.begin(), key.end());
@@ -179,30 +179,16 @@ public:
     using const_iterator = generic_iterator<const node_type>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    iterator begin() {
-        if (empty()) return end();
-        return iterator(&base_, { 0 });
-    }
-    const_iterator begin() const {
-        return cbegin();
-    }
-    const_iterator cbegin() const {
-        if (empty()) return cend();
-        return const_iterator(&base_, { 0 });
-    }
+    /* iterator begin(); */
+    /* const_iterator begin() const; */
+    /* const_iterator cbegin() const; */
     /* reverse_iterator rbegin(); */
     /* reverse_const_iterator rbegin() const; */
     /* reverse_const_iterator crbegin() const; */
 
-    iterator end() {
-        return iterator(&base_, { });
-    }
-    const_iterator end() const {
-        return cend();
-    }
-    const_iterator cend() const {
-        return const_iterator(&base_, { });
-    }
+    /* iterator end(); */
+    /* const_iterator end() const; */
+    /* const_iterator cend() const; */
     /* reverse_iterator rend(); */
     /* reverse_const_iterator rend() const; */
     /* reverse_const_iterator crend() const; */
@@ -272,14 +258,14 @@ private:
     ) const {
         if constexpr (SAFE) {
             if (root == nullptr) {
-                throw std::out_of_range("moat::radix_trie::at");
+                throw std::out_of_range("moat::trie::at");
             }
         }
 
         if (cur == last) {
             if constexpr (SAFE) {
                 if (root->value == nullptr) {
-                    throw std::out_of_range("moat::radix_trie::at");
+                    throw std::out_of_range("moat::trie::at");
                 }
             }
             return root->value;
@@ -298,7 +284,6 @@ private:
         }
     }
 
-    node_type      base_;
     node_type      root_;
     allocator_type allocator_;
     key_map        key_map_;
@@ -306,14 +291,14 @@ private:
 
 /// A Trie mapping strings of ASCII characters only.
 template <typename T>
-using ascii_trie = radix_trie<T, 127>;
+using ascii_trie = trie<T, 127>;
 
 /// A Trie mapping strings of lowercase letters only.
 template <typename T>
-using lowercase_trie = radix_trie<T, 26, trie::count_from<std::size_t, 'a'>>;
+using lowercase_trie = trie<T, 26, utility::count_from<std::size_t, 'a'>>;
 
 /// A Trie mapping strings of uppercase letters only.
 template <typename T>
-using uppercase_trie = radix_trie<T, 26, trie::count_from<std::size_t, 'A'>>;
+using uppercase_trie = trie<T, 26, utility::count_from<std::size_t, 'A'>>;
 
 } // namespace moat
