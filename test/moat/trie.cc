@@ -77,11 +77,23 @@ TEST(trie, count_increase_after_write) {
 }
 
 TEST(trie, read_iteration) {
+    std::vector<std::string> strings { "bar", "baz", "foo" };
     trie t;
-    t["foo"] = 1;
-    t["bar"] = 2;
-    t["baz"] = 3;
+
+    for (std::string& s : strings) t[s] = 42;
+
+    std::size_t i = 0;
     for (auto& [key, value] : t) {
-        std::cout << key << "=" << value << std::endl;
+        EXPECT_EQ(strings[i++], key);
+        EXPECT_EQ(42, value);
     }
+}
+
+TEST(trie, write_iteration) {
+    std::vector<std::string> strings { "bar", "baz", "foo" };
+    trie t;
+
+    for (std::string& s : strings) t[s] = 42;
+    for (auto& [_, value] : t) value = 0;
+    for (std::string& s : strings) EXPECT_EQ(0, t[s]);
 }
