@@ -5,43 +5,9 @@
 #include <string>
 #include <stack>
 
+#include <moat/utility.h>
+
 namespace moat {
-
-namespace utility {
-
-template <typename T>
-struct identity { T operator()(T v) const { return v; } };
-template <typename T, T S>
-struct count_from { T operator()(T v) const { return v - S; } };
-
-namespace detail {
-
-template <typename T, T N, T V, T... Vs>
-struct indexed_helper {
-    T operator()(T v) {
-        if (v == V) return N;
-        return indexed_helper<T, N + 1, Vs...>{}(v);
-    }
-};
-
-template <typename T, T N, T V>
-struct indexed_helper<T, N, V> {
-    T operator()(T v) {
-        if (v == V) return N;
-        return v;
-    }
-};
-
-} // namespace detail
-
-template <typename T, T... Vs>
-struct indexed {
-    T operator()(T v) const {
-        return detail::indexed_helper<T, 0, Vs...>{}(v);
-    }
-};
-
-} // namespace utility
 
 /**
  * An implementation of an R-way Trie.
@@ -60,14 +26,14 @@ struct indexed {
  *
  * Examples of trie instantiations are:
  * - `using ascii_trie = trie<T, 127;`
- * - `using lowercase_trie = trie<T, 26, moat::count_from<char, 'a'>;`
- * - `using uppercase_trie = trie<T, 26, moat::count_from<char, 'A'>;`
- * - `using dna_trie = trie<T, 4, moat::indexed<char, 'A', 'C', 'G', 'T'>;`
+ * - `using lowercase_trie = trie<T, 26, count_from<char, 'a'>;`
+ * - `using uppercase_trie = trie<T, 26, count_from<char, 'A'>;`
+ * - `using dna_trie = trie<T, 4, indexed<char, 'A', 'C', 'G', 'T'>;`
  */
 template <
     typename T,
     std::size_t R,
-    typename F = utility::identity<std::size_t>,
+    typename F = identity<std::size_t>,
     typename Key = std::string,
     typename Allocator = std::allocator<T>
 >
@@ -295,10 +261,10 @@ using ascii_trie = trie<T, 127>;
 
 /// A Trie mapping strings of lowercase letters only.
 template <typename T>
-using lowercase_trie = trie<T, 26, utility::count_from<std::size_t, 'a'>>;
+using lowercase_trie = trie<T, 26, count_from<std::size_t, 'a'>>;
 
 /// A Trie mapping strings of uppercase letters only.
 template <typename T>
-using uppercase_trie = trie<T, 26, utility::count_from<std::size_t, 'A'>>;
+using uppercase_trie = trie<T, 26, count_from<std::size_t, 'A'>>;
 
 } // namespace moat
