@@ -97,9 +97,7 @@ public:
         InputIterator last,
         key_map f = key_type(),
         allocator_type allocator = allocator_type()
-    ) : 
-        key_map_(std::move(f)), allocator_(std::move(allocator))
-    {
+    ) : key_map_(std::move(f)), allocator_(std::move(allocator)) {
         init_base_root();
         for (auto cur = first; cur != last; ++cur) insert(*cur);
     }
@@ -311,7 +309,6 @@ public:
     void insert(std::initializer_list<value_type> init) {
         insert(init.begin(), init.end());
     }
-
 
     // TODO:
     // - copy constructors
