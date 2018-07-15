@@ -283,6 +283,18 @@ TEST(trie, iterator_constructor) {
     }
 }
 
-TEST(trie, initializer_list_constructor) {}
+TEST(trie, initializer_list_constructor) {
+    std::vector<std::pair<std::string, int>> v{
+        { "bar", 1 }, { "baz", 2 }, { "foo", 3 }
+    };
 
-TEST(trie, does_not_leak) {}
+    trie t{ {"bar", 1}, {"baz", 2}, {"foo", 3} };
+
+    for (auto& [key, value] : v) {
+        EXPECT_EQ(value, t[key]);
+    }
+}
+
+TEST(trie, DISABLED_does_not_leak) {
+    EXPECT_TRUE(false) << "Not implemented";
+}

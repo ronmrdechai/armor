@@ -91,20 +91,20 @@ public:
         key_map_(std::move(other.key_map_))
     {}
 
-    template <typename InputIterator>
+    template <typename InputIt>
     trie(
-        InputIterator first,
-        InputIterator last,
-        key_map f = key_type(),
+        InputIt first,
+        InputIt last,
+        key_map f = key_map(),
         allocator_type allocator = allocator_type()
-    ) : key_map_(std::move(f)), allocator_(std::move(allocator)) {
+    ) : allocator_(std::move(allocator)), key_map_(std::move(f)) {
         init_base_root();
         for (auto cur = first; cur != last; ++cur) insert(*cur);
     }
 
     trie(
         std::initializer_list<value_type> init,
-        key_map f = key_type(),
+        key_map f = key_map(),
         allocator_type allocator = allocator_type()
     ) : trie(init.begin(), init.end(), std::move(f), std::move(allocator)) {}
     trie(std::initializer_list<value_type> init, allocator_type allocator) :
