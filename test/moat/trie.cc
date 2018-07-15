@@ -157,3 +157,43 @@ TEST(trie, insert_list) {
         ++i;
     }
 }
+
+TEST(trie, equality) {
+    trie t1;
+    t1["foo"] = 1;
+    t1["bar"] = 2;
+    trie t2;
+    t2["foo"] = 1;
+    t2["bar"] = 2;
+    EXPECT_TRUE(t1 == t2);
+}
+
+TEST(trie, key_inequlity) {
+    trie t1;
+    t1["foo"] = 1;
+    t1["bar"] = 2;
+    trie t2;
+    t2["foo"] = 1;
+    t2["baz"] = 2;
+    EXPECT_TRUE(t1 != t2);
+}
+
+TEST(trie, value_inequlity) {
+    trie t1;
+    t1["foo"] = 1;
+    t1["bar"] = 2;
+    trie t2;
+    t2["foo"] = 1;
+    t2["bar"] = 3;
+    EXPECT_TRUE(t1 != t2);
+}
+
+TEST(trie, key_value_inequlity) {
+    trie t1;
+    t1["foo"] = 1;
+    t1["bar"] = 2;
+    trie t2;
+    t2["foo"] = 1;
+    t2["baz"] = 3;
+    EXPECT_TRUE(t1 != t2);
+}

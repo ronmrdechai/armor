@@ -111,7 +111,18 @@ public:
         trie(init.begin(), init.end(), key_map(), std::move(allocator))
     {}
 
+    trie(const trie& other) : trie(other.begin(), other.end()) {}
+    trie(const trie& other, allocator_type allocator) :
+        trie(other.begin(), other.end(), std::move(allocator))
+    {}
+
     ~trie() { root_.destroy(allocator_); }
+
+    trie& operator=(trie&&) = default;
+    trie& operator=(const trie&& other) {
+        clear();
+        insert(other.begin(), other.end());
+    }
 
     mapped_type& operator[](const key_type& key) {
         insert_key(&root_, &base_, key, 0);
@@ -311,13 +322,26 @@ public:
     }
 
     // TODO:
-    // - copy constructors
-    // - assignment
     // - all inserts
     // - prefix search
     // - longest matching prefix
     // - insert_or_assign, emplace, try_emplace, erase, swap, extract, merge
-    // - operator==, operator!=, operator<, operator<=, operator>, operator>=
+    
+    bool operator==(const trie& other) {
+        for (
+            auto it1 = begin(), it2 = other.begin();
+            it1 != end() && it2 != other.end();
+            ++it1, ++it2
+        ) {
+            if (it1->first  != it2->first ) return false;
+            if (it1->second != it2->second) return false;
+        }
+        return true;
+    }
+
+    bool operator!=(const trie& other) {
+        return !(*this == other);
+    }
 
 private:
     node_type      base_;
