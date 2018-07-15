@@ -6,7 +6,7 @@
 #include <string>
 #include <stack>
 
-#include <moat/utility.h>
+#include <moat/functors.h>
 
 namespace moat {
 
