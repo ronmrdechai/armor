@@ -150,26 +150,6 @@ TEST(trie, insert_twice) {
     EXPECT_EQ(1, t["foo"]);
 }
 
-TEST(trie, insert_or_assign_and_access) {
-    trie t;
-    t.insert_or_assign( {"foo", 1} );
-    EXPECT_EQ(1, t["foo"]);
-}
-
-TEST(trie, insert_or_assign_twice) {
-    trie t;
-
-    bool inserted;
-    typename trie::iterator it1, it2;
-    std::tie(it1, inserted) = t.insert_or_assign( {"foo", 1} );
-    EXPECT_TRUE(inserted);
-
-    std::tie(it2, inserted) = t.insert_or_assign( {"foo", 2} );
-    EXPECT_FALSE(inserted);
-    EXPECT_EQ(it1, it2);
-    EXPECT_EQ(2, t["foo"]);
-}
-
 TEST(trie, insert_range) {
     trie t;
     std::vector<typename trie::value_type> v{
@@ -198,6 +178,26 @@ TEST(trie, insert_list) {
         EXPECT_EQ(v[i].second, value);
         ++i;
     }
+}
+
+TEST(trie, insert_or_assign_and_access) {
+    trie t;
+    t.insert_or_assign( {"foo", 1} );
+    EXPECT_EQ(1, t["foo"]);
+}
+
+TEST(trie, insert_or_assign_twice) {
+    trie t;
+
+    bool inserted;
+    typename trie::iterator it1, it2;
+    std::tie(it1, inserted) = t.insert_or_assign( {"foo", 1} );
+    EXPECT_TRUE(inserted);
+
+    std::tie(it2, inserted) = t.insert_or_assign( {"foo", 2} );
+    EXPECT_FALSE(inserted);
+    EXPECT_EQ(it1, it2);
+    EXPECT_EQ(2, t["foo"]);
 }
 
 TEST(trie, equality) {
