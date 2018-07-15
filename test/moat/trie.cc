@@ -4,7 +4,7 @@
 
 using trie = moat::trie<int, 127>;
 
-TEST(trie, insertion_and_access) {
+TEST(trie, write_and_read) {
     trie t;
     t["foo"] = 1;
     t["bar"] = 2;
@@ -39,7 +39,7 @@ TEST(trie, default_is_empty) {
     EXPECT_TRUE(t.empty());
 }
 
-TEST(trie, not_empty_after_insert) {
+TEST(trie, not_empty_after_write) {
     trie t;
     t["foo"] = 1;
     EXPECT_FALSE(t.empty());
@@ -110,6 +110,26 @@ TEST(trie, find_non_existant) {
     EXPECT_EQ(t.end(), t.find("foo"));
 }
 
+TEST(trie, try_emplace_and_access) {
+    trie t;
+    t.try_emplace("foo", 1);
+    EXPECT_EQ(1, t["foo"]);
+}
+
+TEST(trie, try_emplace_twice) {
+    trie t;
+
+    bool emplaced;
+    typename trie::iterator it1, it2;
+    std::tie(it1, emplaced) = t.try_emplace("foo", 1);
+    EXPECT_TRUE(emplaced);
+
+    std::tie(it2, emplaced) = t.try_emplace("foo", 2);
+    EXPECT_FALSE(emplaced);
+    EXPECT_EQ(it1, it2);
+    EXPECT_EQ(1, t["foo"]);
+}
+
 TEST(trie, insert_and_access) {
     trie t;
     t.insert( {"foo", 1} );
@@ -123,9 +143,31 @@ TEST(trie, insert_twice) {
     typename trie::iterator it1, it2;
     std::tie(it1, inserted) = t.insert( {"foo", 1} );
     EXPECT_TRUE(inserted);
-    std::tie(it2, inserted) = t.insert( {"foo", 1} );
+
+    std::tie(it2, inserted) = t.insert( {"foo", 2} );
     EXPECT_FALSE(inserted);
     EXPECT_EQ(it1, it2);
+    EXPECT_EQ(1, t["foo"]);
+}
+
+TEST(trie, insert_or_assign_and_access) {
+    trie t;
+    t.insert_or_assign( {"foo", 1} );
+    EXPECT_EQ(1, t["foo"]);
+}
+
+TEST(trie, insert_or_assign_twice) {
+    trie t;
+
+    bool inserted;
+    typename trie::iterator it1, it2;
+    std::tie(it1, inserted) = t.insert_or_assign( {"foo", 1} );
+    EXPECT_TRUE(inserted);
+
+    std::tie(it2, inserted) = t.insert_or_assign( {"foo", 2} );
+    EXPECT_FALSE(inserted);
+    EXPECT_EQ(it1, it2);
+    EXPECT_EQ(2, t["foo"]);
 }
 
 TEST(trie, insert_range) {

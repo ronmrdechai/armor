@@ -125,7 +125,15 @@ public:
     }
 
     mapped_type& operator[](const key_type& key) {
-        insert_key(&root_, &base_, key, 0);
+        create_node(
+            &root_,
+            &base_,
+            key,
+            0, 
+            std::piecewise_construct,
+            std::tuple<const key_type&>(key),
+            std::tuple<>()
+        );
         iterator it = find(key);
         return it->second;
     }
@@ -304,14 +312,48 @@ public:
         );
     }
 
+    template <typename... Args>
+    std::pair<iterator, bool> emplace(Args&&... args) {
+        value_type* ptr = allocate_and_emplace(std::forward<Args>(args)...);
+
+        iterator it = find(ptr->first);
+        if (it != end()) {
+            allocator_traits::deallocate(allocator_, ptr, 1);
+            return {it, false};
+        }
+
+        insert_node(&root_, &base_, ptr->first, 0, ptr);
+        return {find(ptr->first), true};
+    }
+
+    template <typename... Args>
+    std::pair<iterator, bool> try_emplace(const key_type& key, Args&&... args) {
+        iterator it = find(key);
+        if (it == end()) return emplace(value_type(
+            std::piecewise_construct,
+            std::forward_as_tuple(key),
+            std::forward_as_tuple(args...)
+        ));
+        else return {it, false};
+    }
+
+    template <typename... Args>
+    std::pair<iterator, bool> try_emplace(key_type&& key, Args&&... args) {
+        iterator it = find(key);
+        if (it == end()) return emplace(value_type(
+            std::piecewise_construct,
+            std::forward_as_tuple(std::move(key)),
+            std::forward_as_tuple(args...)
+        ));
+        else return {it, false};
+    }
+
     std::pair<iterator, bool> insert(const value_type& value) {
         iterator it = find(value.first);
         if (it != end()) return {it, false};
 
-        insert_key(&root_, &base_, value.first, 0);
-        it = find(value.first);
-        it->second = value.second;
-        return {it, true};
+        create_node(&root_, &base_, value.first, 0, value);
+        return {find(value.first), true};
     }
     template <typename InputIt>
     void insert(InputIt first, InputIt last) {
@@ -321,11 +363,17 @@ public:
         insert(init.begin(), init.end());
     }
 
+    std::pair<iterator, bool> insert_or_assign(const value_type& value) {
+        auto [it, inserted] = insert(value);
+        if (!inserted) it->second = value.second;
+        return {it, inserted};
+    }
+
     // TODO:
-    // - all inserts
     // - prefix search
     // - longest matching prefix
-    // - insert_or_assign, emplace, try_emplace, erase, swap, extract, merge
+    // - erase, swap, extract, merge
+    // - deduction guides
     
     bool operator==(const trie& other) {
         for (
@@ -354,23 +402,35 @@ private:
         base_.children[0] = &root_;
     }
 
-    value_type* allocate_value(const key_type& key) {
+    template <typename... Args>
+    value_type* allocate_and_emplace(Args&&... args) {
         value_type* value = allocator_traits::allocate(allocator_, 1);
         allocator_traits::construct(
-            allocator_,
-            value,
-            std::piecewise_construct,
-            std::tuple<const key_type&>(key),
-            std::tuple<>()
+            allocator_, value, std::forward<Args>(args)...
         );
         return value;
     }
 
-    node_type* insert_key(
+    template <typename... Args>
+    node_type* create_node(
         node_type* root,
         node_type* parent,
         const key_type& key,
-        typename key_type::size_type index
+        size_type index,
+        Args&&... args
+    ) {
+        return insert_node(
+            root, parent, key, index,
+            allocate_and_emplace(std::forward<Args>(args)...)
+        );
+    }
+
+    node_type* insert_node(
+        node_type* root,
+        node_type* parent,
+        const key_type& key,
+        size_type index,
+        value_type* ptr
     ) {
         if (root == nullptr) {
             root = new node_type{};
@@ -378,10 +438,11 @@ private:
         }
 
         if (index == key.size()) {
-            if (root->value == nullptr) root->value = allocate_value(key);
+            if (root->value == nullptr) root->value = ptr;
+            else                        allocator_traits::deallocate(allocator_, ptr, 1);
         } else {
             auto& child = root->children[key_map_(key[index])];
-            child = insert_key(child, root, key, index + 1);
+            child = insert_node(child, root, key, index + 1, ptr);
         }
 
         return root;
