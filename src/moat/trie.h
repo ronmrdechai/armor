@@ -375,7 +375,7 @@ public:
     // - erase, swap, extract, merge
     // - deduction guides
     
-    bool operator==(const trie& other) {
+    bool operator==(const trie& other) const {
         for (
             auto it1 = begin(), it2 = other.begin();
             it1 != end() && it2 != other.end();
@@ -387,7 +387,7 @@ public:
         return true;
     }
 
-    bool operator!=(const trie& other) {
+    bool operator!=(const trie& other) const {
         return !(*this == other);
     }
 

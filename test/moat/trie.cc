@@ -77,7 +77,7 @@ TEST(trie, count_increase_after_write) {
 }
 
 TEST(trie, read_iteration) {
-    std::vector<std::string> strings { "bar", "baz", "foo" };
+    std::vector<std::string> strings{ "bar", "baz", "foo" };
     trie t;
 
     for (std::string& s : strings) t[s] = 42;
@@ -90,7 +90,7 @@ TEST(trie, read_iteration) {
 }
 
 TEST(trie, write_iteration) {
-    std::vector<std::string> strings { "bar", "baz", "foo" };
+    std::vector<std::string> strings{ "bar", "baz", "foo" };
     trie t;
 
     for (std::string& s : strings) t[s] = 42;
@@ -239,3 +239,50 @@ TEST(trie, key_value_inequlity) {
     t2["baz"] = 3;
     EXPECT_TRUE(t1 != t2);
 }
+
+TEST(trie, copy_constructor) {
+    trie t1;
+    t1["foo"] = 1;
+    t1["bar"] = 2;
+
+    trie t2(t1);
+    EXPECT_EQ(t1, t2);
+}
+
+TEST(trie, change_original_after_copy) {
+    trie t1;
+    t1["foo"] = 1;
+    t1["bar"] = 2;
+
+    trie t2(t1);
+
+    t1["foo"] = 3;
+    EXPECT_NE(t1, t2);
+}
+
+TEST(trie, change_copy_after_copy) {
+    trie t1;
+    t1["foo"] = 1;
+    t1["bar"] = 2;
+
+    trie t2(t1);
+
+    t2["foo"] = 3;
+    EXPECT_NE(t1, t2);
+}
+
+TEST(trie, iterator_constructor) {
+    std::vector<std::pair<std::string, int>> v{
+        { "bar", 1 }, { "baz", 2 }, { "foo", 3 }
+    };
+
+    trie t(v.begin(), v.end());
+
+    for (auto& [key, value] : v) {
+        EXPECT_EQ(value, t[key]);
+    }
+}
+
+TEST(trie, initializer_list_constructor) {}
+
+TEST(trie, does_not_leak) {}
