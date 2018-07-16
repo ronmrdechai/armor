@@ -11,6 +11,16 @@
 
 namespace moat {
 
+namespace detail {
+
+template <typename...> struct rebind;
+template <template <typename> typename Type, typename Inner, typename New>
+struct rebind<Type<Inner>, New> {
+    using type = Type<New>;
+};
+
+} // namespace detail
+
 /**
  * An implementation of an R-way Trie.
  * A Trie is an insertion efficient string-based associative container.
@@ -59,6 +69,10 @@ public:
     using pointer         = typename allocator_traits::pointer;
     using const_pointer   = typename allocator_traits::const_pointer;
 
+    class node_type;
+private:
+    using node_allocator_type = detail::rebind<allocator_type, node_type>;
+public:
     class node_type {
     public:
         using key_type       = trie::key_type;
@@ -443,10 +457,11 @@ public:
     key_mapper     key_map()       const { return key_map_; }
 
 private:
-    node_type      base_;
-    node_type      root_;
-    allocator_type allocator_;
-    key_mapper     key_map_;
+    node_type           base_;
+    node_type           root_;
+    allocator_type      allocator_;
+    node_allocator_type node_allocator_;
+    key_mapper          key_map_;
 
     void init_base_root() {
         root_.parent_ = &base_;
@@ -474,6 +489,14 @@ private:
             root, parent, key, index,
             allocate_and_emplace(std::forward<Args>(args)...)
         );
+    }
+
+    node_type* create_node_type() {
+        node_type* node = std::allocator_traits<node_allocator_type>::allocate(
+            node_allocator_, 1
+        );
+        std::allocator_traits<node_allocator_type>::construct(node_allocator_, node);
+        return node;
     }
 
     node_type* insert_node(
