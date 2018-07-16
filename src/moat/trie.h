@@ -61,7 +61,10 @@ public:
         using value_type     = trie::value_type;
         using allocator_type = trie::allocator_type;
 
-        node_type() : children_{ nullptr }, value_(nullptr), parent_(nullptr) {}
+        constexpr node_type() :
+            children_{ nullptr }, value_(nullptr), parent_(nullptr)
+        {}
+        node_type(node_type&&) = default;
 
         bool             empty() const { return value == nullptr; }
         explicit operator bool() const { return !empty(); }
