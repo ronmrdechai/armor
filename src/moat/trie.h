@@ -2,6 +2,7 @@
 
 #include <iterator>
 #include <initializer_list>
+#include <type_traits>
 #include <stdexcept>
 #include <string>
 #include <stack>
@@ -19,7 +20,7 @@ namespace moat {
  *
  * @tparam T          The value of keys contained in this trie.
  * @tparam R          The radix of this trie's strings.
- * @tparam F          A function object to map from a key character to a value
+ * @tparam KeyMapper  A function object to map from a key character to a value
  *                    within the range (0, R].
  * @tparam Key        The type of the trie keys.
  * @tparam Allocator  An allocator to type use when inserting or removing
@@ -34,12 +35,16 @@ namespace moat {
 template <
     typename T,
     std::size_t R,
-    typename F = identity<std::size_t>,
+    typename KeyMapper = identity<std::size_t>,
     typename Key = std::string,
     typename Allocator = std::allocator<std::pair<const Key, T>>
 >
 class trie {
     using allocator_traits = std::allocator_traits<Allocator>;
+    static_assert(
+        std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>, 
+        "KeyMapper is not invokable on std::size_t or does not return std::size_t"
+    );
 public:
     using key_type        = Key;
     using char_type       = typename key_type::value_type;
@@ -47,7 +52,7 @@ public:
     using value_type      = std::pair<const key_type, mapped_type>;
     using size_type       = std::size_t;
     using difference_type = std::ptrdiff_t;
-    using key_map         = F;
+    using key_mapper      = KeyMapper;
     using allocator_type  = Allocator;
     using reference       = value_type&;
     using const_reference = const value_type&;
@@ -106,7 +111,7 @@ public:
     };
 
     trie() { init_base_root(); }
-    explicit trie(key_map f, allocator_type allocator = allocator_type()) :
+    explicit trie(key_mapper f, allocator_type allocator = allocator_type()) :
         key_map_(std::move(f)), allocator_(std::move(allocator))
     { init_base_root(); }
     explicit trie(allocator_type allocator) :
@@ -125,7 +130,7 @@ public:
     trie(
         InputIt first,
         InputIt last,
-        key_map f = key_map(),
+        key_mapper f = key_mapper(),
         allocator_type allocator = allocator_type()
     ) : allocator_(std::move(allocator)), key_map_(std::move(f)) {
         init_base_root();
@@ -134,11 +139,11 @@ public:
 
     trie(
         std::initializer_list<value_type> init,
-        key_map f = key_map(),
+        key_mapper f = key_mapper(),
         allocator_type allocator = allocator_type()
     ) : trie(init.begin(), init.end(), std::move(f), std::move(allocator)) {}
     trie(std::initializer_list<value_type> init, allocator_type allocator) :
-        trie(init.begin(), init.end(), key_map(), std::move(allocator))
+        trie(init.begin(), init.end(), key_mapper(), std::move(allocator))
     {}
 
     trie(const trie& other) : trie(other.begin(), other.end()) {}
@@ -434,11 +439,14 @@ public:
         lhs.swap(rhs);
     }
 
+    allocator_type get_allocator() const { return allocator_; }
+    key_mapper     key_map()       const { return key_map_; }
+
 private:
     node_type      base_;
     node_type      root_;
     allocator_type allocator_;
-    key_map        key_map_;
+    key_mapper     key_map_;
 
     void init_base_root() {
         root_.parent_ = &base_;
@@ -507,7 +515,7 @@ private:
     static It find_key(
         It it,
         It end,
-        const key_map& f,
+        const key_mapper& f,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) {
