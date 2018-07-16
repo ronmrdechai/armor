@@ -201,74 +201,74 @@ TEST(trie, insert_or_assign_twice) {
 }
 
 TEST(trie, equality) {
-    trie t1;
-    t1["foo"] = 1;
-    t1["bar"] = 2;
-    trie t2;
-    t2["foo"] = 1;
-    t2["bar"] = 2;
-    EXPECT_TRUE(t1 == t2);
+    trie t;
+    t["foo"] = 1;
+    t["bar"] = 2;
+    trie s;
+    s["foo"] = 1;
+    s["bar"] = 2;
+    EXPECT_TRUE(t == s);
 }
 
 TEST(trie, key_inequlity) {
-    trie t1;
-    t1["foo"] = 1;
-    t1["bar"] = 2;
-    trie t2;
-    t2["foo"] = 1;
-    t2["baz"] = 2;
-    EXPECT_TRUE(t1 != t2);
+    trie t;
+    t["foo"] = 1;
+    t["bar"] = 2;
+    trie s;
+    s["foo"] = 1;
+    s["baz"] = 2;
+    EXPECT_TRUE(t != s);
 }
 
 TEST(trie, value_inequlity) {
-    trie t1;
-    t1["foo"] = 1;
-    t1["bar"] = 2;
-    trie t2;
-    t2["foo"] = 1;
-    t2["bar"] = 3;
-    EXPECT_TRUE(t1 != t2);
+    trie t;
+    t["foo"] = 1;
+    t["bar"] = 2;
+    trie s;
+    s["foo"] = 1;
+    s["bar"] = 3;
+    EXPECT_TRUE(t != s);
 }
 
 TEST(trie, key_value_inequlity) {
-    trie t1;
-    t1["foo"] = 1;
-    t1["bar"] = 2;
-    trie t2;
-    t2["foo"] = 1;
-    t2["baz"] = 3;
-    EXPECT_TRUE(t1 != t2);
+    trie t;
+    t["foo"] = 1;
+    t["bar"] = 2;
+    trie s;
+    s["foo"] = 1;
+    s["baz"] = 3;
+    EXPECT_TRUE(t != s);
 }
 
 TEST(trie, copy_constructor) {
-    trie t1;
-    t1["foo"] = 1;
-    t1["bar"] = 2;
+    trie t;
+    t["foo"] = 1;
+    t["bar"] = 2;
 
-    trie t2(t1);
-    EXPECT_EQ(t1, t2);
+    trie s(t);
+    EXPECT_EQ(t, s);
 }
 
 TEST(trie, change_original_after_copy) {
-    trie t1;
-    t1["foo"] = 1;
-    t1["bar"] = 2;
+    trie t;
+    t["foo"] = 1;
+    t["bar"] = 2;
 
-    trie t2(t1);
+    trie s(t);
 
-    t1["foo"] = 3;
-    EXPECT_NE(t1, t2);
+    t["foo"] = 3;
+    EXPECT_NE(t, s);
 }
 
 TEST(trie, change_copy_after_copy) {
-    trie t1;
-    t1["foo"] = 1;
-    t1["bar"] = 2;
+    trie t;
+    t["foo"] = 1;
+    t["bar"] = 2;
 
-    trie t2(t1);
+    trie s(t);
 
-    t2["foo"] = 3;
-    EXPECT_NE(t1, t2);
+    s["foo"] = 3;
+    EXPECT_NE(t, s);
 }
 
 TEST(trie, iterator_constructor) {
@@ -293,6 +293,26 @@ TEST(trie, initializer_list_constructor) {
     for (auto& [key, value] : v) {
         EXPECT_EQ(value, t[key]);
     }
+}
+
+TEST(trie, swap) {
+    trie t{ {"foo", 1} };
+    trie s{ {"bar", 2} };
+
+    swap(t, s);
+    EXPECT_EQ(2, t["bar"]);
+    EXPECT_EQ(1, s["foo"]);
+}
+
+TEST(trie, swap_and_modify) {
+    trie t{ {"foo", 1} };
+    trie s{ {"bar", 2} };
+
+    swap(t, s);
+    t["foo"] = 3;
+
+    EXPECT_EQ(2, t["bar"]);
+    EXPECT_EQ(1, s["foo"]);
 }
 
 TEST(trie, DISABLED_does_not_leak) {

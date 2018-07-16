@@ -421,6 +421,19 @@ public:
         return !(*this == other);
     }
 
+    void swap(trie& other) {
+        using std::swap;
+
+        swap(base_, other.base_);
+        swap(root_, other.root_);
+        swap(allocator_, other.allocator_);
+        swap(key_map_, other.key_map_);
+    }
+
+    friend void swap(trie& lhs, trie& rhs) {
+        lhs.swap(rhs);
+    }
+
 private:
     node_type      base_;
     node_type      root_;
