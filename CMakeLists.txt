@@ -51,6 +51,7 @@ include_directories(src)
 add_subdirectory(src)
 
 option(MOAT_INCLUDE_TESTS "Generate build targets for the Moat unit tests." ON)
+enable_testing()
 if(MOAT_INCLUDE_TESTS)
     add_subdirectory(test)
 endif()
