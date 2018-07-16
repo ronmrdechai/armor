@@ -63,12 +63,21 @@ public:
 
         node_type() : children_{ nullptr }, value_(nullptr), parent_(nullptr) {}
 
-        bool empty() const { return value == nullptr; }
+        bool             empty() const { return value == nullptr; }
         explicit operator bool() const { return !empty(); }
 
-        key_type& key() { return value_->first; }
-        mapped_type& mapped() { return value_->second; }
-        value_type& value() { return value_; }
+        key_type&    key()    const { return value_->first; }
+        mapped_type& mapped() const { return value_->second; }
+        value_type&  value()  const { return value_; }
+
+        void swap(node_type& nh) {
+            std::swap(children_, nh.children_);
+            std::swap(value_,    nh.value_);
+            std::swap(parent_,   nh.parent_);
+        }
+        friend void swap(node_type& x, node_type& y) {
+            x.swap(y);
+        }
 
     private:
         std::array<node_type*, R> children_;
