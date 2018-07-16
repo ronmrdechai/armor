@@ -54,18 +54,34 @@ public:
     using pointer         = typename allocator_traits::pointer;
     using const_pointer   = typename allocator_traits::const_pointer;
 
-    struct node_type {
-        std::array<node_type*, R> children = { nullptr };
-        value_type*                  value = nullptr;
-        node_type*                  parent = nullptr;
+    class node_type {
+    public:
+        using key_type       = trie::key_type;
+        using mapped_type    = trie::mapped_type;
+        using value_type     = trie::value_type;
+        using allocator_type = trie::allocator_type;
+
+        node_type() : children_{ nullptr }, value_(nullptr), parent_(nullptr) {}
+
+        bool empty() const { return value == nullptr; }
+        explicit operator bool() const { return !empty(); }
+
+        key_type& key() { return value_->first; }
+        mapped_type& mapped() { return value_->second; }
+        value_type& value() { return value_; }
+
+    private:
+        std::array<node_type*, R> children_;
+        value_type*                  value_;
+        node_type*                  parent_;
 
         void destroy(allocator_type& allocator) {
-            if (value != nullptr) {
-                allocator_traits::deallocate(allocator, value, 1);
-                value = nullptr;
+            if (value_ != nullptr) {
+                allocator_traits::deallocate(allocator, value_, 1);
+                value_ = nullptr;
             }
 
-            for (auto& child : children) {
+            for (auto& child : children_) {
                 if (child != nullptr) {
                     child->destroy(allocator);
                     delete child;
@@ -73,6 +89,8 @@ public:
                 }
             }
         }
+
+        friend class trie;
     };
 
     trie() { init_base_root(); }
@@ -166,24 +184,24 @@ public:
         generic_iterator& operator++() {
             do {
                 *this = next(std::move(*this));
-            } while(this->node_->value == nullptr && !positions_.empty());
+            } while(this->node_->value_ == nullptr && !positions_.empty());
             return *this;
         }
 
         generic_iterator operator++(int) {
             generic_iterator it = next(*this);
-            while (it.node_->value == nullptr && !positions_.empty()) {
+            while (it.node_->value_ == nullptr && !positions_.empty()) {
                 it = next(it);
             }
             return it;
         }
 
         reference operator*() const {
-            return *(node_->value);
+            return *(node_->value_);
         }
 
         pointer operator->() const {
-            return node_->value;
+            return node_->value_;
         }
 
         bool operator==(const generic_iterator& other) const {
@@ -206,8 +224,8 @@ public:
         static std::pair<generic_iterator, bool>
         step_down(generic_iterator it) {
             for (size_type pos = 0; pos < R; ++pos) {
-                if (it.node_->children[pos] != nullptr) {
-                    it.node_ = it.node_->children[pos];
+                if (it.node_->children_[pos] != nullptr) {
+                    it.node_ = it.node_->children_[pos];
                     it.positions_.push(pos);
                     return {it, true};
                 }
@@ -220,9 +238,9 @@ public:
             if (it.positions_.empty()) return {it, false};
 
             for (size_type pos = it.positions_.top() + 1; pos < R; ++pos) {
-                node_type* parent = it.node_->parent;
-                if (parent->children[pos] != nullptr) {
-                    it.node_ = parent->children[pos];
+                node_type* parent = it.node_->parent_;
+                if (parent->children_[pos] != nullptr) {
+                    it.node_ = parent->children_[pos];
                     it.positions_.top() = pos;
                     return {it, true};
                 }
@@ -232,7 +250,7 @@ public:
 
         static std::pair<generic_iterator, bool>
         step_up(generic_iterator it) {
-            it.node_ = it.node_->parent;
+            it.node_ = it.node_->parent_;
             it.positions_.pop();
             return step_right(it);
         }
@@ -276,8 +294,8 @@ public:
 
     bool empty() const {
         return std::all_of(
-            root_.children.begin(),
-            root_.children.end(),
+            root_.children_.begin(),
+            root_.children_.end(),
             [](node_type* child) { return child == nullptr; }
         );
     }
@@ -398,8 +416,8 @@ private:
     key_map        key_map_;
 
     void init_base_root() {
-        root_.parent = &base_;
-        base_.children[0] = &root_;
+        root_.parent_ = &base_;
+        base_.children_[0] = &root_;
     }
 
     template <typename... Args>
@@ -434,14 +452,14 @@ private:
     ) {
         if (root == nullptr) {
             root = new node_type{};
-            root->parent = parent;
+            root->parent_ = parent;
         }
 
         if (index == key.size()) {
-            if (root->value == nullptr) root->value = ptr;
+            if (root->value_ == nullptr) root->value_ = ptr;
             else                        allocator_traits::deallocate(allocator_, ptr, 1);
         } else {
-            auto& child = root->children[key_map_(key[index])];
+            auto& child = root->children_[key_map_(key[index])];
             child = insert_node(child, root, key, index + 1, ptr);
         }
 
@@ -472,16 +490,16 @@ private:
         if (cur == last) return it;
 
         size_type index = f(*cur);
-        it.node_ = it.node_->children[index];
+        it.node_ = it.node_->children_[index];
         it.positions_.push(index);
         return find_key(std::move(it), std::move(end), f, ++cur, last);
     }
 
     static void count_keys(const node_type* root, size_type& count) {
-        for (auto& child : root->children) {
+        for (auto& child : root->children_) {
             if (child != nullptr) {
                 count_keys(child, count);
-                if (child->value != nullptr) count += 1;
+                if (child->value_ != nullptr) count += 1;
             }
         }
     }
