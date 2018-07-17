@@ -71,7 +71,8 @@ public:
 
     class node_type;
 private:
-    using node_allocator_type = detail::rebind<allocator_type, node_type>;
+    using node_allocator_type = typename detail::rebind<allocator_type, node_type>::type;
+    using node_allocator_traits = std::allocator_traits<node_allocator_type>;
 public:
     class node_type {
     public:
@@ -492,10 +493,8 @@ private:
     }
 
     node_type* create_node_type() {
-        node_type* node = std::allocator_traits<node_allocator_type>::allocate(
-            node_allocator_, 1
-        );
-        std::allocator_traits<node_allocator_type>::construct(node_allocator_, node);
+        node_type* node = node_allocator_traits::allocate(node_allocator_, 1);
+        node_allocator_traits::construct(node_allocator_, node);
         return node;
     }
 
@@ -507,7 +506,7 @@ private:
         value_type* ptr
     ) {
         if (root == nullptr) {
-            root = new node_type{};
+            root = create_node_type();
             root->parent_ = parent;
         }
 
