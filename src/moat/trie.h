@@ -88,7 +88,7 @@ private:
         bool             empty() const { return value == nullptr; }
         explicit operator bool() const { return !empty(); }
 
-        key_type& key()          const { return const_cast<key_type&>(value_->first); }
+        key_type&       key()    const { return const_cast<key_type&>(value_->first); }
         mapped_type&    mapped() const { return value_->second; }
         value_type&     value()  const { return *value_; }
 
