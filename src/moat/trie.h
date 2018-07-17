@@ -484,9 +484,10 @@ private:
         return handle;
     }
 
-    trie_node* make_trie_node() {
+    trie_node* make_trie_node(trie_node* parent) {
         trie_node* node = node_allocator_traits::allocate(node_allocator_, 1);
         node_allocator_traits::construct(node_allocator_, node);
+        node->parent_ = parent;
         return node;
     }
 
@@ -497,10 +498,7 @@ private:
         size_type index,
         node_type* nh
     ) {
-        if (root == nullptr) {
-            root = make_trie_node();
-            root->parent_ = parent;
-        }
+        if (root == nullptr) root = make_trie_node(parent);
 
         if (index == key.size()) {
             if (root->handle_ == nullptr) root->handle_ = nh;
