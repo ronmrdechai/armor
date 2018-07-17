@@ -88,8 +88,8 @@ private:
         bool             empty() const { return value == nullptr; }
         explicit operator bool() const { return !empty(); }
 
-        const key_type& key()    const { return  value_->first; }
-        mapped_type&    mapped() const { return  value_->second; }
+        key_type& key()          const { return const_cast<key_type&>(value_->first); }
+        mapped_type&    mapped() const { return value_->second; }
         value_type&     value()  const { return *value_; }
 
         void swap(node_handle& nh) {
@@ -381,7 +381,6 @@ public:
         insert_handle(&root_, &base_, nh->key(), 0, nh);
         return {find(nh->key()), true};
     }
-
     template <typename... Args>
     std::pair<iterator, bool> try_emplace(const key_type& key, Args&&... args) {
         iterator it = find(key);
@@ -392,7 +391,6 @@ public:
         ));
         else return {it, false};
     }
-
     template <typename... Args>
     std::pair<iterator, bool> try_emplace(key_type&& key, Args&&... args) {
         iterator it = find(key);
@@ -418,7 +416,6 @@ public:
     void insert(std::initializer_list<value_type> init) {
         insert(init.begin(), init.end());
     }
-
     std::pair<iterator, bool> insert_or_assign(const value_type& value) {
         auto [it, inserted] = insert(value);
         if (!inserted) it->second = value.second;
@@ -428,7 +425,7 @@ public:
     // TODO:
     // - prefix search
     // - longest matching prefix
-    // - erase, swap, extract, merge
+    // - merge
     // - deduction guides
     
     bool operator==(const trie& other) const {
@@ -442,7 +439,6 @@ public:
         }
         return true;
     }
-
     bool operator!=(const trie& other) const {
         return !(*this == other);
     }
@@ -455,9 +451,39 @@ public:
         swap(allocator_, other.allocator_);
         swap(key_map_, other.key_map_);
     }
-
     friend void swap(trie& lhs, trie& rhs) {
         lhs.swap(rhs);
+    }
+
+    node_type extract(const_iterator pos) {
+        node_type handle = std::move(*pos.node_->handle);
+        erase(pos);
+        return std::move(handle);
+    }
+    node_type extract(const key_type& key) {
+        return extract(find(key));
+    }
+
+    iterator erase(const_iterator pos);
+    iterator erase(iterator pos) {
+        trie_node* parent = pos.node_->parent;
+        iterator ret = std::next(pos);
+
+        while (parent != nullptr && parent->parent->handle == nullptr) parent = parent->parent;
+        parent->destroy(handle_allocator_, node_allocator_);
+
+        return ret;
+    }
+    iterator erase(const_iterator first, const_iterator last) {
+        iterator ret;
+        for (auto it = first; it != last; ++it) ret = erase(it);
+        return ret;
+    }
+    size_type erase(const key_type& key) {
+        iterator it = find(key);
+        if (it == end()) return 0;
+        erase(it);
+        return 1;
     }
 
     allocator_type get_allocator() const { return allocator_; }
@@ -526,8 +552,7 @@ private:
 
     template <typename It>
     static It find_key(
-        It it,
-        It end,
+        It it, It end,
         const key_mapper& f,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last

@@ -315,6 +315,33 @@ TEST(trie, swap_and_modify) {
     EXPECT_EQ(1, s["foo"]);
 }
 
+TEST(trie, erase_not_empty) {
+}
+
+TEST(trie, erase_empty) {
+}
+
+TEST(trie, erase_size_drop) {
+}
+
+TEST(trie, erase_non_existant) {
+}
+
+TEST(trie, extract_erases) {
+}
+
+TEST(trie, extract_gives_valid_handle) {
+}
+
+TEST(trie, extract_reinsertion) {
+}
+
+TEST(trie, extract_reinsertion_key_change) {
+}
+
+TEST(trie, node_type_properties) {
+}
+
 TEST(trie, DISABLED_does_not_leak) {
     EXPECT_TRUE(false) << "Not implemented";
 }
