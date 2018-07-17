@@ -69,22 +69,21 @@ public:
     using pointer         = typename allocator_traits::pointer;
     using const_pointer   = typename allocator_traits::const_pointer;
 
-    class node_type;
 private:
-    using handle_allocator_type = typename detail::rebind<allocator_type, node_type>::type;
+    class node_handle;
+    using handle_allocator_type = typename detail::rebind<allocator_type, node_handle>::type;
     using handle_allocator_traits = std::allocator_traits<handle_allocator_type>;
-public:
-    class node_type {
+    class node_handle {
     public:
         using key_type       = trie::key_type;
         using mapped_type    = trie::mapped_type;
         using value_type     = trie::value_type;
         using allocator_type = trie::allocator_type;
 
-        constexpr node_type(allocator_type allocator) :
+        constexpr node_handle(allocator_type allocator) :
             value_(nullptr), allocator_(std::move(allocator))
         {} 
-        node_type(node_type&&) = default;
+        node_handle(node_handle&&) = default;
 
         bool             empty() const { return value == nullptr; }
         explicit operator bool() const { return !empty(); }
@@ -93,11 +92,11 @@ public:
         mapped_type&    mapped() const { return  value_->second; }
         value_type&     value()  const { return *value_; }
 
-        void swap(node_type& nh) {
+        void swap(node_handle& nh) {
             std::swap(value_,     nh.value_);
             std::swap(allocator_, nh.allocator_);
         }
-        friend void swap(node_type& x, node_type& y) {
+        friend void swap(node_handle& x, node_handle& y) {
             x.swap(y);
         }
 
@@ -107,24 +106,24 @@ public:
 
         friend class trie;
     };
-private:
+
     struct trie_node;
     using node_allocator_type = typename detail::rebind<allocator_type, trie_node>::type;
     using node_allocator_traits = std::allocator_traits<node_allocator_type>;
     struct trie_node {
-        std::array<trie_node*, R> children_ = { nullptr };
-        trie_node*                parent_   = nullptr;
-        node_type*                handle_   = nullptr;
+        std::array<trie_node*, R> children = { nullptr };
+        trie_node*                parent   = nullptr;
+        node_handle*              handle   = nullptr;
 
         void destroy(
             handle_allocator_type& handle_allocator, node_allocator_type& node_allocator
         ) {
-            if (handle_ != nullptr) {
-                handle_allocator_traits::deallocate(handle_allocator, handle_, 1);
-                handle_ = nullptr;
+            if (handle != nullptr) {
+                handle_allocator_traits::deallocate(handle_allocator, handle, 1);
+                handle = nullptr;
             }
 
-            for (auto& child : children_) {
+            for (auto& child : children) {
                 if (child != nullptr) {
                     child->destroy(handle_allocator, node_allocator);
                     node_allocator_traits::deallocate(node_allocator, child, 1);
@@ -135,6 +134,8 @@ private:
     };
 
 public:
+    using node_type = node_handle;
+
     trie() { init_base_root(); }
     explicit trie(key_mapper f, allocator_type allocator = allocator_type()) :
         key_map_(std::move(f)), allocator_(std::move(allocator))
@@ -221,24 +222,24 @@ public:
         generic_iterator& operator++() {
             do {
                 *this = next(std::move(*this));
-            } while(this->node_->handle_ == nullptr && !positions_.empty());
+            } while(this->node_->handle == nullptr && !positions_.empty());
             return *this;
         }
 
         generic_iterator operator++(int) {
             generic_iterator it = next(*this);
-            while (it.node_->handle_ == nullptr && !positions_.empty()) {
+            while (it.node_->handle == nullptr && !positions_.empty()) {
                 it = next(it);
             }
             return it;
         }
 
         reference operator*() const {
-            return *(node_->handle_->value_);
+            return *(node_->handle->value_);
         }
 
         pointer operator->() const {
-            return node_->handle_->value_;
+            return node_->handle->value_;
         }
 
         bool operator==(const generic_iterator& other) const {
@@ -261,8 +262,8 @@ public:
         static std::pair<generic_iterator, bool>
         step_down(generic_iterator it) {
             for (size_type pos = 0; pos < R; ++pos) {
-                if (it.node_->children_[pos] != nullptr) {
-                    it.node_ = it.node_->children_[pos];
+                if (it.node_->children[pos] != nullptr) {
+                    it.node_ = it.node_->children[pos];
                     it.positions_.push(pos);
                     return {it, true};
                 }
@@ -275,9 +276,9 @@ public:
             if (it.positions_.empty()) return {it, false};
 
             for (size_type pos = it.positions_.top() + 1; pos < R; ++pos) {
-                trie_node* parent = it.node_->parent_;
-                if (parent->children_[pos] != nullptr) {
-                    it.node_ = parent->children_[pos];
+                trie_node* parent = it.node_->parent;
+                if (parent->children[pos] != nullptr) {
+                    it.node_ = parent->children[pos];
                     it.positions_.top() = pos;
                     return {it, true};
                 }
@@ -287,7 +288,7 @@ public:
 
         static std::pair<generic_iterator, bool>
         step_up(generic_iterator it) {
-            it.node_ = it.node_->parent_;
+            it.node_ = it.node_->parent;
             it.positions_.pop();
             return step_right(it);
         }
@@ -331,8 +332,8 @@ public:
 
     bool empty() const {
         return std::all_of(
-            root_.children_.begin(),
-            root_.children_.end(),
+            root_.children.begin(),
+            root_.children.end(),
             [](trie_node* child) { return child == nullptr; }
         );
     }
@@ -369,7 +370,7 @@ public:
 
     template <typename... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {
-        node_type* nh = make_handle(std::forward<Args>(args)...);
+        node_handle* nh = make_handle(std::forward<Args>(args)...);
 
         iterator it = find(nh->key());
         if (it != end()) {
@@ -471,13 +472,13 @@ private:
     key_mapper            key_map_;
 
     void init_base_root() {
-        root_.parent_ = &base_;
-        base_.children_[0] = &root_;
+        root_.parent = &base_;
+        base_.children[0] = &root_;
     }
 
     template <typename... Args>
-    node_type* make_handle(Args&&... args) {
-        node_type* handle = handle_allocator_traits::allocate(handle_allocator_, 1);
+    node_handle* make_handle(Args&&... args) {
+        node_handle* handle = handle_allocator_traits::allocate(handle_allocator_, 1);
         handle_allocator_traits::construct(handle_allocator_, handle, handle_allocator_);
         handle->value_ = allocator_traits::allocate(allocator_, 1);
         allocator_traits::construct(allocator_, handle->value_, std::forward<Args>(args)...);
@@ -487,7 +488,7 @@ private:
     trie_node* make_trie_node(trie_node* parent) {
         trie_node* node = node_allocator_traits::allocate(node_allocator_, 1);
         node_allocator_traits::construct(node_allocator_, node);
-        node->parent_ = parent;
+        node->parent = parent;
         return node;
     }
 
@@ -496,15 +497,15 @@ private:
         trie_node* parent,
         const key_type& key,
         size_type index,
-        node_type* nh
+        node_handle* nh
     ) {
         if (root == nullptr) root = make_trie_node(parent);
 
         if (index == key.size()) {
-            if (root->handle_ == nullptr) root->handle_ = nh;
-            else                          handle_allocator_traits::deallocate(handle_allocator_, nh, 1);
+            if (root->handle == nullptr) root->handle = nh;
+            else                         handle_allocator_traits::deallocate(handle_allocator_, nh, 1);
         } else {
-            auto& child = root->children_[key_map_(key[index])];
+            auto& child = root->children[key_map_(key[index])];
             child = insert_handle(child, root, key, index + 1, nh);
         }
 
@@ -535,16 +536,16 @@ private:
         if (cur == last) return it;
 
         size_type index = f(*cur);
-        it.node_ = it.node_->children_[index];
+        it.node_ = it.node_->children[index];
         it.positions_.push(index);
         return find_key(std::move(it), std::move(end), f, ++cur, last);
     }
 
     static void count_keys(const trie_node* root, size_type& count) {
-        for (auto& child : root->children_) {
+        for (auto& child : root->children) {
             if (child != nullptr) {
                 count_keys(child, count);
-                if (child->handle_ != nullptr) count += 1;
+                if (child->handle != nullptr) count += 1;
             }
         }
     }
