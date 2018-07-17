@@ -175,14 +175,9 @@ public:
     }
 
     mapped_type& operator[](const key_type& key) {
-        create_node(
-            &root_,
-            &base_,
-            key,
-            0, 
-            std::piecewise_construct,
-            std::tuple<const key_type&>(key),
-            std::tuple<>()
+        insert_node(
+            &root_, &base_, key, 0, 
+            make_value(std::piecewise_construct, std::tuple<const key_type&>(key), std::tuple<>())
         );
         iterator it = find(key);
         return it->second;
@@ -364,7 +359,7 @@ public:
 
     template <typename... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {
-        value_type* ptr = allocate_and_emplace(std::forward<Args>(args)...);
+        value_type* ptr = make_value(std::forward<Args>(args)...);
 
         iterator it = find(ptr->first);
         if (it != end()) {
@@ -402,7 +397,7 @@ public:
         iterator it = find(value.first);
         if (it != end()) return {it, false};
 
-        create_node(&root_, &base_, value.first, 0, value);
+        insert_node(&root_, &base_, value.first, 0, make_value(value));
         return {find(value.first), true};
     }
     template <typename InputIt>
@@ -470,7 +465,7 @@ private:
     }
 
     template <typename... Args>
-    value_type* allocate_and_emplace(Args&&... args) {
+    value_type* make_value(Args&&... args) {
         value_type* value = allocator_traits::allocate(allocator_, 1);
         allocator_traits::construct(
             allocator_, value, std::forward<Args>(args)...
@@ -478,21 +473,7 @@ private:
         return value;
     }
 
-    template <typename... Args>
-    node_type* create_node(
-        node_type* root,
-        node_type* parent,
-        const key_type& key,
-        size_type index,
-        Args&&... args
-    ) {
-        return insert_node(
-            root, parent, key, index,
-            allocate_and_emplace(std::forward<Args>(args)...)
-        );
-    }
-
-    node_type* create_node_type() {
+    node_type* make_trie_node() {
         node_type* node = node_allocator_traits::allocate(node_allocator_, 1);
         node_allocator_traits::construct(node_allocator_, node);
         return node;
@@ -506,13 +487,13 @@ private:
         value_type* ptr
     ) {
         if (root == nullptr) {
-            root = create_node_type();
+            root = make_trie_node();
             root->parent_ = parent;
         }
 
         if (index == key.size()) {
             if (root->value_ == nullptr) root->value_ = ptr;
-            else                        allocator_traits::deallocate(allocator_, ptr, 1);
+            else                         allocator_traits::deallocate(allocator_, ptr, 1);
         } else {
             auto& child = root->children_[key_map_(key[index])];
             child = insert_node(child, root, key, index + 1, ptr);
