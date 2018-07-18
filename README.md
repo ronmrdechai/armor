@@ -12,7 +12,7 @@ near future:
 - [ ] `tst_map` - An implementation of a Ternary Search Tree based map.
 - [ ] `ctrie_map` - An implementation of a compressed Trie based map.
 - [ ] `ptrie_map` - An implementation of a PARTICIA Trie based map.
-- [ ] `htrie_map` - An implementation of a HAT Trie based map.
+- [ ] `htrie_map` - An implementation of a [HAT Trie](http://crpit.com/confpapers/CRPITV62Askitis.pdf) based map.
 - [ ] `trie_set` - A Trie based map to set adaptor.
 
 ## Building Tests and Benchmarks
