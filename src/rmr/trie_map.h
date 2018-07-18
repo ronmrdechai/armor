@@ -7,9 +7,9 @@
 #include <string>
 #include <stack>
 
-#include <moat/functors.h>
+#include <rmr/functors.h>
 
-namespace moat {
+namespace rmr {
 
 namespace detail {
 
@@ -21,27 +21,6 @@ struct rebind<Type<Inner>, New> {
 
 } // namespace detail
 
-/**
- * An implementation of an R-way Trie.
- * A Trie is an insertion efficient string-based associative container.
- * Insertion is linearly dependent on the size of the key. Tries also support
- * prefix-based queries such as 'all keys with prefix' or 'key with longest
- * prefix of'.
- *
- * @tparam T          The value of keys contained in this trie.
- * @tparam R          The radix of this trie's strings.
- * @tparam KeyMapper  A function object to map from a key character to a value
- *                    within the range (0, R].
- * @tparam Key        The type of the trie keys.
- * @tparam Allocator  An allocator to type use when inserting or removing
- *                    values.
- *
- * Examples of trie instantiations are:
- * - `using ascii_trie = trie<T, 127;`
- * - `using lowercase_trie = trie<T, 26, count_from<char, 'a'>;`
- * - `using uppercase_trie = trie<T, 26, count_from<char, 'A'>;`
- * - `using dna_trie = trie<T, 4, indexed<char, 'A', 'C', 'G', 'T'>;`
- */
 template <
     typename T,
     std::size_t R,
@@ -49,7 +28,7 @@ template <
     typename Key = std::string,
     typename Allocator = std::allocator<std::pair<const Key, T>>
 >
-class trie {
+class trie_map {
     using allocator_traits = std::allocator_traits<Allocator>;
     static_assert(
         std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>, 
@@ -69,21 +48,23 @@ public:
     using pointer         = typename allocator_traits::pointer;
     using const_pointer   = typename allocator_traits::const_pointer;
 
+public:
+    class node_type;
 private:
-    class node_handle;
-    using handle_allocator_type = typename detail::rebind<allocator_type, node_handle>::type;
+    using handle_allocator_type = typename detail::rebind<allocator_type, node_type>::type;
     using handle_allocator_traits = std::allocator_traits<handle_allocator_type>;
-    class node_handle {
+public:
+    class node_type {
     public:
-        using key_type       = trie::key_type;
-        using mapped_type    = trie::mapped_type;
-        using value_type     = trie::value_type;
-        using allocator_type = trie::allocator_type;
+        using key_type       = trie_map::key_type;
+        using mapped_type    = trie_map::mapped_type;
+        using value_type     = trie_map::value_type;
+        using allocator_type = trie_map::allocator_type;
 
-        constexpr node_handle(allocator_type allocator) :
+        constexpr node_type(allocator_type allocator) :
             value_(nullptr), allocator_(std::move(allocator))
         {} 
-        node_handle(node_handle&&) = default;
+        node_type(node_type&&) = default;
 
         bool             empty() const { return value == nullptr; }
         explicit operator bool() const { return !empty(); }
@@ -92,11 +73,11 @@ private:
         mapped_type&    mapped() const { return value_->second; }
         value_type&     value()  const { return *value_; }
 
-        void swap(node_handle& nh) {
+        void swap(node_type& nh) {
             std::swap(value_,     nh.value_);
             std::swap(allocator_, nh.allocator_);
         }
-        friend void swap(node_handle& x, node_handle& y) {
+        friend void swap(node_type& x, node_type& y) {
             x.swap(y);
         }
 
@@ -104,16 +85,16 @@ private:
         pointer                              value_;
         std::optional<handle_allocator_type> allocator_;
 
-        friend class trie;
+        friend class trie_map;
     };
 
-    struct trie_node;
-    using node_allocator_type = typename detail::rebind<allocator_type, trie_node>::type;
+    struct link_type;
+    using node_allocator_type = typename detail::rebind<allocator_type, link_type>::type;
     using node_allocator_traits = std::allocator_traits<node_allocator_type>;
-    struct trie_node {
-        std::array<trie_node*, R> children = { nullptr };
-        trie_node*                parent   = nullptr;
-        node_handle*              handle   = nullptr;
+    struct link_type {
+        std::array<link_type*, R> children = { nullptr };
+        link_type*                parent   = nullptr;
+        node_type*                handle   = nullptr;
 
         void destroy(
             handle_allocator_type& handle_allocator, node_allocator_type& node_allocator
@@ -134,18 +115,16 @@ private:
     };
 
 public:
-    using node_type = node_handle;
-
-    trie() { init_base_root(); }
-    explicit trie(key_mapper f, allocator_type allocator = allocator_type()) :
+    trie_map() { init_base_root(); }
+    explicit trie_map(key_mapper f, allocator_type allocator = allocator_type()) :
         key_map_(std::move(f)), allocator_(std::move(allocator))
     { init_base_root(); }
-    explicit trie(allocator_type allocator) :
+    explicit trie_map(allocator_type allocator) :
         allocator_(std::move(allocator)) 
     { init_base_root(); }
 
-    trie(trie&&) = default;
-    trie(trie&& other, allocator_type allocator) :
+    trie_map(trie_map&&) = default;
+    trie_map(trie_map&& other, allocator_type allocator) :
         base_(std::move(other.base_)),
         root_(std::move(other.root_)),
         allocator_(std::move(allocator)),
@@ -153,7 +132,7 @@ public:
     {}
 
     template <typename InputIt>
-    trie(
+    trie_map(
         InputIt first,
         InputIt last,
         key_mapper f = key_mapper(),
@@ -163,24 +142,24 @@ public:
         for (auto cur = first; cur != last; ++cur) insert(*cur);
     }
 
-    trie(
+    trie_map(
         std::initializer_list<value_type> init,
         key_mapper f = key_mapper(),
         allocator_type allocator = allocator_type()
-    ) : trie(init.begin(), init.end(), std::move(f), std::move(allocator)) {}
-    trie(std::initializer_list<value_type> init, allocator_type allocator) :
-        trie(init.begin(), init.end(), key_mapper(), std::move(allocator))
+    ) : trie_map(init.begin(), init.end(), std::move(f), std::move(allocator)) {}
+    trie_map(std::initializer_list<value_type> init, allocator_type allocator) :
+        trie_map(init.begin(), init.end(), key_mapper(), std::move(allocator))
     {}
 
-    trie(const trie& other) : trie(other.begin(), other.end()) {}
-    trie(const trie& other, allocator_type allocator) :
-        trie(other.begin(), other.end(), std::move(allocator))
+    trie_map(const trie_map& other) : trie_map(other.begin(), other.end()) {}
+    trie_map(const trie_map& other, allocator_type allocator) :
+        trie_map(other.begin(), other.end(), std::move(allocator))
     {}
 
-    ~trie() { root_.destroy(handle_allocator_, node_allocator_); }
+    ~trie_map() { root_.destroy(handle_allocator_, node_allocator_); }
 
-    trie& operator=(trie&&) = default;
-    trie& operator=(const trie&& other) {
+    trie_map& operator=(trie_map&&) = default;
+    trie_map& operator=(const trie_map&& other) {
         clear();
         insert(other.begin(), other.end());
     }
@@ -196,12 +175,12 @@ public:
 
     mapped_type& at(const key_type& key) {
         iterator it = find(key);
-        if (it == end()) throw std::out_of_range("moat::trie::at");
+        if (it == end()) throw std::out_of_range("rmr::trie_map::at");
         return it->second;
     }
     const mapped_type& at(const key_type& key) const {
         const_iterator it = find(key);
-        if (it == end()) throw std::out_of_range("moat::trie::at");
+        if (it == end()) throw std::out_of_range("rmr::trie_map::at");
         return it->second;
     }
 
@@ -209,9 +188,9 @@ public:
     class generic_iterator {
     public:
         using difference_type   = std::ptrdiff_t;
-        using value_type        = typename trie::value_type;
-        using reference         = typename trie::reference;
-        using pointer           = typename trie::pointer;
+        using value_type        = typename trie_map::value_type;
+        using reference         = typename trie_map::reference;
+        using pointer           = typename trie_map::pointer;
         using iterator_category = std::forward_iterator_tag;
 
         generic_iterator() = default;
@@ -276,7 +255,7 @@ public:
             if (it.positions_.empty()) return {it, false};
 
             for (size_type pos = it.positions_.top() + 1; pos < R; ++pos) {
-                trie_node* parent = it.node_->parent;
+                link_type* parent = it.node_->parent;
                 if (parent->children[pos] != nullptr) {
                     it.node_ = parent->children[pos];
                     it.positions_.top() = pos;
@@ -308,11 +287,11 @@ public:
             return it;
         }
 
-        friend class trie;
+        friend class trie_map;
     };
 
-    using iterator = generic_iterator<trie_node>;
-    using const_iterator = generic_iterator<const trie_node>;
+    using iterator = generic_iterator<link_type>;
+    using const_iterator = generic_iterator<const link_type>;
 
     iterator begin() {
         if (empty()) return end();
@@ -334,7 +313,7 @@ public:
         return std::all_of(
             root_.children.begin(),
             root_.children.end(),
-            [](trie_node* child) { return child == nullptr; }
+            [](link_type* child) { return child == nullptr; }
         );
     }
 
@@ -370,7 +349,7 @@ public:
 
     template <typename... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {
-        node_handle* nh = make_handle(std::forward<Args>(args)...);
+        node_type* nh = make_handle(std::forward<Args>(args)...);
 
         iterator it = find(nh->key());
         if (it != end()) {
@@ -428,7 +407,7 @@ public:
     // - merge
     // - deduction guides
     
-    bool operator==(const trie& other) const {
+    bool operator==(const trie_map& other) const {
         for (
             auto it1 = begin(), it2 = other.begin();
             it1 != end() && it2 != other.end();
@@ -439,11 +418,11 @@ public:
         }
         return true;
     }
-    bool operator!=(const trie& other) const {
+    bool operator!=(const trie_map& other) const {
         return !(*this == other);
     }
 
-    void swap(trie& other) {
+    void swap(trie_map& other) {
         using std::swap;
 
         swap(base_, other.base_);
@@ -451,7 +430,7 @@ public:
         swap(allocator_, other.allocator_);
         swap(key_map_, other.key_map_);
     }
-    friend void swap(trie& lhs, trie& rhs) {
+    friend void swap(trie_map& lhs, trie_map& rhs) {
         lhs.swap(rhs);
     }
 
@@ -466,7 +445,7 @@ public:
 
     iterator erase(const_iterator pos);
     iterator erase(iterator pos) {
-        trie_node* parent = pos.node_->parent;
+        link_type* parent = pos.node_->parent;
         iterator ret = std::next(pos);
 
         while (parent != nullptr && parent->parent->handle == nullptr) parent = parent->parent;
@@ -490,8 +469,8 @@ public:
     key_mapper     key_map()       const { return key_map_; }
 
 private:
-    trie_node             base_;
-    trie_node             root_;
+    link_type             base_;
+    link_type             root_;
     allocator_type        allocator_;
     node_allocator_type   node_allocator_;
     handle_allocator_type handle_allocator_;
@@ -503,29 +482,29 @@ private:
     }
 
     template <typename... Args>
-    node_handle* make_handle(Args&&... args) {
-        node_handle* handle = handle_allocator_traits::allocate(handle_allocator_, 1);
+    node_type* make_handle(Args&&... args) {
+        node_type* handle = handle_allocator_traits::allocate(handle_allocator_, 1);
         handle_allocator_traits::construct(handle_allocator_, handle, handle_allocator_);
         handle->value_ = allocator_traits::allocate(allocator_, 1);
         allocator_traits::construct(allocator_, handle->value_, std::forward<Args>(args)...);
         return handle;
     }
 
-    trie_node* make_trie_node(trie_node* parent) {
-        trie_node* node = node_allocator_traits::allocate(node_allocator_, 1);
+    link_type* make_link_type(link_type* parent) {
+        link_type* node = node_allocator_traits::allocate(node_allocator_, 1);
         node_allocator_traits::construct(node_allocator_, node);
         node->parent = parent;
         return node;
     }
 
-    trie_node* insert_handle(
-        trie_node* root,
-        trie_node* parent,
+    link_type* insert_handle(
+        link_type* root,
+        link_type* parent,
         const key_type& key,
         size_type index,
-        node_handle* nh
+        node_type* nh
     ) {
-        if (root == nullptr) root = make_trie_node(parent);
+        if (root == nullptr) root = make_link_type(parent);
 
         if (index == key.size()) {
             if (root->handle == nullptr) root->handle = nh;
@@ -566,7 +545,7 @@ private:
         return find_key(std::move(it), std::move(end), f, ++cur, last);
     }
 
-    static void count_keys(const trie_node* root, size_type& count) {
+    static void count_keys(const link_type* root, size_type& count) {
         for (auto& child : root->children) {
             if (child != nullptr) {
                 count_keys(child, count);
@@ -576,4 +555,4 @@ private:
     }
 };
 
-} // namespace moat
+} // namespace rmr

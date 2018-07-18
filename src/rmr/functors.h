@@ -1,6 +1,6 @@
 #pragma once
 
-namespace moat {
+namespace rmr {
 
 template <typename T>
 struct identity { T operator()(T v) const { return v; } };
@@ -34,4 +34,4 @@ struct indexed {
     }
 };
 
-} // namespace moat
+} // namespace rmr

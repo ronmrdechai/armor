@@ -1,23 +1,23 @@
 cmake_minimum_required(VERSION 3.11)
 
 # Configure version.
-if(NOT DEFINED Moat_VERSION_MAJOR)
-    set(Moat_VERSION_MAJOR 0)
+if(NOT DEFINED Armor_VERSION_MAJOR)
+    set(Armor_VERSION_MAJOR 0)
 endif()
-if(NOT DEFINED Moat_VERSION_MINOR)
-    set(Moat_VERSION_MINOR 1)
+if(NOT DEFINED Armor_VERSION_MINOR)
+    set(Armor_VERSION_MINOR 1)
 endif()
-if(NOT DEFINED Moat_VERSION_PATCH)
-    set(Moat_VERSION_PATCH 0)
+if(NOT DEFINED Armor_VERSION_PATCH)
+    set(Armor_VERSION_PATCH 0)
 endif()
 if (NOT PACKAGE_VERSION)
     set(PACKAGE_VERSION
-        "${Moat_VERSION_MAJOR}.${Moat_VERSION_MINOR}.${Moat_VERSION_PATCH}"
+        "${Armor_VERSION_MAJOR}.${Armor_VERSION_MINOR}.${Armor_VERSION_PATCH}"
     )
 endif()
 
-project(Moat
-    VERSION "${Moat_VERSION_MAJOR}.${Moat_VERSION_MINOR}.${Moat_VERSION_PATCH}"
+project(Armor
+    VERSION "${Armor_VERSION_MAJOR}.${Armor_VERSION_MINOR}.${Armor_VERSION_PATCH}"
     LANGUAGES CXX
 )
 
@@ -38,11 +38,11 @@ set(CMAKE_CXX_FLAGS_DEBUG       "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE     "-O3 -funroll-loops -march=native")
 
 # Configure CPack.
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "moat")
-set(CPACK_PACKAGE_VENDOR "moat")
-set(CPACK_PACKAGE_VERSION_MAJOR ${Moat_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${Moat_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${Moat_VERSION_PATCH})
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "armor")
+set(CPACK_PACKAGE_VENDOR "armor")
+set(CPACK_PACKAGE_VERSION_MAJOR ${Armor_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${Armor_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${Armor_VERSION_PATCH})
 set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.TXT")
 include(CPack)
@@ -50,13 +50,13 @@ include(CPack)
 include_directories(src)
 add_subdirectory(src)
 
-option(MOAT_INCLUDE_TESTS "Generate build targets for the Moat unit tests." OFF)
+option(ARMOR_INCLUDE_TESTS "Generate build targets for the Armor unit tests." OFF)
 enable_testing()
-if(MOAT_INCLUDE_TESTS)
+if(ARMOR_INCLUDE_TESTS)
     add_subdirectory(test)
 endif()
 
-option(MOAT_INCLUDE_BENCHMARKS "Generate build targets for the Moat benchmarks." OFF)
-if(MOAT_INCLUDE_BENCHMARKS)
+option(ARMOR_INCLUDE_BENCHMARKS "Generate build targets for the Armor benchmarks." OFF)
+if(ARMOR_INCLUDE_BENCHMARKS)
     add_subdirectory(bench)
 endif()
