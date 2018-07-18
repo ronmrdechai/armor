@@ -1,4 +1,4 @@
-# Armor: An STL-compliant header-only C++ library
+# Armor: An STL-compliant header-only C++ container library
 
 _Armor_ is a C++ library containing various non-standard containers and
 algorithms. Many different implementations of the same concepts exist, and all
