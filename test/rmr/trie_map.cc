@@ -316,31 +316,110 @@ TEST(trie_map, swap_and_modify) {
 }
 
 TEST(trie_map, erase_not_empty) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+
+    t.erase("foo");
+
+    ASSERT_THROW(t.at("foo") = 1, std::out_of_range);
+    EXPECT_EQ(1u, t.count("bar"));
+    EXPECT_EQ(1u, t.count("baz"));
+
+    t.erase("bar");
+    ASSERT_THROW(t.at("bar") = 1, std::out_of_range);
+    EXPECT_EQ(1u, t.count("baz"));
 }
 
 TEST(trie_map, erase_empty) {
+    trie_map t{ {"foo", 1} };
+
+    t.erase("foo");
+
+    ASSERT_THROW(t.at("foo") = 1, std::out_of_range);
+    // make sure trie_map still works
+    t["bar"] = 1;
+    EXPECT_EQ(1u, t.count("bar"));
+}
+
+TEST(trie_map, erase_const_iterator) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+
+    typename trie_map::const_iterator it = const_cast<const trie_map&>(t).find("foo");
+    t.erase(it);
+
+    ASSERT_THROW(t.at("foo") = 1, std::out_of_range);
+    EXPECT_EQ(1u, t.count("bar"));
+    EXPECT_EQ(1u, t.count("baz"));
 }
 
 TEST(trie_map, erase_size_drop) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+    size_t size = t.size();
+    t.erase("foo");
+    EXPECT_EQ(size - 1, t.size());
 }
 
 TEST(trie_map, erase_non_existant) {
+    trie_map t{ {"bar", 1}, {"baz", 1} };
+    EXPECT_EQ(0u, t.erase("foo"));
+}
+
+template <typename> class tester;
+
+TEST(trie_map, erase_range) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"bax", 1}, {"bay", 1}, {"baz", 1} };
+
+    auto first = const_cast<const trie_map&>(t).find("bar");
+    auto last  = const_cast<const trie_map&>(t).find("baz");
+
+    t.erase(first, last);
+
+    EXPECT_EQ(1u, t.count("foo"));
+    EXPECT_EQ(1u, t.count("baz"));
+    ASSERT_THROW(t.at("bar") = 1, std::out_of_range);
+    ASSERT_THROW(t.at("bax") = 1, std::out_of_range);
+    ASSERT_THROW(t.at("bay") = 1, std::out_of_range);
+}
+
+TEST(trie_map, erase_empty_range) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+
+    auto first = const_cast<const trie_map&>(t).find("foo");
+    auto last  = const_cast<const trie_map&>(t).find("foo");
+
+    t.erase(first, last);
+
+    EXPECT_EQ(1u, t.count("foo"));
+    EXPECT_EQ(1u, t.count("bar"));
+    EXPECT_EQ(1u, t.count("baz"));
+}
+
+TEST(trie_map, erase_returns_iterator) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"bax", 1}, {"bay", 1}, {"baz", 1} };
+    auto it = t.erase(t.find("bar"));
+
+    EXPECT_EQ("bax", it->first);
 }
 
 TEST(trie_map, extract_erases) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+    t.extract("foo");
+
+    ASSERT_THROW(t.at("foo") = 1, std::out_of_range);
 }
 
 TEST(trie_map, extract_gives_valid_handle) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+    auto nh = t.extract("foo");
+
+    EXPECT_EQ("foo", nh.key());
+    EXPECT_EQ(1, nh.mapped());
 }
 
-TEST(trie_map, extract_reinsertion) {
-}
+TEST(trie_map, extract_reinsertion) {}
+TEST(trie_map, extract_reinsertion_key_change) {}
 
-TEST(trie_map, extract_reinsertion_key_change) {
-}
-
-TEST(trie_map, node_type_properties) {
-}
+TEST(trie_map, get_allocator) {}
+TEST(trie_map, get_key_map) {}
 
 TEST(trie_map, DISABLED_does_not_leak) {
     EXPECT_TRUE(false) << "Not implemented";
