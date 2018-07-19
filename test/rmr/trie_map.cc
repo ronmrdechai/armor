@@ -132,7 +132,15 @@ TEST(trie_map, try_emplace_twice) {
 
 TEST(trie_map, insert_and_access) {
     trie_map t;
-    t.insert( {"foo", 1} );
+    typename trie_map::value_type v{"foo", 1};
+    t.insert(v);
+    EXPECT_EQ(1, t["foo"]);
+}
+
+TEST(trie_map, insert_move_and_access) {
+    trie_map t;
+    typename trie_map::value_type v{"foo", 1};
+    t.insert(std::move(v));
     EXPECT_EQ(1, t["foo"]);
 }
 
@@ -415,8 +423,45 @@ TEST(trie_map, extract_gives_valid_handle) {
     EXPECT_EQ(1, nh.mapped());
 }
 
-TEST(trie_map, extract_reinsertion) {}
-TEST(trie_map, extract_reinsertion_key_change) {}
+TEST(trie_map, extract_reinsertion) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+    auto nh = t.extract("foo");
+
+    t.insert(std::move(nh));
+    EXPECT_EQ(1, t["foo"]);
+}
+
+TEST(trie_map, extract_reinsertion_key_change) {
+    trie_map t{ {"foo", 42}, {"bar", 1}, {"baz", 1} };
+    auto nh = t.extract("foo");
+    nh.key() = "quux";
+
+    t.insert(std::move(nh));
+    EXPECT_EQ(42, t["quux"]);
+}
+
+TEST(trie_map, reinsertion_return_value) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+
+    auto nh = t.extract("foo");
+    auto ret = t.insert(std::move(nh));
+    EXPECT_EQ(t.find("foo"), ret.position);
+    EXPECT_TRUE(ret.inserted);
+    EXPECT_TRUE(ret.node.empty());
+
+    auto empty_nh = std::move(ret.node);
+    ret = t.insert(std::move(empty_nh));
+    EXPECT_EQ(t.end(), ret.position);
+    EXPECT_FALSE(ret.inserted);
+    EXPECT_TRUE(ret.node.empty());
+
+    trie_map s{ {"foo", 1} };
+    auto existing_nh = s.extract("foo");
+    ret = t.insert(std::move(existing_nh));
+    EXPECT_EQ(t.find("foo"), ret.position);
+    EXPECT_FALSE(ret.inserted);
+    EXPECT_FALSE(ret.node.empty());
+}
 
 TEST(trie_map, get_allocator) {}
 TEST(trie_map, get_key_map) {}

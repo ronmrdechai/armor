@@ -51,8 +51,8 @@ public:
 public:
     class node_type;
 private:
-    using handle_allocator_type = typename detail::rebind<allocator_type, node_type>::type;
-    using handle_allocator_traits = std::allocator_traits<handle_allocator_type>;
+    using node_allocator_type = typename detail::rebind<allocator_type, node_type>::type;
+    using node_allocator_traits = std::allocator_traits<node_allocator_type>;
 public:
     class node_type {
     public:
@@ -61,12 +61,14 @@ public:
         using value_type     = trie_map::value_type;
         using allocator_type = trie_map::allocator_type;
 
+        constexpr node_type() : value_(nullptr) {}
         constexpr node_type(allocator_type allocator) :
             value_(nullptr), allocator_(std::move(allocator))
         {} 
         node_type(node_type&&) = default;
+        node_type& operator=(node_type&&) = default;
 
-        bool             empty() const { return value == nullptr; }
+        bool             empty() const { return value_ == nullptr; }
         explicit operator bool() const { return !empty(); }
 
         key_type&       key()    const { return const_cast<key_type&>(value_->first); }
@@ -83,7 +85,7 @@ public:
 
     private:
         pointer                              value_;
-        std::optional<handle_allocator_type> allocator_;
+        std::optional<node_allocator_type> allocator_;
 
         friend class trie_map;
     };
@@ -97,16 +99,16 @@ public:
         node_type*                handle   = nullptr;
 
         void destroy(
-            handle_allocator_type& handle_allocator, link_allocator_type& link_allocator
+            node_allocator_type& node_allocator, link_allocator_type& link_allocator
         ) {
             if (handle != nullptr) {
-                handle_allocator_traits::deallocate(handle_allocator, handle, 1);
+                node_allocator_traits::deallocate(node_allocator, handle, 1);
                 handle = nullptr;
             }
 
             for (auto& child : children) {
                 if (child != nullptr) {
-                    child->destroy(handle_allocator, link_allocator);
+                    child->destroy(node_allocator, link_allocator);
                     link_allocator_traits::deallocate(link_allocator, child, 1);
                     child = nullptr;
                 }
@@ -156,7 +158,7 @@ public:
         trie_map(other.begin(), other.end(), std::move(allocator))
     {}
 
-    ~trie_map() { root_.destroy(handle_allocator_, link_allocator_); }
+    ~trie_map() { root_.destroy(node_allocator_, link_allocator_); }
 
     trie_map& operator=(trie_map&&) = default;
     trie_map& operator=(const trie_map&& other) {
@@ -329,7 +331,7 @@ public:
     }
 
     void clear() {
-       root_.destroy(handle_allocator_, link_allocator_);
+       root_.destroy(node_allocator_, link_allocator_);
     }
 
     size_type count(const key_type& key) const {
@@ -358,7 +360,7 @@ public:
 
         iterator it = find(nh->key());
         if (it != end()) {
-            handle_allocator_traits::deallocate(handle_allocator_, nh, 1);
+            node_allocator_traits::deallocate(node_allocator_, nh, 1);
             return {it, false};
         }
 
@@ -398,6 +400,34 @@ public:
 
         insert_handle(&root_, &base_, value.first, 0, make_handle(value));
         return {find(value.first), true};
+    }
+    std::pair<iterator, bool> insert(value_type&& value) {
+        iterator it = find(value.first);
+        if (it != end()) return {it, false};
+
+        insert_handle(&root_, &base_, value.first, 0, make_handle(std::move(value)));
+        return {find(value.first), true};
+    }
+    insert_return_type insert(node_type&& nh) {
+        insert_return_type ret{};
+        if (nh.empty()) {
+            ret.position = end();
+            ret.inserted = false;
+            return ret;
+        }
+        // ASSERT nh.get_allocator() == node_allocator_
+
+        auto [it, inserted] = insert(nh.value());
+        if (inserted) {
+            ret.position = it;
+            nh.value_ = nullptr;
+            ret.inserted = true;
+        } else {
+            ret.node = std::move(nh);
+            ret.position = it;
+            ret.inserted = false;
+        }
+        return ret;
     }
 
     template <typename InputIt>
@@ -473,7 +503,7 @@ public:
         }
 
         auto& parent = pos.link_->parent;
-        pos.link_->destroy(handle_allocator_, link_allocator_);
+        pos.link_->destroy(node_allocator_, link_allocator_);
         if (pos.link_ != &root_) {
             parent->children[child] = nullptr;
             link_allocator_traits::deallocate(link_allocator_, pos.link_, 1);
@@ -498,12 +528,12 @@ public:
     key_mapper     key_map()       const { return key_map_; }
 
 private:
-    link_type             base_;
-    link_type             root_;
-    allocator_type        allocator_;
-    link_allocator_type   link_allocator_;
-    handle_allocator_type handle_allocator_;
-    key_mapper            key_map_;
+    link_type            base_;
+    link_type            root_;
+    allocator_type       allocator_;
+    link_allocator_type  link_allocator_;
+    node_allocator_type  node_allocator_;
+    key_mapper           key_map_;
 
     void init_base_root() {
         root_.parent = &base_;
@@ -512,8 +542,8 @@ private:
 
     template <typename... Args>
     node_type* make_handle(Args&&... args) {
-        node_type* handle = handle_allocator_traits::allocate(handle_allocator_, 1);
-        handle_allocator_traits::construct(handle_allocator_, handle, handle_allocator_);
+        node_type* handle = node_allocator_traits::allocate(node_allocator_, 1);
+        node_allocator_traits::construct(node_allocator_, handle, node_allocator_);
         handle->value_ = allocator_traits::allocate(allocator_, 1);
         allocator_traits::construct(allocator_, handle->value_, std::forward<Args>(args)...);
         return handle;
@@ -537,7 +567,7 @@ private:
 
         if (index == key.size()) {
             if (root->handle == nullptr) root->handle = nh;
-            else                         handle_allocator_traits::deallocate(handle_allocator_, nh, 1);
+            else                         node_allocator_traits::deallocate(node_allocator_, nh, 1);
         } else {
             auto& child = root->children[key_map_(key[index])];
             child = insert_handle(child, root, key, index + 1, nh);
