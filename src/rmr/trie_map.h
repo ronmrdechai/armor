@@ -449,12 +449,6 @@ public:
         return {it, inserted};
     }
 
-    // TODO:
-    // - prefix search
-    // - longest matching prefix
-    // - merge
-    // - deduction guides
-    
     bool operator==(const trie_map& other) const {
         for (
             auto it1 = begin(), it2 = other.begin();
