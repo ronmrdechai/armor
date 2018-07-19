@@ -608,9 +608,7 @@ private:
 
     static size_t children_count(const link_type* root) {
         size_t count = 0;
-        for (auto& child : root->children) {
-            count += (child != nullptr);
-        }
+        for (auto& child : root->children) count += (child != nullptr);
         return count;
     }
 };
