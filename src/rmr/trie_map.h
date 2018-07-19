@@ -124,18 +124,19 @@ public:
     };
 
 public:
-    trie_map() { init_base_root(); }
+    trie_map() : size_(0) { init(); }
     explicit trie_map(key_mapper f, allocator_type allocator = allocator_type()) :
-        key_map_(std::move(f)), allocator_(std::move(allocator))
-    { init_base_root(); }
+        size_(0), key_map_(std::move(f)), allocator_(std::move(allocator))
+    { init(); }
     explicit trie_map(allocator_type allocator) :
-        allocator_(std::move(allocator)) 
-    { init_base_root(); }
+        size_(0), allocator_(std::move(allocator)) 
+    { init(); }
 
     trie_map(trie_map&&) = default;
     trie_map(trie_map&& other, allocator_type allocator) :
         base_(std::move(other.base_)),
         root_(std::move(other.root_)),
+        size_(0),
         allocator_(std::move(allocator)),
         key_map_(std::move(other.key_map_))
     {}
@@ -146,8 +147,8 @@ public:
         InputIt last,
         key_mapper f = key_mapper(),
         allocator_type allocator = allocator_type()
-    ) : allocator_(std::move(allocator)), key_map_(std::move(f)) {
-        init_base_root();
+    ) : size_(0), allocator_(std::move(allocator)), key_map_(std::move(f)) {
+        init();
         for (auto cur = first; cur != last; ++cur) insert(*cur);
     }
 
@@ -332,9 +333,7 @@ public:
     }
 
     size_type size() const {
-        size_type c = 0;
-        count_under(&root_, c);
-        return c;
+        return size_;
     }
 
     void clear() {
@@ -516,6 +515,7 @@ public:
             link_allocator_traits::deallocate(link_allocator_, pos.link_, 1);
         }
 
+        --size_;
         return ret;
     }
     iterator erase(const_iterator first, const_iterator last) {
@@ -537,14 +537,15 @@ public:
 private:
     link_type            base_;
     link_type            root_;
+    size_type            size_;
     allocator_type       allocator_;
     link_allocator_type  link_allocator_;
     node_allocator_type  node_allocator_;
     key_mapper           key_map_;
 
-    void init_base_root() {
-        root_.parent = &base_;
+    void init() {
         base_.children[0] = &root_;
+        root_.parent = &base_;
     }
 
     template <typename... Args>
@@ -573,7 +574,7 @@ private:
         if (root == nullptr) root = make_link_type(parent);
 
         if (index == key.size()) {
-            if (root->handle == nullptr) root->handle = nh;
+            if (root->handle == nullptr) { root->handle = nh; ++size_; }
             else                         node_allocator_traits::deallocate(node_allocator_, nh, 1);
         } else {
             auto& child = root->children[key_map_(key[index])];
@@ -617,15 +618,6 @@ private:
             count += (child != nullptr);
         }
         return count;
-    }
-
-    static void count_under(const link_type* root, size_type& count) {
-        for (auto& child : root->children) {
-            if (child != nullptr) {
-                count_under(child, count);
-                if (child->handle != nullptr) count += 1;
-            }
-        }
     }
 };
 

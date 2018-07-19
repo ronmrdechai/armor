@@ -371,6 +371,9 @@ TEST(trie_map, erase_size_drop) {
     size_t size = t.size();
     t.erase("foo");
     EXPECT_EQ(size - 1, t.size());
+
+    t.erase("foo");
+    EXPECT_EQ(size - 1, t.size());
 }
 
 TEST(trie_map, erase_non_existant) {
