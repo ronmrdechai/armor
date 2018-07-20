@@ -230,46 +230,6 @@ TEST(trie_map, insert_or_assign_twice) {
     EXPECT_EQ(2, t["foo"]);
 }
 
-TEST(trie_map, equality) {
-    trie_map t;
-    t["foo"] = 1;
-    t["bar"] = 2;
-    trie_map s;
-    s["foo"] = 1;
-    s["bar"] = 2;
-    EXPECT_TRUE(t == s);
-}
-
-TEST(trie_map, key_inequlity) {
-    trie_map t;
-    t["foo"] = 1;
-    t["bar"] = 2;
-    trie_map s;
-    s["foo"] = 1;
-    s["baz"] = 2;
-    EXPECT_TRUE(t != s);
-}
-
-TEST(trie_map, value_inequlity) {
-    trie_map t;
-    t["foo"] = 1;
-    t["bar"] = 2;
-    trie_map s;
-    s["foo"] = 1;
-    s["bar"] = 3;
-    EXPECT_TRUE(t != s);
-}
-
-TEST(trie_map, key_value_inequlity) {
-    trie_map t;
-    t["foo"] = 1;
-    t["bar"] = 2;
-    trie_map s;
-    s["foo"] = 1;
-    s["baz"] = 3;
-    EXPECT_TRUE(t != s);
-}
-
 TEST(trie_map, copy_constructor) {
     trie_map t;
     t["foo"] = 1;
