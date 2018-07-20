@@ -126,7 +126,7 @@ public:
 public:
     trie_map() : size_(0) { init(); }
     explicit trie_map(key_mapper f, allocator_type allocator = allocator_type()) :
-        size_(0), key_map_(std::move(f)), allocator_(std::move(allocator))
+        size_(0), allocator_(std::move(allocator)), key_map_(std::move(f))
     { init(); }
     explicit trie_map(allocator_type allocator) :
         size_(0), allocator_(std::move(allocator)) 
@@ -221,11 +221,9 @@ public:
         }
 
         generic_iterator operator++(int) {
-            generic_iterator it = next(*this);
-            while (it.link_->handle == nullptr && !positions_.empty()) {
-                it = next(it);
-            }
-            return it;
+            generic_iterator tmp = *this;
+            ++(*this);
+            return tmp;
         }
 
         reference operator*() const {
@@ -292,6 +290,11 @@ public:
 
             std::tie(it, stepped) = step_down(std::move(it));
             if (stepped) return it;
+            return skip(std::move(it));
+        }
+        static generic_iterator skip(generic_iterator it) {
+            bool stepped;
+
             std::tie(it, stepped) = step_right(std::move(it));
             if (stepped) return it;
 
@@ -299,6 +302,14 @@ public:
                 std::tie(it, stepped) = step_up(std::move(it));
                 if (stepped) return it;
             }
+            return it;
+        }
+
+        generic_iterator<std::remove_const_t<NodeT>> remove_const() const {
+            generic_iterator<std::remove_const_t<NodeT>> it(
+                const_cast<std::remove_const_t<NodeT>*>(link_)
+            );
+            it.positions_ = positions_;
             return it;
         }
 
@@ -350,14 +361,10 @@ public:
     }
 
     iterator find(const key_type& key) {
-        return find_key(
-            root_iterator(), end(), key_map_, key.begin(), key.end()
-        );
+        return const_cast<const trie_map&>(*this).find(key).remove_const();
     }
     const_iterator find(const key_type& key) const {
-        return find_key(
-            root_iterator(), end(), key_map_, key.begin(), key.end()
-        );
+        return find_key(root_iterator(), end(), key.begin(), key.end());
     }
 
     template <typename... Args>
@@ -525,8 +532,42 @@ public:
         return 1;
     }
 
+    template <typename KeyMapper2>
+    void merge(trie_map<T, R, KeyMapper2, Key, Allocator>& source) {
+        for (auto i = source.begin(), last = source.end(); i != last;) {
+            auto pos = i++;
+            if (find(pos->first) != end()) continue;
+            insert(source.extract(pos));
+        }
+    }
+    template <typename KeyMapper2>
+    void merge(trie_map<T, R, KeyMapper2, Key, Allocator>&& source) {
+        merge(source);
+    }
+
+    iterator longest_match(const key_type& key) {
+        return const_cast<const trie_map&>(*this).longest_match(key).remove_const();
+    }
+    const_iterator longest_match(const key_type& key) const {
+        return find_longest_match(root_iterator(), key.begin(), key.end());
+    }
+
+    std::pair<iterator, iterator>
+    prefixed_with(const key_type& key) {
+        auto [first, last] = const_cast<const trie_map&>(*this).prefixed_with(key);
+        return {first.remove_const(), last.remove_const()};
+    }
+    std::pair<const_iterator, const_iterator>
+    prefixed_with(const key_type& key) const {
+        auto first = longest_match(key);
+        auto last = const_iterator::skip(first);
+        return {first, last};
+    }
+
     allocator_type get_allocator() const { return allocator_; }
     key_mapper     key_map()       const { return key_map_; }
+
+    static constexpr size_type radix() { return R; }
 
 private:
     link_type            base_;
@@ -540,6 +581,12 @@ private:
     void init() {
         base_.children[0] = &root_;
         root_.parent = &base_;
+    }
+
+    const_iterator root_iterator() const {
+        const_iterator it(&root_);
+        it.positions_.push(0);
+        return it;
     }
 
     template <typename... Args>
@@ -578,32 +625,49 @@ private:
         return root;
     }
 
-    iterator root_iterator() {
-        iterator it(&root_);
-        it.positions_.push(0);
-        return it;
-    }
-
-    const_iterator root_iterator() const {
-        const_iterator it(&root_);
-        it.positions_.push(0);
-        return it;
-    }
-
-    template <typename It>
-    static It find_key(
-        It it, It end,
-        const key_mapper& f,
+    const_iterator find_key(
+        const_iterator it, const_iterator end,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
-    ) {
+    ) const {
         if (it.link_ == nullptr) return end;
-        if (cur == last) return it;
+        if (cur == last)         return it;
 
-        size_type index = f(*cur);
+        size_type index = key_map_(*cur);
         it.link_ = it.link_->children[index];
         it.positions_.push(index);
-        return find_key(std::move(it), std::move(end), f, ++cur, last);
+
+        return find_key(std::move(it), std::move(end), ++cur, last);
+    }
+
+    const_iterator find_longest_match_candidate(
+        const_iterator it, const_iterator prev,
+        typename key_type::const_iterator cur,
+        typename key_type::const_iterator last
+    ) const {
+        if (it.link_ == nullptr) return prev;
+        if (cur == last)         return it;
+
+        prev = it;
+
+        size_type index = key_map_(*cur);
+        it.link_ = it.link_->children[index];
+        it.positions_.push(index);
+
+        return find_longest_match_candidate(std::move(it), std::move(prev), ++cur, last);
+    }
+
+    const_iterator find_longest_match(
+        const_iterator it,
+        typename key_type::const_iterator cur,
+        typename key_type::const_iterator last
+    ) const {
+        auto pos = find_longest_match_candidate(it, end(), cur, last);
+        while (!pos.positions_.empty() && pos.link_->handle == nullptr) {
+            pos.link_ = pos.link_->parent;
+            pos.positions_.pop();
+        }
+        return pos;
     }
 
     static size_t children_count(const link_type* root) {

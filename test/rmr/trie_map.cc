@@ -7,9 +7,24 @@
 
 #include <gtest/gtest.h>
 
+#include <experimental/memory_resource>
 #include <rmr/trie_map.h>
 
 using trie_map = rmr::trie_map<int, 127>;
+
+namespace fixtures {
+
+const trie_map roman_trie{
+    {"romane", 1},
+    {"romanus", 1},
+    {"romulus", 1},
+    {"rubens", 1},
+    {"ruber", 1},
+    {"rubicon", 1},
+    {"rubicundus", 1}
+};
+
+} // namespace fixtures
 
 TEST(trie_map, write_and_read) {
     trie_map t;
@@ -368,7 +383,7 @@ TEST(trie_map, erase_const_iterator) {
 
 TEST(trie_map, erase_size_drop) {
     trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
-    size_t size = t.size();
+    std::size_t size = t.size();
     t.erase("foo");
     EXPECT_EQ(size - 1, t.size());
 
@@ -444,10 +459,10 @@ TEST(trie_map, extract_reinsertion) {
 TEST(trie_map, extract_reinsertion_key_change) {
     trie_map t{ {"foo", 42}, {"bar", 1}, {"baz", 1} };
     auto nh = t.extract("foo");
-    nh.key() = "quux";
+    nh.key() = "qux";
 
     t.insert(std::move(nh));
-    EXPECT_EQ(42, t["quux"]);
+    EXPECT_EQ(42, t["qux"]);
 }
 
 TEST(trie_map, reinsertion_return_value) {
@@ -473,8 +488,125 @@ TEST(trie_map, reinsertion_return_value) {
     EXPECT_FALSE(ret.node.empty());
 }
 
-TEST(trie_map, get_allocator) {}
-TEST(trie_map, get_key_map) {}
+TEST(trie_map, merge_all) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+    trie_map s{ {"qux", 1}, {"quux", 1} };
+
+    t.merge(s);
+
+    EXPECT_EQ(5u, t.size());
+    EXPECT_EQ(0u, s.size());
+    EXPECT_EQ(1, t["qux"]);
+    EXPECT_EQ(1, t["quux"]);
+    ASSERT_THROW(s.at("qux") = 1, std::out_of_range);
+    ASSERT_THROW(s.at("quux") = 1, std::out_of_range);
+}
+
+TEST(trie_map, merge_partial) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+    trie_map s{ {"baz", 1}, {"qux", 1} };
+
+    t.merge(s);
+
+    EXPECT_EQ(4u, t.size());
+    EXPECT_EQ(1u, s.size());
+    EXPECT_EQ(1, s["baz"]);
+}
+
+TEST(trie_map, merge_move) {
+    trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
+    trie_map s{ {"qux", 1}, {"quux", 1} };
+
+    t.merge(std::move(s));
+
+    EXPECT_EQ(5u, t.size());
+    EXPECT_EQ(0u, s.size());
+}
+
+TEST(trie_map, prefixed_with) {
+    std::vector<std::string> v{ "rubens", "ruber", "rubicon", "rubicundus" };
+    trie_map t = fixtures::roman_trie;
+
+    auto [first, last] = t.prefixed_with("rub");
+
+    EXPECT_EQ(4u, std::distance(first, last));
+    std::size_t i = 0;
+    for (auto it = first; it != last; ++it) v[i++] = it->first;
+}
+
+TEST(trie_map, prefixed_with_empty_range) {
+    trie_map t = fixtures::roman_trie;
+
+    auto [first, last] = t.prefixed_with("rob");
+    EXPECT_EQ(first, last);
+}
+
+TEST(trie_map, longest_match) {
+    trie_map t{ {"foo", 1}, {"foobar", 1}, {"bar", 1} };
+    auto it = t.longest_match("fooba");
+
+    ASSERT_NE(t.end(), it);
+    EXPECT_EQ("foo", it->first);
+}
+
+TEST(trie_map, longest_match_has_key) {
+    trie_map t{ {"foo", 1}, {"foobar", 1}, {"bar", 1} };
+    auto it = t.longest_match("foobar");
+
+    ASSERT_NE(t.end(), it);
+    EXPECT_EQ("foobar", it->first);
+}
+
+TEST(trie_map, longest_match_no_key) {
+    trie_map t{ {"foo", 1}, {"foobar", 1}, {"bar", 1} };
+    auto it = t.longest_match("qux");
+    EXPECT_EQ(t.end(), it);
+}
+
+TEST(trie_map, longest_match_empty) {
+    trie_map t;
+    auto it = t.longest_match("foo");
+    EXPECT_EQ(t.end(), it);
+}
+
+TEST(trie_map, equals) {}
+TEST(trie_map, not_equals) {}
+TEST(trie_map, greater) {}
+TEST(trie_map, greater_equals) {}
+TEST(trie_map, less) {}
+TEST(trie_map, less_equals) {}
+
+TEST(trie_map, get_allocator) {
+    using namespace std::experimental;
+
+    using key_mapper = rmr::identity<std::size_t>;
+    using allocator_type = pmr::polymorphic_allocator<std::pair<std::string, int>>;
+    using trie_map = rmr::trie_map<int, 127, key_mapper, std::string, allocator_type>;
+
+    // Create a unique allocator
+    auto resource = pmr::new_delete_resource();
+    auto allocator = allocator_type(resource);
+    trie_map t(allocator);
+
+    EXPECT_EQ(resource, t.get_allocator().resource());
+}
+
+TEST(trie_map, get_key_map) {
+    struct map {
+        int v;
+        std::size_t operator()(std::size_t n) { return n; }
+    };
+
+    map m{42};
+    rmr::trie_map<int, 127, map> t(m);
+    EXPECT_EQ(m.v, t.key_map().v);
+}
+
+TEST(trie_map, radix) {
+    trie_map t;
+    EXPECT_EQ(127u, t.radix());
+    EXPECT_EQ(127u, trie_map::radix());
+}
 
 TEST(trie_map, DISABLED_does_not_leak) {
     EXPECT_TRUE(false) << "Not implemented";
