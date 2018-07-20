@@ -12,8 +12,11 @@ the near future:
 - [ ] `tst_map` - An implementation of a Ternary Search Tree based map.
 - [ ] `compressed_trie_map` - An implementation of a compressed Trie based map.
 - [ ] `patricia_trie_map` - An implementation of a PARTICIA Trie based map.
-- [ ] `hat_trie_map` - An implementation of a [HAT Trie](http://crpit.com/confpapers/CRPITV62Askitis.pdf) based map.
+- [ ] `hat_trie_map` - An implementation of a
+[HAT Trie](http://crpit.com/confpapers/CRPITV62Askitis.pdf) based map.
 - [ ] `trie_set` - A Trie based map to set adaptor.
+
+<br/>
 
 - [ ] `rope` - An implementation of a Rope-based string.
 - [ ] `gap_buffer` - An implementation of a Gap Buffer-base string.
