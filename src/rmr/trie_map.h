@@ -38,7 +38,7 @@ template <
     typename Allocator = std::allocator<std::pair<const Key, T>>
 >
 class trie_map {
-    using allocator_traits = std::allocator_traits<Allocator>;
+    using alloc_traits = std::allocator_traits<Allocator>;
     static_assert(
         std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>, 
         "KeyMapper is not invokable on std::size_t or does not return std::size_t"
@@ -54,14 +54,14 @@ public:
     using allocator_type  = Allocator;
     using reference       = value_type&;
     using const_reference = const value_type&;
-    using pointer         = typename allocator_traits::pointer;
-    using const_pointer   = typename allocator_traits::const_pointer;
+    using pointer         = typename alloc_traits::pointer;
+    using const_pointer   = typename alloc_traits::const_pointer;
 
 public:
     class node_type;
 private:
     using node_allocator_type = typename detail::rebind<allocator_type, node_type>::type;
-    using node_allocator_traits = std::allocator_traits<node_allocator_type>;
+    using node_alloc_traits = std::allocator_traits<node_allocator_type>;
 public:
     class node_type {
     public:
@@ -72,10 +72,20 @@ public:
 
         constexpr node_type() : value_(nullptr) {}
         constexpr node_type(allocator_type allocator) :
-            value_(nullptr), allocator_(std::move(allocator))
+            value_(nullptr), alloc_(std::move(allocator))
         {} 
-        node_type(node_type&&) = default;
-        node_type& operator=(node_type&&) = default;
+        node_type(node_type&& other) :
+            value_(std::move(other.value_)), alloc_(std::move(other.alloc_))
+        { other.value_ = nullptr; }
+
+        node_type& operator=(node_type&& other) {
+            value_ = std::move(other.value_);
+            other.value_ = nullptr;
+            if (node_alloc_traits::propagate_on_container_move_assignment::value) {
+                alloc_ = std::move(other.alloc_);
+            }
+            return *this;
+        }
 
         bool             empty() const { return value_ == nullptr; }
         explicit operator bool() const { return !empty(); }
@@ -84,26 +94,28 @@ public:
         mapped_type&    mapped() const { return value_->second; }
         value_type&     value()  const { return *value_; }
 
-        node_allocator_type get_allocator() const { return *allocator_; }
+        node_allocator_type get_allocator() const { return *alloc_; }
 
         void swap(node_type& nh) {
             std::swap(value_,     nh.value_);
-            std::swap(allocator_, nh.allocator_);
+            if (node_alloc_traits::propagate_on_container_swap::value) {
+                std::swap(alloc_, nh.alloc_);
+            }
         }
         friend void swap(node_type& x, node_type& y) {
             x.swap(y);
         }
 
     private:
-        pointer                              value_;
-        std::optional<node_allocator_type> allocator_;
+        pointer                            value_;
+        std::optional<node_allocator_type> alloc_;
 
         friend class trie_map;
     };
 
     struct link_type;
     using link_allocator_type = typename detail::rebind<allocator_type, link_type>::type;
-    using link_allocator_traits = std::allocator_traits<link_allocator_type>;
+    using link_alloc_traits = std::allocator_traits<link_allocator_type>;
     struct link_type {
         std::array<link_type*, R> children = { nullptr };
         link_type*                parent   = nullptr;
@@ -113,14 +125,14 @@ public:
             node_allocator_type& node_allocator, link_allocator_type& link_allocator
         ) {
             if (handle != nullptr) {
-                node_allocator_traits::deallocate(node_allocator, handle, 1);
+                node_alloc_traits::deallocate(node_allocator, handle, 1);
                 handle = nullptr;
             }
 
             for (auto& child : children) {
                 if (child != nullptr) {
                     child->destroy(node_allocator, link_allocator);
-                    link_allocator_traits::deallocate(link_allocator, child, 1);
+                    link_alloc_traits::deallocate(link_allocator, child, 1);
                     child = nullptr;
                 }
             }
@@ -130,10 +142,10 @@ public:
 public:
     trie_map() : size_(0) { init(); }
     explicit trie_map(key_mapper f, allocator_type allocator = allocator_type()) :
-        size_(0), allocator_(std::move(allocator)), key_map_(std::move(f))
+        size_(0), alloc_(std::move(allocator)), key_map_(std::move(f))
     { init(); }
     explicit trie_map(allocator_type allocator) :
-        size_(0), allocator_(std::move(allocator)) 
+        size_(0), alloc_(std::move(allocator)) 
     { init(); }
 
     trie_map(trie_map&&) = default;
@@ -141,7 +153,7 @@ public:
         base_(std::move(other.base_)),
         root_(std::move(other.root_)),
         size_(0),
-        allocator_(std::move(allocator)),
+        alloc_(std::move(allocator)),
         key_map_(std::move(other.key_map_))
     {}
 
@@ -151,7 +163,7 @@ public:
         InputIt last,
         key_mapper f = key_mapper(),
         allocator_type allocator = allocator_type()
-    ) : size_(0), allocator_(std::move(allocator)), key_map_(std::move(f)) {
+    ) : size_(0), alloc_(std::move(allocator)), key_map_(std::move(f)) {
         init();
         for (auto cur = first; cur != last; ++cur) insert(*cur);
     }
@@ -165,17 +177,48 @@ public:
         trie_map(init.begin(), init.end(), key_mapper(), std::move(allocator))
     {}
 
-    trie_map(const trie_map& other) : trie_map(other.begin(), other.end()) {}
+    trie_map(const trie_map& other) :
+        trie_map(
+            other.begin(), other.end(), other.key_map_,
+            alloc_traits::select_on_container_copy_construction(other.alloc_)
+        )
+    {}
     trie_map(const trie_map& other, allocator_type allocator) :
         trie_map(other.begin(), other.end(), std::move(allocator))
     {}
 
-    ~trie_map() { root_.destroy(node_allocator_, link_allocator_); }
+    ~trie_map() { root_.destroy(node_alloc_, link_alloc_); }
 
-    trie_map& operator=(trie_map&&) = default;
-    trie_map& operator=(const trie_map&& other) {
+    trie_map& operator=(trie_map&& other) {
+        base_ = std::move(other.base_);
+        root_ = std::move(other.root_);
+        size_ = std::move(other.size_);
+        key_map_ = std::move(other.key_map_);
+
+        if (alloc_traits::propagate_on_container_move_assignment::value) {
+            alloc_ = std::move(other.alloc_);
+        }
+        if (link_alloc_traits::propagate_on_container_move_assignment::value) {
+            link_alloc_ = std::move(other.link_alloc_);
+        }
+        if (node_alloc_traits::propagate_on_container_move_assignment::value) {
+            node_alloc_ = std::move(other.node_alloc_);
+        }
+    }
+    trie_map& operator=(const trie_map& other) {
         clear();
         insert(other.begin(), other.end());
+        key_map_ = other.key_map_;
+
+        if (alloc_traits::propagate_on_container_copy_assignment::value) {
+            alloc_ = other.alloc_;
+        }
+        if (link_alloc_traits::propagate_on_container_copy_assignment::value) {
+            link_alloc_ = other.link_alloc_;
+        }
+        if (node_alloc_traits::propagate_on_container_copy_assignment::value) {
+            node_alloc_ = other.node_alloc_;
+        }
     }
 
     mapped_type& operator[](const key_type& key) {
@@ -341,7 +384,7 @@ public:
 
     size_type size() const { return size_; }
     bool empty() const { return size() == 0; }
-    void clear() { root_.destroy(node_allocator_, link_allocator_); size_ = 0; }
+    void clear() { root_.destroy(node_alloc_, link_alloc_); size_ = 0; }
 
     size_type count(const key_type& key) const {
         try {
@@ -365,7 +408,7 @@ public:
 
         iterator it = find(nh->key());
         if (it != end()) {
-            node_allocator_traits::deallocate(node_allocator_, nh, 1);
+            node_alloc_traits::deallocate(node_alloc_, nh, 1);
             return {it, false};
         }
 
@@ -420,7 +463,7 @@ public:
             ret.inserted = false;
             return ret;
         }
-        assert(nh.get_allocator() == node_allocator_);
+        assert(nh.get_allocator() == node_alloc_);
 
         auto [it, inserted] = insert(nh.value());
         if (inserted) {
@@ -472,8 +515,16 @@ public:
 
         swap(base_, other.base_);
         swap(root_, other.root_);
-        swap(allocator_, other.allocator_);
         swap(key_map_, other.key_map_);
+        if (alloc_traits::propagate_on_container_swap::value) {
+            swap(alloc_, other.alloc_);
+        }
+        if (link_alloc_traits::propagate_on_container_swap::value) {
+            swap(link_alloc_, other.link_alloc_);
+        }
+        if (node_alloc_traits::propagate_on_container_swap::value) {
+            swap(node_alloc_, other.node_alloc_);
+        }
     }
     friend void swap(trie_map& lhs, trie_map& rhs) {
         lhs.swap(rhs);
@@ -506,10 +557,10 @@ public:
         }
 
         auto& parent = pos.link_->parent;
-        pos.link_->destroy(node_allocator_, link_allocator_);
+        pos.link_->destroy(node_alloc_, link_alloc_);
         if (pos.link_ != &root_) {
             parent->children[child] = nullptr;
-            link_allocator_traits::deallocate(link_allocator_, pos.link_, 1);
+            link_alloc_traits::deallocate(link_alloc_, pos.link_, 1);
         }
 
         --size_;
@@ -562,7 +613,7 @@ public:
         return {++first, last};
     }
 
-    allocator_type get_allocator() const { return allocator_; }
+    allocator_type get_allocator() const { return alloc_; }
     key_mapper     key_map()       const { return key_map_; }
 
     static constexpr size_type radix() { return R; }
@@ -571,9 +622,9 @@ private:
     link_type            base_;
     link_type            root_;
     size_type            size_;
-    allocator_type       allocator_;
-    link_allocator_type  link_allocator_;
-    node_allocator_type  node_allocator_;
+    allocator_type       alloc_;
+    link_allocator_type  link_alloc_;
+    node_allocator_type  node_alloc_;
     key_mapper           key_map_;
 
     void init() {
@@ -589,16 +640,16 @@ private:
 
     template <typename... Args>
     node_type* make_handle(Args&&... args) {
-        node_type* handle = node_allocator_traits::allocate(node_allocator_, 1);
-        node_allocator_traits::construct(node_allocator_, handle, node_allocator_);
-        handle->value_ = allocator_traits::allocate(allocator_, 1);
-        allocator_traits::construct(allocator_, handle->value_, std::forward<Args>(args)...);
+        node_type* handle = node_alloc_traits::allocate(node_alloc_, 1);
+        node_alloc_traits::construct(node_alloc_, handle, node_alloc_);
+        handle->value_ = alloc_traits::allocate(alloc_, 1);
+        alloc_traits::construct(alloc_, handle->value_, std::forward<Args>(args)...);
         return handle;
     }
 
     link_type* make_link_type(link_type* parent) {
-        link_type* node = link_allocator_traits::allocate(link_allocator_, 1);
-        link_allocator_traits::construct(link_allocator_, node);
+        link_type* node = link_alloc_traits::allocate(link_alloc_, 1);
+        link_alloc_traits::construct(link_alloc_, node);
         node->parent = parent;
         return node;
     }
@@ -614,7 +665,7 @@ private:
 
         if (index == key.size()) {
             if (root->handle == nullptr) { root->handle = nh; ++size_; }
-            else                         node_allocator_traits::deallocate(node_allocator_, nh, 1);
+            else                         node_alloc_traits::deallocate(node_alloc_, nh, 1);
         } else {
             auto& child = root->children[key_map_(key[index])];
             child = insert_handle(child, root, key, index + 1, nh);
