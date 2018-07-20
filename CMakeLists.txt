@@ -54,7 +54,6 @@ set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 include(CPack)
 
-include_directories(src)
 add_subdirectory(src)
 
 option(ARMOR_INCLUDE_TESTS "Generate build targets for the Armor unit tests." OFF)
