@@ -396,8 +396,6 @@ TEST(trie_map, erase_non_existant) {
     EXPECT_EQ(0u, t.erase("foo"));
 }
 
-template <typename> class tester;
-
 TEST(trie_map, erase_range) {
     trie_map t{ {"foo", 1}, {"bar", 1}, {"bax", 1}, {"bay", 1}, {"baz", 1} };
 
