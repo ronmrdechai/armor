@@ -569,12 +569,52 @@ TEST(trie_map, longest_match_empty) {
     EXPECT_EQ(t.end(), it);
 }
 
-TEST(trie_map, equals) {}
-TEST(trie_map, not_equals) {}
-TEST(trie_map, greater) {}
-TEST(trie_map, greater_equals) {}
-TEST(trie_map, less) {}
-TEST(trie_map, less_equals) {}
+TEST(trie_map, equals) {
+    trie_map t = fixtures::roman_trie;
+    trie_map s = fixtures::roman_trie;
+    EXPECT_EQ(t, s);
+}
+
+TEST(trie_map, not_equals) {
+    trie_map t = fixtures::roman_trie;
+    trie_map s = fixtures::roman_trie;
+    s["romane"] = 2;
+    EXPECT_NE(t, s);
+}
+
+TEST(trie_map, greater) {
+    trie_map t = fixtures::roman_trie;
+    trie_map s = fixtures::roman_trie;
+
+    for (auto& [key, value] : s) value--;
+    EXPECT_GT(t, s);
+}
+
+TEST(trie_map, greater_equals) {
+    trie_map t = fixtures::roman_trie;
+    trie_map s = fixtures::roman_trie;
+
+    EXPECT_GE(t, s);
+    for (auto& [key, value] : s) value--;
+    EXPECT_GE(t, s);
+}
+
+TEST(trie_map, less) {
+    trie_map t = fixtures::roman_trie;
+    trie_map s = fixtures::roman_trie;
+
+    for (auto& [key, value] : s) value++;
+    EXPECT_LT(t, s);
+}
+
+TEST(trie_map, less_equals) {
+    trie_map t = fixtures::roman_trie;
+    trie_map s = fixtures::roman_trie;
+
+    EXPECT_LE(t, s);
+    for (auto& [key, value] : s) value++;
+    EXPECT_LE(t, s);
+}
 
 TEST(trie_map, get_allocator) {
     using namespace std::experimental;

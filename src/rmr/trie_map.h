@@ -428,7 +428,7 @@ public:
             ret.inserted = false;
             return ret;
         }
-        // ASSERT nh.get_allocator() == node_allocator_
+        // TODO ASSERT nh.get_allocator() == node_allocator_
 
         auto [it, inserted] = insert(nh.value());
         if (inserted) {
@@ -456,19 +456,23 @@ public:
         return {it, inserted};
     }
 
-    bool operator==(const trie_map& other) const {
-        for (
-            auto it1 = begin(), it2 = other.begin();
-            it1 != end() && it2 != other.end();
-            ++it1, ++it2
-        ) {
-            if (it1->first  != it2->first ) return false;
-            if (it1->second != it2->second) return false;
-        }
-        return true;
+    inline bool operator==(const trie_map& other) const {
+        return size() == other.size() && std::equal(begin(), end(), other.begin());
     }
-    bool operator!=(const trie_map& other) const {
+    inline bool operator<(const trie_map& other) const {
+        return std::lexicographical_compare(begin(), end(), other.begin(), other.end());
+    }
+    inline bool operator!=(const trie_map& other) const {
         return !(*this == other);
+    }
+    inline bool operator>(const trie_map& other) const {
+        return other < *this;
+    }
+    inline bool operator<=(const trie_map& other) const {
+        return !(other < *this);
+    }
+    inline bool operator>=(const trie_map& other) const {
+        return !(*this < other);
     }
 
     void swap(trie_map& other) {
