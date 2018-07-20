@@ -29,4 +29,4 @@ install(FILES
     "${PROJECT_BINARY_DIR}/ArmorConfig.cmake"
     DESTINATION "lib/cmake/Armor"
 )
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/src/rmr" DESTINATION "include/rmr")
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/src/rmr" DESTINATION "include")
