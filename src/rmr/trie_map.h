@@ -364,7 +364,7 @@ public:
         return const_cast<const trie_map&>(*this).find(key).remove_const();
     }
     const_iterator find(const key_type& key) const {
-        return find_key(root_iterator(), end(), key.begin(), key.end());
+        return find_key(root_iterator(), key.begin(), key.end());
     }
 
     template <typename... Args>
@@ -559,9 +559,11 @@ public:
     }
     std::pair<const_iterator, const_iterator>
     prefixed_with(const key_type& key) const {
-        auto first = longest_match(key);
+        auto first = find_key(root_iterator(), key.begin(), key.end());
+        if (first == end()) return { end(), end() };
+
         auto last = const_iterator::skip(first);
-        return {first, last};
+        return {++first, last};
     }
 
     allocator_type get_allocator() const { return allocator_; }
@@ -625,19 +627,25 @@ private:
         return root;
     }
 
+    const_iterator next_iterator_for_char(
+        const_iterator it, const char_type& c
+    ) const {
+        size_type index = key_map_(c);
+        it.link_ = it.link_->children[index];
+        it.positions_.push(index);
+        return it;
+    }
+
     const_iterator find_key(
-        const_iterator it, const_iterator end,
+        const_iterator it,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) const {
-        if (it.link_ == nullptr) return end;
+        if (it.link_ == nullptr) return end();
         if (cur == last)         return it;
+        it = next_iterator_for_char(it, *cur);
 
-        size_type index = key_map_(*cur);
-        it.link_ = it.link_->children[index];
-        it.positions_.push(index);
-
-        return find_key(std::move(it), std::move(end), ++cur, last);
+        return find_key(std::move(it), ++cur, last);
     }
 
     const_iterator find_longest_match_candidate(
@@ -647,12 +655,8 @@ private:
     ) const {
         if (it.link_ == nullptr) return prev;
         if (cur == last)         return it;
-
         prev = it;
-
-        size_type index = key_map_(*cur);
-        it.link_ = it.link_->children[index];
-        it.positions_.push(index);
+        it = next_iterator_for_char(it, *cur);
 
         return find_longest_match_candidate(std::move(it), std::move(prev), ++cur, last);
     }
