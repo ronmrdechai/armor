@@ -195,12 +195,15 @@ public:
         size_ = std::move(other.size_);
         key_map_ = std::move(other.key_map_);
 
+        // TODO reallocate all values if not
         if (alloc_traits::propagate_on_container_move_assignment::value) {
             alloc_ = std::move(other.alloc_);
         }
+        // TODO reallocate all links if not
         if (link_alloc_traits::propagate_on_container_move_assignment::value) {
             link_alloc_ = std::move(other.link_alloc_);
         }
+        // TODO reallocate all nodes if not
         if (node_alloc_traits::propagate_on_container_move_assignment::value) {
             node_alloc_ = std::move(other.node_alloc_);
         }
