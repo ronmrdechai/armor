@@ -18,7 +18,7 @@ install(TARGETS Armor
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
     "${PROJECT_BINARY_DIR}/ArmorConfigVersion.cmake"
-    VERSION 0.1
+    VERSION ${PROJECT_VERSION}
     COMPATIBILITY AnyNewerVersion
 )
 configure_package_config_file(
