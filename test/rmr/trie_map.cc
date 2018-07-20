@@ -230,6 +230,11 @@ TEST(trie_map, insert_or_assign_twice) {
     EXPECT_EQ(2, t["foo"]);
 }
 
+TEST(trie_map, hint_try_emplace) {}
+TEST(trie_map, hint_emplace) {}
+TEST(trie_map, hint_insert) {}
+TEST(trie_map, hint_insert_or_assign) {}
+
 TEST(trie_map, copy_constructor) {
     trie_map t;
     t["foo"] = 1;
