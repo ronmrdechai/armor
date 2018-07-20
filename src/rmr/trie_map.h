@@ -335,25 +335,13 @@ public:
         return ++it;
     }
 
-    iterator end() { return iterator(&base_); }
+    iterator end() { return cend().remove_const(); }
     const_iterator end() const { return cend(); }
     const_iterator cend() const { return const_iterator(&base_); }
 
-    bool empty() const {
-        return std::all_of(
-            root_.children.begin(),
-            root_.children.end(),
-            [](link_type* child) { return child == nullptr; }
-        );
-    }
-
-    size_type size() const {
-        return size_;
-    }
-
-    void clear() {
-       root_.destroy(node_allocator_, link_allocator_);
-    }
+    size_type size() const { return size_; }
+    bool empty() const { return size() == 0; }
+    void clear() { root_.destroy(node_allocator_, link_allocator_); size_ = 0; }
 
     size_type count(const key_type& key) const {
         try {
