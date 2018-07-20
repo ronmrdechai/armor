@@ -11,7 +11,7 @@ include(GoogleTest)
 find_package(GoogleTest 1.8.0)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS "rmr/*.cc")
+file(GLOB test_sources CONFIGURE_DEPENDS "rmr/*.cc")
 
 foreach(source ${test_sources})
     get_filename_component(source_name ${source} NAME_WE)
