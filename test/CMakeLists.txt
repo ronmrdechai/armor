@@ -11,6 +11,13 @@ include(GoogleTest)
 find_package(GoogleTest 1.8.0)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-add_executable(test_trie_map ${CMAKE_CURRENT_SOURCE_DIR}/rmr/trie_map.cc)
-target_link_libraries(test_trie_map Armor ${GTEST_BOTH_LIBRARIES})
-gtest_discover_tests(test_trie_map)
+file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS "rmr/*.cc")
+
+foreach(source ${test_sources})
+    get_filename_component(source_name ${source} NAME_WE)
+    set(target "test_${source_name}")
+
+    add_executable(${target} ${source})
+    target_link_libraries(${target} Armor ${GTEST_BOTH_LIBRARIES})
+    gtest_discover_tests(${target})
+endforeach()
