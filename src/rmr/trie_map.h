@@ -7,12 +7,13 @@
 
 #pragma once
 
-#include <iterator>
+#include <cassert>
 #include <initializer_list>
-#include <type_traits>
+#include <iterator>
+#include <stack>
 #include <stdexcept>
 #include <string>
-#include <stack>
+#include <type_traits>
 
 #include <rmr/functors.h>
 
@@ -81,6 +82,8 @@ public:
         key_type&       key()    const { return const_cast<key_type&>(value_->first); }
         mapped_type&    mapped() const { return value_->second; }
         value_type&     value()  const { return *value_; }
+
+        node_allocator_type get_allocator() const { return *allocator_; }
 
         void swap(node_type& nh) {
             std::swap(value_,     nh.value_);
@@ -428,7 +431,7 @@ public:
             ret.inserted = false;
             return ret;
         }
-        // TODO ASSERT nh.get_allocator() == node_allocator_
+        assert(nh.get_allocator() == node_allocator_);
 
         auto [it, inserted] = insert(nh.value());
         if (inserted) {
