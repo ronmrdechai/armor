@@ -10,10 +10,6 @@ target_include_directories(Armor INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 )
-install(TARGETS Armor
-    EXPORT ArmorTargets
-    PUBLIC_HEADER DESTINATION "include/rmr" COMPONENT Development
-)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
@@ -26,6 +22,7 @@ configure_package_config_file(
     "${PROJECT_BINARY_DIR}/ArmorConfig.cmake"
     INSTALL_DESTINATION lib/cmake/Armor
 )
+install(TARGETS Armor EXPORT ArmorTargets)
 install(EXPORT ArmorTargets DESTINATION "lib/cmake/Armor")
 install(FILES
     "${PROJECT_BINARY_DIR}/ArmorConfigVersion.cmake"
