@@ -14,16 +14,21 @@ else()
 endif()
 
 ExternalProject_Add(googletest
-      GIT_REPOSITORY  "https://github.com/google/googletest.git"
-      UPDATE_COMMAND  ""
-      GIT_TAG         ${GTEST_TAG}
-      INSTALL_COMMAND ""
-      CMAKE_ARGS      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                      -DCMAKE_BUILD_TYPE=Release
-      LOG_DOWNLOAD    ON
-      LOG_CONFIGURE   ON
-      LOG_BUILD       ON
+    GIT_REPOSITORY   "https://github.com/google/googletest.git"
+    UPDATE_COMMAND   ""
+    GIT_TAG          ${GTEST_TAG}
+    INSTALL_COMMAND  ""
+    CMAKE_ARGS       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                     -DCMAKE_BUILD_TYPE=Release
+    LOG_DOWNLOAD     ON
+    LOG_CONFIGURE    ON
+    LOG_BUILD        ON
+    BUILD_BYPRODUCTS
+        <BINARY_DIR>/googlemock/gtest/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a
+        <BINARY_DIR>/googlemock/gtest/${CMAKE_FIND_LIBRARY_PREFIXES}gtest_main.a
+        <BINARY_DIR>/googlemock/gtest/${CMAKE_FIND_LIBRARY_PREFIXES}gmock.a
+        <BINARY_DIR>/googlemock/gtest/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main.a
 )
 set(GTEST_VERSION_STRING ${PACKAGE_FIND_VERSION})
 
