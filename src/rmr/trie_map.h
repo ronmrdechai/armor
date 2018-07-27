@@ -40,7 +40,7 @@ class trie_map {
     using alloc_traits = std::allocator_traits<Allocator>;
     static_assert(
         std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>, 
-        "KeyMapper is not invokable on std::size_t or does not return std::size_t"
+        "KeyMapper is not invocable on std::size_t or does not return std::size_t"
     );
 
     static constexpr std::size_t R_END = std::numeric_limits<std::size_t>::max();
