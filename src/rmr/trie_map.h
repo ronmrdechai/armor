@@ -22,9 +22,9 @@ namespace rmr {
 namespace detail {
 
 template <typename...> struct rebind;
-template <template <typename> typename Type, typename Inner, typename New>
-struct rebind<Type<Inner>, New> {
-    using type = Type<New>;
+template <template <typename> typename Type, typename... Inner, typename... New>
+struct rebind<Type<Inner...>, New...> {
+    using type = Type<New...>;
 };
 
 } // namespace detail
@@ -43,8 +43,8 @@ class trie_map {
         "KeyMapper is not invokable on std::size_t or does not return std::size_t"
     );
 
-    static constexpr std::size_t R_MAX = std::numeric_limits<std::size_t>::max();
-    static_assert(R < R_MAX, "R must be less than UINT_MAX");
+    static constexpr std::size_t R_END = std::numeric_limits<std::size_t>::max();
+    static_assert(R < R_END, "R must be less than UINT_MAX");
 public:
     using key_type        = Key;
     using char_type       = typename key_type::value_type;
@@ -269,7 +269,7 @@ public:
         generic_iterator& operator++() {
             do {
                 *this = next(std::move(*this));
-            } while(this->link_->handle == nullptr && this->link_->parent_index != R_MAX);
+            } while(this->link_->handle == nullptr && this->link_->parent_index != R_END);
             return *this;
         }
 
@@ -315,7 +315,7 @@ public:
 
         static std::pair<generic_iterator, bool>
         step_right(generic_iterator it) {
-            if (it.link_->parent_index == R_MAX) return {it, false};
+            if (it.link_->parent_index == R_END) return {it, false};
 
             for (size_type pos = it.link_->parent_index + 1; pos < R; ++pos) {
                 link_type* parent = it.link_->parent;
@@ -346,7 +346,7 @@ public:
             std::tie(it, stepped) = step_right(std::move(it));
             if (stepped) return it;
 
-            while (it.link_->parent_index != R_MAX) {
+            while (it.link_->parent_index != R_END) {
                 std::tie(it, stepped) = step_up(std::move(it));
                 if (stepped) return it;
             }
@@ -404,16 +404,16 @@ public:
 
     template <typename... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {
-        node_type* nh = make_handle(std::forward<Args>(args)...);
+        node_type* np = make_handle(std::forward<Args>(args)...);
 
-        iterator it = find(nh->key());
+        iterator it = find(np->key());
         if (it != end()) {
-            node_alloc_traits::deallocate(node_alloc_, nh, 1);
+            node_alloc_traits::deallocate(node_alloc_, np, 1);
             return {it, false};
         }
 
-        insert_handle(nh->key(), nh);
-        return {find(nh->key()), true};
+        insert_handle(np->key(), np);
+        return {find(np->key()), true};
     }
     template <typename... Args>
     std::pair<iterator, bool> try_emplace(const key_type& key, Args&&... args) {
@@ -624,7 +624,7 @@ private:
 
     void init() {
         base_.children[0] = &root_;
-        base_.parent_index = R_MAX;
+        base_.parent_index = R_END;
 
         root_.parent = &base_;
         root_.parent_index = 0;
@@ -652,8 +652,8 @@ private:
         return link;
     }
 
-    void insert_handle(const key_type& key, node_type* nh) {
-        insert_handle_impl(&root_, &base_, 0, key, 0, nh);
+    void insert_handle(const key_type& key, node_type* np) {
+        insert_handle_impl(&root_, &base_, 0, key, 0, np);
     }
 
     link_type* insert_handle_impl(
@@ -662,17 +662,17 @@ private:
         std::size_t parent_index,
         const key_type& key,
         size_type index,
-        node_type* nh
+        node_type* np
     ) {
         if (root == nullptr) root = make_link_type(parent, parent_index);
 
         if (index == key.size()) {
-            if (root->handle == nullptr) { root->handle = nh; ++size_; }
-            else                         node_alloc_traits::deallocate(node_alloc_, nh, 1);
+            if (root->handle == nullptr) { root->handle = np; ++size_; }
+            else                         node_alloc_traits::deallocate(node_alloc_, np, 1);
         } else {
             std::size_t parent_index = key_map_(key[index]);
             auto& child = root->children[parent_index];
-            child = insert_handle_impl(child, root, parent_index, key, index + 1, nh);
+            child = insert_handle_impl(child, root, parent_index, key, index + 1, np);
         }
 
         return root;
@@ -717,7 +717,7 @@ private:
         typename key_type::const_iterator last
     ) const {
         auto pos = find_longest_match_candidate(it, end(), cur, last);
-        while (pos.link_->handle == nullptr && pos.link_->parent_index != R_MAX)
+        while (pos.link_->handle == nullptr && pos.link_->parent_index != R_END)
             pos.link_ = pos.link_->parent;
         return pos;
     }
