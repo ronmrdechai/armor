@@ -11,7 +11,6 @@
 #include <cassert>
 #include <initializer_list>
 #include <iterator>
-#include <stack>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -43,6 +42,9 @@ class trie_map {
         std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>, 
         "KeyMapper is not invokable on std::size_t or does not return std::size_t"
     );
+
+    static constexpr std::size_t R_MAX = std::numeric_limits<std::size_t>::max();
+    static_assert(R < R_MAX, "R must be less than UINT_MAX");
 public:
     using key_type        = Key;
     using char_type       = typename key_type::value_type;
@@ -118,8 +120,9 @@ public:
     using link_alloc_traits = std::allocator_traits<link_allocator_type>;
     struct link_type {
         std::array<link_type*, R> children = { nullptr };
-        link_type*                parent   = nullptr;
-        node_type*                handle   = nullptr;
+        std::size_t parent_index = 0;
+        link_type* parent = nullptr;
+        node_type* handle = nullptr;
 
         void destroy(
             node_allocator_type& node_allocator, link_allocator_type& link_allocator
@@ -226,7 +229,7 @@ public:
 
     mapped_type& operator[](const key_type& key) {
         insert_handle(
-            &root_, &base_, key, 0, 
+            key,
             make_handle(std::piecewise_construct, std::tuple<const key_type&>(key), std::tuple<>())
         );
         iterator it = find(key);
@@ -260,13 +263,13 @@ public:
 
         template <typename = std::enable_if_t<std::is_const_v<NodeT>>>
         generic_iterator(const generic_iterator<std::remove_const_t<NodeT>>& other) :
-            link_(const_cast<const NodeT*>(other.link_)), positions_(other.positions_)
+            link_(const_cast<const NodeT*>(other.link_))
         {}
 
         generic_iterator& operator++() {
             do {
                 *this = next(std::move(*this));
-            } while(this->link_->handle == nullptr && !positions_.empty());
+            } while(this->link_->handle == nullptr && this->link_->parent_index != R_MAX);
             return *this;
         }
 
@@ -285,7 +288,7 @@ public:
         }
 
         bool operator==(const generic_iterator& other) const {
-            return (link_ == other.link_) && (positions_ == other.positions_);
+            return (link_ == other.link_);
         }
 
         bool operator!=(const generic_iterator& other) const {
@@ -294,19 +297,16 @@ public:
 
         friend void swap(generic_iterator& lhs, generic_iterator& rhs) {
             std::swap(lhs.link_, rhs.link_);
-            std::swap(lhs.positions_, rhs.positions_);
         }
 
     private:
-        NodeT*                link_;
-        std::stack<size_type> positions_;
+        NodeT* link_;
 
         static std::pair<generic_iterator, bool>
         step_down(generic_iterator it) {
             for (size_type pos = 0; pos < R; ++pos) {
                 if (it.link_->children[pos] != nullptr) {
                     it.link_ = it.link_->children[pos];
-                    it.positions_.push(pos);
                     return {it, true};
                 }
             }
@@ -315,13 +315,12 @@ public:
 
         static std::pair<generic_iterator, bool>
         step_right(generic_iterator it) {
-            if (it.positions_.empty()) return {it, false};
+            if (it.link_->parent_index == R_MAX) return {it, false};
 
-            for (size_type pos = it.positions_.top() + 1; pos < R; ++pos) {
+            for (size_type pos = it.link_->parent_index + 1; pos < R; ++pos) {
                 link_type* parent = it.link_->parent;
                 if (parent->children[pos] != nullptr) {
                     it.link_ = parent->children[pos];
-                    it.positions_.top() = pos;
                     return {it, true};
                 }
             }
@@ -331,7 +330,6 @@ public:
         static std::pair<generic_iterator, bool>
         step_up(generic_iterator it) {
             it.link_ = it.link_->parent;
-            it.positions_.pop();
             return step_right(it);
         }
 
@@ -348,7 +346,7 @@ public:
             std::tie(it, stepped) = step_right(std::move(it));
             if (stepped) return it;
 
-            while (!it.positions_.empty()) {
+            while (it.link_->parent_index != R_MAX) {
                 std::tie(it, stepped) = step_up(std::move(it));
                 if (stepped) return it;
             }
@@ -359,7 +357,6 @@ public:
             generic_iterator<std::remove_const_t<NodeT>> it(
                 const_cast<std::remove_const_t<NodeT>*>(link_)
             );
-            it.positions_ = positions_;
             return it;
         }
 
@@ -415,7 +412,7 @@ public:
             return {it, false};
         }
 
-        insert_handle(&root_, &base_, nh->key(), 0, nh);
+        insert_handle(nh->key(), nh);
         return {find(nh->key()), true};
     }
     template <typename... Args>
@@ -449,14 +446,14 @@ public:
         iterator it = find(value.first);
         if (it != end()) return {it, false};
 
-        insert_handle(&root_, &base_, value.first, 0, make_handle(value));
+        insert_handle(value.first, make_handle(value));
         return {find(value.first), true};
     }
     std::pair<iterator, bool> insert(value_type&& value) {
         iterator it = find(value.first);
         if (it != end()) return {it, false};
 
-        insert_handle(&root_, &base_, value.first, 0, make_handle(std::move(value)));
+        insert_handle(value.first, make_handle(std::move(value)));
         return {find(value.first), true};
     }
     insert_return_type insert(node_type&& nh) {
@@ -543,20 +540,16 @@ public:
     }
 
     iterator erase(const_iterator pos) {
-        iterator it;
-        it.link_ = const_cast<link_type*>(pos.link_);
-        it.positions_ = pos.positions_;
-        return erase(it);
+        return erase(pos.remove_const());
     }
 
     iterator erase(iterator pos) {
-        size_t child = pos.positions_.top();
+        std::size_t child = pos.link_->parent_index;
         iterator ret = std::next(pos);
 
         while (pos.link_->parent != &base_ && children_count(pos.link_->parent) == 1) {
             pos.link_ = pos.link_->parent;
-            pos.positions_.pop();
-            child = pos.positions_.top();
+            child = pos.link_->parent_index;
         }
 
         auto& parent = pos.link_->parent;
@@ -572,7 +565,6 @@ public:
     iterator erase(const_iterator first, const_iterator last) {
         for (auto it = first; it != last; ++it) erase(it);
         iterator ret(const_cast<link_type*>(last.link_));
-        ret.positions_ = last.positions_;
         return ret;
     }
     size_type erase(const key_type& key) {
@@ -632,12 +624,14 @@ private:
 
     void init() {
         base_.children[0] = &root_;
+        base_.parent_index = R_MAX;
+
         root_.parent = &base_;
+        root_.parent_index = 0;
     }
 
     const_iterator root_iterator() const {
         const_iterator it(&root_);
-        it.positions_.push(0);
         return it;
     }
 
@@ -650,28 +644,35 @@ private:
         return handle;
     }
 
-    link_type* make_link_type(link_type* parent) {
-        link_type* node = link_alloc_traits::allocate(link_alloc_, 1);
-        link_alloc_traits::construct(link_alloc_, node);
-        node->parent = parent;
-        return node;
+    link_type* make_link_type(link_type* parent, std::size_t parent_index) {
+        link_type* link = link_alloc_traits::allocate(link_alloc_, 1);
+        link_alloc_traits::construct(link_alloc_, link);
+        link->parent = parent;
+        link->parent_index = parent_index;
+        return link;
     }
 
-    link_type* insert_handle(
+    void insert_handle(const key_type& key, node_type* nh) {
+        insert_handle_impl(&root_, &base_, 0, key, 0, nh);
+    }
+
+    link_type* insert_handle_impl(
         link_type* root,
         link_type* parent,
+        std::size_t parent_index,
         const key_type& key,
         size_type index,
         node_type* nh
     ) {
-        if (root == nullptr) root = make_link_type(parent);
+        if (root == nullptr) root = make_link_type(parent, parent_index);
 
         if (index == key.size()) {
             if (root->handle == nullptr) { root->handle = nh; ++size_; }
             else                         node_alloc_traits::deallocate(node_alloc_, nh, 1);
         } else {
-            auto& child = root->children[key_map_(key[index])];
-            child = insert_handle(child, root, key, index + 1, nh);
+            std::size_t parent_index = key_map_(key[index]);
+            auto& child = root->children[parent_index];
+            child = insert_handle_impl(child, root, parent_index, key, index + 1, nh);
         }
 
         return root;
@@ -682,7 +683,6 @@ private:
     ) const {
         size_type index = key_map_(c);
         it.link_ = it.link_->children[index];
-        it.positions_.push(index);
         return it;
     }
 
@@ -717,10 +717,8 @@ private:
         typename key_type::const_iterator last
     ) const {
         auto pos = find_longest_match_candidate(it, end(), cur, last);
-        while (!pos.positions_.empty() && pos.link_->handle == nullptr) {
+        while (pos.link_->handle == nullptr && pos.link_->parent_index != R_MAX)
             pos.link_ = pos.link_->parent;
-            pos.positions_.pop();
-        }
         return pos;
     }
 
