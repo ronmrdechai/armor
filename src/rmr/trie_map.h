@@ -11,6 +11,7 @@
 #include <cassert>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -228,11 +229,9 @@ public:
     }
 
     mapped_type& operator[](const key_type& key) {
-        insert_handle(
-            key,
+        iterator it = insert_handle(
             make_handle(std::piecewise_construct, std::tuple<const key_type&>(key), std::tuple<>())
         );
-        iterator it = find(key);
         return it->second;
     }
 
@@ -247,7 +246,7 @@ public:
         return it->second;
     }
 
-    template <typename NodeT>
+    template <typename LinkT>
     class generic_iterator {
     public:
         using difference_type   = std::ptrdiff_t;
@@ -257,13 +256,13 @@ public:
         using iterator_category = std::forward_iterator_tag;
 
         generic_iterator() : link_(nullptr) {}
-        generic_iterator(NodeT* node) : link_(std::move(node)) {}
+        generic_iterator(LinkT* node) : link_(std::move(node)) {}
         generic_iterator(const generic_iterator&) = default;
         generic_iterator& operator=(const generic_iterator&) = default;
 
-        template <typename = std::enable_if_t<std::is_const_v<NodeT>>>
-        generic_iterator(const generic_iterator<std::remove_const_t<NodeT>>& other) :
-            link_(const_cast<const NodeT*>(other.link_))
+        template <typename = std::enable_if_t<std::is_const_v<LinkT>>>
+        generic_iterator(const generic_iterator<std::remove_const_t<LinkT>>& other) :
+            link_(const_cast<const LinkT*>(other.link_))
         {}
 
         generic_iterator& operator++() {
@@ -300,7 +299,7 @@ public:
         }
 
     private:
-        NodeT* link_;
+        LinkT* link_;
 
         static std::pair<generic_iterator, bool>
         step_down(generic_iterator it) {
@@ -353,9 +352,9 @@ public:
             return it;
         }
 
-        generic_iterator<std::remove_const_t<NodeT>> remove_const() const {
-            generic_iterator<std::remove_const_t<NodeT>> it(
-                const_cast<std::remove_const_t<NodeT>*>(link_)
+        generic_iterator<std::remove_const_t<LinkT>> remove_const() const {
+            generic_iterator<std::remove_const_t<LinkT>> it(
+                const_cast<std::remove_const_t<LinkT>*>(link_)
             );
             return it;
         }
@@ -412,8 +411,7 @@ public:
             return {it, false};
         }
 
-        insert_handle(np->key(), np);
-        return {find(np->key()), true};
+        return {insert_handle(np), true};
     }
     template <typename... Args>
     std::pair<iterator, bool> try_emplace(const key_type& key, Args&&... args) {
@@ -443,27 +441,38 @@ public:
     };
 
     std::pair<iterator, bool> insert(const value_type& value) {
-        iterator it = find(value.first);
-        if (it != end()) return {it, false};
+        if (iterator it = find(value.first); it != end()) return {it, false};
 
-        insert_handle(value.first, make_handle(value));
-        return {find(value.first), true};
+        return {insert_handle(make_handle(value)), true};
     }
+
+    iterator insert(const_iterator hint, const value_type& value) {
+        if (iterator it = find(value.first); it != end()) return it;
+
+        return {insert_handle_hint(hint, make_handle(value)), true};
+    }
+
     std::pair<iterator, bool> insert(value_type&& value) {
-        iterator it = find(value.first);
-        if (it != end()) return {it, false};
+        if (iterator it = find(value.first); it != end()) return {it, false};
 
-        insert_handle(value.first, make_handle(std::move(value)));
-        return {find(value.first), true};
+        return {insert_handle(make_handle(std::move(value))), true};
     }
+
+    iterator insert(const_iterator hint, value_type&& value) {
+        if (iterator it = find(value.first); it != end()) return it;
+
+        return {insert_handle_hint(hint, make_handle(std::move(value))), true};
+    }
+
     insert_return_type insert(node_type&& nh) {
+        assert(nh.get_allocator() == node_alloc_);
+
         insert_return_type ret{};
         if (nh.empty()) {
             ret.position = end();
             ret.inserted = false;
             return ret;
         }
-        assert(nh.get_allocator() == node_alloc_);
 
         auto [it, inserted] = insert(nh.value());
         if (inserted) {
@@ -476,6 +485,15 @@ public:
             ret.inserted = false;
         }
         return ret;
+    }
+
+    iterator insert(const_iterator hint, node_type&& nh) {
+        assert(nh.get_allocator() == node_alloc_);
+
+        if (nh.empty()) return end();
+        if (iterator it = find(nh.key()); it != end()) return it;
+
+        return {insert_handle_hint(hint, make_handle(std::move(nh))), true};
     }
 
     template <typename InputIt>
@@ -544,7 +562,7 @@ public:
     }
 
     iterator erase(iterator pos) {
-        std::size_t child = pos.link_->parent_index;
+        size_type child = pos.link_->parent_index;
         iterator ret = std::next(pos);
 
         while (pos.link_->parent != &base_ && children_count(pos.link_->parent) == 1) {
@@ -631,8 +649,7 @@ private:
     }
 
     const_iterator root_iterator() const {
-        const_iterator it(&root_);
-        return it;
+        return const_iterator(&root_);
     }
 
     template <typename... Args>
@@ -644,7 +661,7 @@ private:
         return handle;
     }
 
-    link_type* make_link_type(link_type* parent, std::size_t parent_index) {
+    link_type* make_link_type(link_type* parent, size_type parent_index) {
         link_type* link = link_alloc_traits::allocate(link_alloc_, 1);
         link_alloc_traits::construct(link_alloc_, link);
         link->parent = parent;
@@ -652,27 +669,54 @@ private:
         return link;
     }
 
-    void insert_handle(const key_type& key, node_type* np) {
-        insert_handle_impl(&root_, &base_, 0, key, 0, np);
+    iterator insert_handle(node_type* np) {
+        return insert_handle(root_iterator(), 0, np);
+    }
+
+    iterator insert_handle(const_iterator _hint, node_type* np) {
+        iterator hint = _hint.remove_const();
+        size_type rank = 0;
+        link_type* cur = hint.link_;
+        while (cur != &root_) { ++rank; cur = cur->parent; }
+
+        return insert_handle(_hint, rank, np);
+    }
+
+    iterator insert_handle(const_iterator _hint, size_type rank, node_type* np) {
+        iterator hint = _hint.remove_const();
+
+        iterator ret;
+        insert_handle_impl(
+            hint.link_,
+            hint.link_->parent,
+            hint.link_->parent_index,
+            np->key(),
+            rank,
+            np,
+            ret
+        );
+        return ret;
     }
 
     link_type* insert_handle_impl(
         link_type* root,
         link_type* parent,
-        std::size_t parent_index,
+        size_type parent_index,
         const key_type& key,
         size_type index,
-        node_type* np
+        node_type* np,
+        iterator& ret
     ) {
         if (root == nullptr) root = make_link_type(parent, parent_index);
 
         if (index == key.size()) {
             if (root->handle == nullptr) { root->handle = np; ++size_; }
             else                         node_alloc_traits::deallocate(node_alloc_, np, 1);
+            ret = iterator(root);
         } else {
-            std::size_t parent_index = key_map_(key[index]);
+            size_type parent_index = key_map_(key[index]);
             auto& child = root->children[parent_index];
-            child = insert_handle_impl(child, root, parent_index, key, index + 1, np);
+            child = insert_handle_impl(child, root, parent_index, key, index + 1, np, ret);
         }
 
         return root;
