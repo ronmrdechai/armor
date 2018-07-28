@@ -180,6 +180,15 @@ TEST(trie_map, insert_twice) {
     EXPECT_EQ(1, t["foo"]);
 }
 
+TEST(trie_map, insert_prefix) {
+    trie_map t{ {"foobar", 2} };
+
+    auto [it, inserted] = t.insert( {"foo", 1} );
+    EXPECT_TRUE(inserted);
+    EXPECT_EQ(1, t["foo"]);
+    EXPECT_EQ(2, t["foobar"]);
+}
+
 TEST(trie_map, insert_range) {
     trie_map t;
     std::vector<typename trie_map::value_type> v{
@@ -208,6 +217,50 @@ TEST(trie_map, insert_list) {
         EXPECT_EQ(v[i].second, value);
         ++i;
     }
+}
+
+TEST(trie_map, insert_hint) {
+    trie_map t;
+
+    auto [hint, _] = t.insert( {"foo", 1} );
+    t.insert(hint, {"foobar", 2});
+
+    EXPECT_EQ(1, t["foo"]);
+    EXPECT_EQ(2, t["foobar"]);
+}
+
+#if 0
+TEST(trie_map, insert_hint_handle) {
+    trie_map t{ {"foobar", 3} };
+
+    auto [hint, _] = t.insert( {"foo", 1} );
+    auto nh = t.extract("foobar");
+    t.insert(hint, std::move(nh));
+
+    EXPECT_EQ(1, t["foo"]);
+    EXPECT_EQ(3, t["foobar"]);
+}
+#endif
+
+TEST(trie_map, insert_hint_exists) {
+    trie_map t{ {"foobar", 3} };
+
+    auto [hint, _] = t.insert( {"foo", 1} );
+
+    EXPECT_EQ(t.find("foobar"), t.insert(hint, {"foobar", 2} ));
+
+    EXPECT_EQ(1, t["foo"]);
+    EXPECT_EQ(3, t["foobar"]);
+}
+
+TEST(trie_map, insert_hint_wrong_hint) {
+    trie_map t;
+
+    auto [hint, _] = t.insert( {"bar", 1} );
+    t.insert(hint, {"foobar", 2} );
+
+    EXPECT_EQ(1, t["bar"]);
+    EXPECT_EQ(2, t["barbar"]);
 }
 
 TEST(trie_map, insert_or_assign_and_access) {

@@ -449,7 +449,7 @@ public:
     iterator insert(const_iterator hint, const value_type& value) {
         if (iterator it = find(value.first); it != end()) return it;
 
-        return {insert_handle_hint(hint, make_handle(value)), true};
+        return insert_handle(hint, make_handle(value));
     }
 
     std::pair<iterator, bool> insert(value_type&& value) {
@@ -461,7 +461,7 @@ public:
     iterator insert(const_iterator hint, value_type&& value) {
         if (iterator it = find(value.first); it != end()) return it;
 
-        return {insert_handle_hint(hint, make_handle(std::move(value))), true};
+        return insert_handle(hint, make_handle(std::move(value)));
     }
 
     insert_return_type insert(node_type&& nh) {
@@ -487,14 +487,7 @@ public:
         return ret;
     }
 
-    iterator insert(const_iterator hint, node_type&& nh) {
-        assert(nh.get_allocator() == node_alloc_);
-
-        if (nh.empty()) return end();
-        if (iterator it = find(nh.key()); it != end()) return it;
-
-        return {insert_handle_hint(hint, make_handle(std::move(nh))), true};
-    }
+    iterator insert(const_iterator hint, node_type&& nh);
 
     template <typename InputIt>
     void insert(InputIt first, InputIt last) {
