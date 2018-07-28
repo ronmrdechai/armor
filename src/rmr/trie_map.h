@@ -487,7 +487,14 @@ public:
         return ret;
     }
 
-    iterator insert(const_iterator hint, node_type&& nh);
+    iterator insert(const_iterator hint, node_type&& nh) {
+        assert(nh.get_allocator() == node_alloc_);
+
+        if (nh.empty()) return end();
+        if (iterator it = find(nh.key()); it != end()) return it;
+
+        return insert_handle(hint, make_handle(std::move(nh)));
+    }
 
     template <typename InputIt>
     void insert(InputIt first, InputIt last) {
@@ -651,6 +658,12 @@ private:
         node_alloc_traits::construct(node_alloc_, handle, node_alloc_);
         handle->value_ = alloc_traits::allocate(alloc_, 1);
         alloc_traits::construct(alloc_, handle->value_, std::forward<Args>(args)...);
+        return handle;
+    }
+
+    node_type* make_handle(node_type&& nh) {
+        node_type* handle = node_alloc_traits::allocate(node_alloc_, 1);
+        node_alloc_traits::construct(node_alloc_, handle, std::move(nh));
         return handle;
     }
 

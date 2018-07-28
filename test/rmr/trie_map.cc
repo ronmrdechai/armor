@@ -229,8 +229,6 @@ TEST(trie_map, insert_hint) {
     EXPECT_EQ(2, t["foobar"]);
 }
 
-/* TODO this test
-
 TEST(trie_map, insert_hint_handle) {
     trie_map t{ {"foobar", 3} };
 
@@ -241,8 +239,6 @@ TEST(trie_map, insert_hint_handle) {
     EXPECT_EQ(1, t["foo"]);
     EXPECT_EQ(3, t["foobar"]);
 }
-
-*/
 
 TEST(trie_map, insert_hint_exists) {
     trie_map t{ {"foobar", 3} };
