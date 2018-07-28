@@ -612,7 +612,7 @@ public:
     }
     std::pair<const_iterator, const_iterator>
     prefixed_with(const key_type& key) const {
-        auto first = find_key(root_iterator(), key.begin(), key.end());
+        auto first = find_key_unsafe(root_iterator(), key.begin(), key.end());
         if (first == end()) return { end(), end() };
 
         auto last = const_iterator::skip(first);
@@ -728,11 +728,21 @@ private:
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) const {
+        const_iterator pos = find_key_unsafe(it, cur, last);
+        if (pos.link_->handle == nullptr) return cend();
+        return pos;
+    }
+
+    const_iterator find_key_unsafe(
+        const_iterator it,
+        typename key_type::const_iterator cur,
+        typename key_type::const_iterator last
+    ) const {
         if (it.link_ == nullptr) return end();
         if (cur == last)         return it;
         it = next_iterator_for_char(it, *cur);
 
-        return find_key(std::move(it), ++cur, last);
+        return find_key_unsafe(std::move(it), ++cur, last);
     }
 
     const_iterator find_longest_match_candidate(
