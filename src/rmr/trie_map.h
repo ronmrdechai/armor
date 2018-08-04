@@ -125,6 +125,14 @@ public:
         link_type* parent = nullptr;
         node_type* handle = nullptr;
 
+        size_type children_count() const {
+            return std::count_if(
+                children.begin(), children.end(), [](link_type* child) {
+                    return child != nullptr;
+                }
+            );
+        }
+
         void unlink() { parent->children[parent_index] = nullptr; }
 
         void destroy_handle(
@@ -579,9 +587,9 @@ public:
 
         auto link = pos.link_;
         link->destroy_handle(alloc_, node_alloc_);
-        if (children_count(link) == 0) {
+        if (link->children_count() == 0) {
             auto parent = link->parent;
-            while (children_count(parent) == 1 && parent != &root_ && parent->handle == nullptr) {
+            while (parent->children_count() == 1 && parent != &root_ && parent->handle == nullptr) {
                 link   = link->parent;
                 parent = link->parent;
             }
@@ -791,12 +799,6 @@ private:
         while (pos.link_->handle == nullptr && pos.link_->parent_index != R_END)
             pos.link_ = pos.link_->parent;
         return pos;
-    }
-
-    static size_t children_count(const link_type* root) {
-        size_t count = 0;
-        for (auto& child : root->children) count += (child != nullptr);
-        return count;
     }
 };
 
