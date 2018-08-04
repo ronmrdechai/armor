@@ -40,7 +40,7 @@ template <
 class trie_map {
     using alloc_traits = std::allocator_traits<Allocator>;
     static_assert(
-        std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>, 
+        std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>,
         "KeyMapper is not invocable on std::size_t or does not return std::size_t"
     );
 
@@ -76,7 +76,7 @@ public:
         constexpr node_type() : value_(nullptr) {}
         constexpr node_type(allocator_type allocator) :
             value_(nullptr), alloc_(std::move(allocator))
-        {} 
+        {}
         node_type(node_type&& other) :
             value_(std::move(other.value_)), alloc_(std::move(other.alloc_))
         { other.value_ = nullptr; }
@@ -170,7 +170,7 @@ public:
         size_(0), alloc_(std::move(allocator)), key_map_(std::move(f))
     { init(); }
     explicit trie_map(allocator_type allocator) :
-        size_(0), alloc_(std::move(allocator)) 
+        size_(0), alloc_(std::move(allocator))
     { init(); }
 
     trie_map(trie_map&&) = default;
