@@ -125,6 +125,8 @@ public:
         link_type* parent = nullptr;
         node_type* handle = nullptr;
 
+        void unlink() { parent->children[parent_index] = nullptr; }
+
         void destroy_handle(
             allocator_type& alloc, node_allocator_type& node_alloc
         ) {
@@ -583,7 +585,7 @@ public:
                 link   = link->parent;
                 parent = link->parent;
             }
-            link->parent->children[link->parent_index] = nullptr;
+            link->unlink();
             link->destroy(alloc_, node_alloc_, link_alloc_);
         }
         size_--;
