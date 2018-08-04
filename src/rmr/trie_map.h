@@ -125,18 +125,29 @@ public:
         link_type* parent = nullptr;
         node_type* handle = nullptr;
 
-        void destroy(
-            node_allocator_type& node_allocator, link_allocator_type& link_allocator
+        void destroy_handle(
+            allocator_type& alloc, node_allocator_type& node_alloc
         ) {
-            if (handle != nullptr) {
-                node_alloc_traits::deallocate(node_allocator, handle, 1);
+            if (handle != nullptr && handle->value_ != nullptr) {
+                alloc_traits::deallocate(alloc, handle->value_, 1);
+                handle->value_ = nullptr;
+
+                node_alloc_traits::deallocate(node_alloc, handle, 1);
                 handle = nullptr;
             }
+        }
+
+        void destroy(
+                 allocator_type&      alloc,
+            node_allocator_type& node_alloc,
+            link_allocator_type& link_alloc
+        ) {
+            destroy_handle(alloc, node_alloc);
 
             for (auto& child : children) {
                 if (child != nullptr) {
-                    child->destroy(node_allocator, link_allocator);
-                    link_alloc_traits::deallocate(link_allocator, child, 1);
+                    child->destroy(alloc, node_alloc, link_alloc);
+                    link_alloc_traits::deallocate(link_alloc, child, 1);
                     child = nullptr;
                 }
             }
@@ -191,7 +202,7 @@ public:
         trie_map(other.begin(), other.end(), std::move(allocator))
     {}
 
-    ~trie_map() { root_.destroy(node_alloc_, link_alloc_); }
+    ~trie_map() { root_.destroy(alloc_, node_alloc_, link_alloc_); }
 
     trie_map& operator=(trie_map&& other) {
         base_ = std::move(other.base_);
@@ -383,7 +394,7 @@ public:
 
     size_type size() const { return size_; }
     bool empty() const { return size() == 0; }
-    void clear() { root_.destroy(node_alloc_, link_alloc_); size_ = 0; }
+    void clear() { root_.destroy(alloc_, node_alloc_, link_alloc_); size_ = 0; }
 
     size_type count(const key_type& key) const {
         try {
@@ -562,22 +573,20 @@ public:
     }
 
     iterator erase(iterator pos) {
-        size_type child = pos.link_->parent_index;
         iterator ret = std::next(pos);
 
-        while (pos.link_->parent != &base_ && children_count(pos.link_->parent) == 1) {
-            pos.link_ = pos.link_->parent;
-            child = pos.link_->parent_index;
+        auto link = pos.link_;
+        link->destroy_handle(alloc_, node_alloc_);
+        if (children_count(link) == 0) {
+            auto parent = link->parent;
+            while (children_count(parent) == 1 && parent != &root_ && parent->handle == nullptr) {
+                link   = link->parent;
+                parent = link->parent;
+            }
+            link->parent->children[link->parent_index] = nullptr;
+            link->destroy(alloc_, node_alloc_, link_alloc_);
         }
-
-        auto& parent = pos.link_->parent;
-        pos.link_->destroy(node_alloc_, link_alloc_);
-        if (pos.link_ != &root_) {
-            parent->children[child] = nullptr;
-            link_alloc_traits::deallocate(link_alloc_, pos.link_, 1);
-        }
-
-        --size_;
+        size_--;
         return ret;
     }
     iterator erase(const_iterator first, const_iterator last) {
@@ -592,16 +601,16 @@ public:
         return 1;
     }
 
-    template <typename KeyMapper2>
-    void merge(trie_map<T, R, KeyMapper2, Key, Allocator>& source) {
+    template <typename KeyMapper_>
+    void merge(trie_map<T, R, KeyMapper_, Key, Allocator>& source) {
         for (auto i = source.begin(), last = source.end(); i != last;) {
             auto pos = i++;
             if (find(pos->first) != end()) continue;
             insert(source.extract(pos));
         }
     }
-    template <typename KeyMapper2>
-    void merge(trie_map<T, R, KeyMapper2, Key, Allocator>&& source) {
+    template <typename KeyMapper_>
+    void merge(trie_map<T, R, KeyMapper_, Key, Allocator>&& source) {
         merge(source);
     }
 

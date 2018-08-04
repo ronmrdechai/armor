@@ -386,6 +386,24 @@ TEST(trie_map, erase_empty) {
     EXPECT_EQ(1u, t.count("bar"));
 }
 
+TEST(trie_map, erase_prefix) {
+    trie_map t{ {"foo", 1}, {"foobar", 2}, {"bar", 3} };
+    t.erase("foo");
+
+    ASSERT_THROW(t.at("foo") = 1, std::out_of_range);
+    EXPECT_EQ(2, t.at("foobar"));
+    EXPECT_EQ(3, t.at("bar"));
+}
+
+TEST(trie_map, erase_suffix) {
+    trie_map t{ {"foo", 1}, {"foobar", 2}, {"bar", 3} };
+    t.erase("foobar");
+
+    ASSERT_THROW(t.at("foobar") = 1, std::out_of_range);
+    EXPECT_EQ(1, t.at("foo"));
+    EXPECT_EQ(3, t.at("bar"));
+}
+
 TEST(trie_map, erase_const_iterator) {
     trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
 
