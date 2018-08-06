@@ -419,7 +419,7 @@ public:
         return const_cast<const trie_map&>(*this).find(key).remove_const();
     }
     const_iterator find(const key_type& key) const {
-        return find_key(root_iterator(), key.begin(), key.end());
+        return const_iterator(find_key(&root_, key.begin(), key.end()));
     }
 
     template <typename... Args>
@@ -482,7 +482,7 @@ public:
     iterator insert(const_iterator hint, value_type&& value) {
         if (iterator it = find(value.first); it != end()) return it;
 
-        return insert_handle(hint, make_handle(std::move(value)));
+        return insert_handle(hint.link_, make_handle(std::move(value)));
     }
 
     insert_return_type insert(node_type&& nh) {
@@ -514,7 +514,7 @@ public:
         if (nh.empty()) return end();
         if (iterator it = find(nh.key()); it != end()) return it;
 
-        return insert_handle(hint, make_handle(std::move(nh)));
+        return insert_handle(hint.link_, make_handle(std::move(nh)));
     }
 
     template <typename InputIt>
@@ -628,7 +628,7 @@ public:
         return const_cast<const trie_map&>(*this).longest_match(key).remove_const();
     }
     const_iterator longest_match(const key_type& key) const {
-        return find_longest_match(root_iterator(), key.begin(), key.end());
+        return const_iterator(find_longest_match(&root_, key.begin(), key.end()));
     }
 
     std::pair<iterator, iterator>
@@ -638,7 +638,7 @@ public:
     }
     std::pair<const_iterator, const_iterator>
     prefixed_with(const key_type& key) const {
-        auto first = find_key_unsafe(root_iterator(), key.begin(), key.end());
+        const_iterator first(find_key_unsafe(&root_, key.begin(), key.end()));
         if (first == end()) return { end(), end() };
 
         auto last = const_iterator::skip(first);
@@ -667,10 +667,6 @@ private:
         root_.parent_index = 0;
     }
 
-    const_iterator root_iterator() const {
-        return const_iterator(&root_);
-    }
-
     template <typename... Args>
     node_type* make_handle(Args&&... args) {
         node_type* handle = node_alloc_traits::allocate(node_alloc_, 1);
@@ -694,31 +690,23 @@ private:
         return link;
     }
 
-    iterator insert_handle(node_type* np) {
-        return insert_handle(root_iterator(), 0, np);
+    link_type* insert_handle(node_type* np) {
+        return insert_handle(&root_, 0, np);
     }
 
-    iterator insert_handle(const_iterator _hint, node_type* np) {
-        iterator hint = _hint.remove_const();
+    link_type* insert_handle(const link_type* hint, node_type* np) {
         size_type rank = 0;
-        link_type* cur = hint.link_;
+        const link_type* cur = hint;
         while (cur != &root_) { ++rank; cur = cur->parent; }
 
-        return insert_handle(_hint, rank, np);
+        return insert_handle(hint, rank, np);
     }
 
-    iterator insert_handle(const_iterator _hint, size_type rank, node_type* np) {
-        iterator hint = _hint.remove_const();
-
-        iterator ret;
+    link_type* insert_handle(const link_type* _hint, size_type rank, node_type* np) {
+        link_type* hint = const_cast<link_type*>(_hint);
+        link_type* ret;
         insert_handle_impl(
-            hint.link_,
-            hint.link_->parent,
-            hint.link_->parent_index,
-            np->key(),
-            rank,
-            np,
-            ret
+            hint, hint->parent, hint->parent_index, np->key(), rank, np, ret
         );
         return ret;
     }
@@ -730,14 +718,14 @@ private:
         const key_type& key,
         size_type index,
         node_type* np,
-        iterator& ret
+        link_type*& ret
     ) {
         if (root == nullptr) root = make_link_type(parent, parent_index);
 
         if (index == key.size()) {
             if (root->handle == nullptr) { root->handle = np; ++size_; }
             else                         node_alloc_traits::deallocate(node_alloc_, np, 1);
-            ret = iterator(root);
+            ret = root;
         } else {
             size_type parent_index = key_map_(key[index]);
             auto& child = root->children[parent_index];
@@ -747,57 +735,53 @@ private:
         return root;
     }
 
-    const_iterator next_iterator_for_char(
-        const_iterator it, const char_type& c
-    ) const {
-        size_type index = key_map_(c);
-        it.link_ = it.link_->children[index];
-        return it;
+    const link_type*
+    next_link_for_char(const link_type* link, const char_type& c) const {
+        return link->children[key_map_(c)];
     }
 
-    const_iterator find_key(
-        const_iterator it,
+    const link_type* find_key(
+        const link_type* link,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) const {
-        const_iterator pos = find_key_unsafe(it, cur, last);
-        if (pos.link_->handle == nullptr) return cend();
+        const link_type* pos = find_key_unsafe(link, cur, last);
+        if (pos->handle == nullptr) return &base_;
         return pos;
     }
 
-    const_iterator find_key_unsafe(
-        const_iterator it,
+    const link_type* find_key_unsafe(
+        const link_type* link,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) const {
-        if (it.link_ == nullptr) return end();
-        if (cur == last)         return it;
-        it = next_iterator_for_char(it, *cur);
+        if (link == nullptr) return &base_;
+        if (cur == last)     return link;
+        link = next_link_for_char(link, *cur);
 
-        return find_key_unsafe(std::move(it), ++cur, last);
+        return find_key_unsafe(link, ++cur, last);
     }
 
-    const_iterator find_longest_match_candidate(
-        const_iterator it, const_iterator prev,
+    const link_type* find_longest_match_candidate(
+        const link_type* link, const link_type* prev,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) const {
-        if (it.link_ == nullptr) return prev;
-        if (cur == last)         return it;
-        prev = it;
-        it = next_iterator_for_char(it, *cur);
+        if (link == nullptr) return prev;
+        if (cur == last)     return link;
+        prev = link;
+        link = next_link_for_char(link, *cur);
 
-        return find_longest_match_candidate(std::move(it), std::move(prev), ++cur, last);
+        return find_longest_match_candidate(link, prev, ++cur, last);
     }
 
-    const_iterator find_longest_match(
-        const_iterator it,
+    const link_type* find_longest_match(
+        const link_type* link,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) const {
-        auto pos = find_longest_match_candidate(it, end(), cur, last);
-        while (pos.link_->handle == nullptr && pos.link_->parent_index != R_END)
-            pos.link_ = pos.link_->parent;
+        auto pos = find_longest_match_candidate(link, &base_, cur, last);
+        while (pos->handle == nullptr && pos->parent_index != R_END) pos = pos->parent;
         return pos;
     }
 };
