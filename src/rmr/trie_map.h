@@ -44,8 +44,6 @@ class trie_map {
         "KeyMapper is not invocable on std::size_t or does not return std::size_t"
     );
 
-    static constexpr std::size_t R_END = std::numeric_limits<std::size_t>::max();
-    static_assert(R < R_END, "R must be less than UINT_MAX");
 public:
     using key_type        = Key;
     using char_type       = typename key_type::value_type;
@@ -121,7 +119,7 @@ public:
     using link_alloc_traits = std::allocator_traits<link_allocator_type>;
     struct link_type {
         std::array<link_type*, R> children = { nullptr };
-        std::size_t parent_index = 0;
+        std::size_t parent_index = R;
         link_type* parent = nullptr;
         node_type* handle = nullptr;
 
@@ -289,7 +287,7 @@ public:
         generic_iterator& operator++() {
             do {
                 *this = next(std::move(*this));
-            } while(this->link_->handle == nullptr && this->link_->parent_index != R_END);
+            } while(this->link_->handle == nullptr && this->link_->parent_index != R);
             return *this;
         }
 
@@ -335,7 +333,7 @@ public:
 
         static std::pair<generic_iterator, bool>
         step_right(generic_iterator it) {
-            if (it.link_->parent_index == R_END) return {it, false};
+            if (it.link_->parent_index == R) return {it, false};
 
             for (size_type pos = it.link_->parent_index + 1; pos < R; ++pos) {
                 link_type* parent = it.link_->parent;
@@ -366,7 +364,7 @@ public:
             std::tie(it, stepped) = step_right(std::move(it));
             if (stepped) return it;
 
-            while (it.link_->parent_index != R_END) {
+            while (it.link_->parent_index != R) {
                 std::tie(it, stepped) = step_up(std::move(it));
                 if (stepped) return it;
             }
@@ -661,7 +659,7 @@ private:
 
     void init() {
         base_.children[0] = &root_;
-        base_.parent_index = R_END;
+        base_.parent_index = R;
 
         root_.parent = &base_;
         root_.parent_index = 0;
@@ -781,7 +779,7 @@ private:
         typename key_type::const_iterator last
     ) const {
         auto pos = find_longest_match_candidate(link, &base_, cur, last);
-        while (pos->handle == nullptr && pos->parent_index != R_END) pos = pos->parent;
+        while (pos->handle == nullptr && pos->parent_index != R) pos = pos->parent;
         return pos;
     }
 };
