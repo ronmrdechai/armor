@@ -494,7 +494,7 @@ public:
     iterator insert(const_iterator hint, const value_type& value) {
         if (iterator it = find(value.first); it != end()) return it;
 
-        return insert_handle(hint, make_handle(value));
+        return insert_handle(hint.link_, make_handle(value));
     }
 
     std::pair<iterator, bool> insert(value_type&& value) {
