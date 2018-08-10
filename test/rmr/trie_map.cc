@@ -152,6 +152,37 @@ TEST(trie_map, try_emplace_twice) {
     EXPECT_EQ(1, t["foo"]);
 }
 
+TEST(trie_map, try_emplace_hint) {
+    trie_map t;
+
+    auto [hint, _] = t.try_emplace("foo", 1);
+    t.try_emplace(hint, "foobar", 2);
+
+    EXPECT_EQ(1, t["foo"]);
+    EXPECT_EQ(2, t["foobar"]);
+}
+
+TEST(trie_map, try_emplace_hint_exists) {
+    trie_map t{ {"foobar", 3} };
+
+    auto [hint, _] = t.insert( {"foo", 1} );
+
+    EXPECT_EQ(t.find("foobar"), t.try_emplace(hint, "foobar", 2));
+
+    EXPECT_EQ(1, t["foo"]);
+    EXPECT_EQ(3, t["foobar"]);
+}
+
+TEST(trie_map, try_emplace_hint_wrong_hint) {
+    trie_map t;
+
+    auto [hint, _] = t.insert( {"bar", 1} );
+    t.try_emplace(hint, "foobar", 2);
+
+    EXPECT_EQ(1, t["bar"]);
+    EXPECT_EQ(2, t["barbar"]);
+}
+
 TEST(trie_map, insert_and_access) {
     trie_map t;
     typename trie_map::value_type v{"foo", 1};
@@ -284,14 +315,6 @@ TEST(trie_map, insert_or_assign_twice) {
 TEST(trie_map, insert_or_assign_hint) {}
 TEST(trie_map, insert_or_assign_hint_exists) {}
 TEST(trie_map, insert_or_assign_hint_wrong_hint) {}
-
-TEST(trie_map, emplace_hint) {}
-TEST(trie_map, emplace_hint_exists) {}
-TEST(trie_map, emplace_hint_wrong_hint) {}
-
-TEST(trie_map, try_emplace_hint) {}
-TEST(trie_map, try_emplace_hint_exists) {}
-TEST(trie_map, try_emplace_hint_wrong_hint) {}
 
 TEST(trie_map, copy_constructor) {
     trie_map t;

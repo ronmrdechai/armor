@@ -424,8 +424,7 @@ public:
     std::pair<iterator, bool> emplace(Args&&... args) {
         node_type* np = make_handle(std::forward<Args>(args)...);
 
-        iterator it = find(np->key());
-        if (it != end()) {
+        if (iterator it = find(np->key()); it != end()) {
             node_alloc_traits::deallocate(node_alloc_, np, 1);
             return {it, false};
         }
@@ -433,9 +432,19 @@ public:
         return {insert_handle(np), true};
     }
     template <typename... Args>
+    iterator emplace_hint(const_iterator hint, Args&&... args) {
+        node_type* np = make_handle(std::forward<Args>(args)...);
+
+        if (iterator it = find(np->key()); it != end()) {
+            node_alloc_traits::deallocate(node_alloc_, np, 1);
+            return it;
+        }
+
+        return insert_handle(hint.link_, np);
+    }
+    template <typename... Args>
     std::pair<iterator, bool> try_emplace(const key_type& key, Args&&... args) {
-        iterator it = find(key);
-        if (it == end()) return emplace(value_type(
+        if (iterator it = find(key); it == end()) return emplace(value_type(
             std::piecewise_construct,
             std::forward_as_tuple(key),
             std::forward_as_tuple(args...)
@@ -444,13 +453,30 @@ public:
     }
     template <typename... Args>
     std::pair<iterator, bool> try_emplace(key_type&& key, Args&&... args) {
-        iterator it = find(key);
-        if (it == end()) return emplace(value_type(
+        if (iterator it = find(key); it == end()) return emplace(value_type(
             std::piecewise_construct,
             std::forward_as_tuple(std::move(key)),
             std::forward_as_tuple(args...)
         ));
         else return {it, false};
+    }
+    template <typename... Args>
+    iterator try_emplace(const_iterator hint, const key_type& key, Args&&... args) {
+        if (iterator it = find(key); it == end()) return emplace_hint(hint, value_type(
+            std::piecewise_construct,
+            std::forward_as_tuple(key),
+            std::forward_as_tuple(args...)
+        ));
+        else return it;
+    }
+    template <typename... Args>
+    iterator try_emplace(const_iterator hint, key_type&& key, Args&&... args) {
+        if (iterator it = find(key); it == end()) return emplace_hint(hint, value_type(
+            std::piecewise_construct,
+            std::forward_as_tuple(std::move(key)),
+            std::forward_as_tuple(args...)
+        ));
+        else return it;
     }
 
     struct insert_return_type {
