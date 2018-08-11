@@ -548,10 +548,39 @@ public:
     void insert(std::initializer_list<value_type> init) {
         insert(init.begin(), init.end());
     }
-    std::pair<iterator, bool> insert_or_assign(const value_type& value) {
-        auto [it, inserted] = insert(value);
-        if (!inserted) it->second = value.second;
-        return {it, inserted};
+
+    template <typename M>
+    std::pair<iterator, bool> insert_or_assign(const key_type& key, M&& obj) {
+        if (iterator it = find(key); it != end()) {
+            it->second = std::forward<M>(obj);
+            return {it, false};
+        }
+        return insert(value_type(key, std::forward<M>(obj)));
+    }
+    template <typename M>
+    std::pair<iterator, bool> insert_or_assign(key_type&& key, M&& obj) {
+        if (iterator it = find(key); it != end()) {
+            it->second = std::forward<M>(obj);
+            return {it, false};
+        }
+        return insert(value_type(std::move(key), std::forward<M>(obj)));
+    }
+
+    template <typename M>
+    iterator insert_or_assign(const_iterator hint, const key_type& key, M&& obj) {
+        if (iterator it = find(key); it != end()) {
+            it->second = std::forward<M>(obj);
+            return it;
+        }
+        return insert(hint, value_type(key, std::forward<M>(obj)));
+    }
+    template <typename M>
+    iterator insert_or_assign(const_iterator hint, key_type&& key, M&& obj) {
+        if (iterator it = find(key); it != end()) {
+            it->second = std::forward<M>(obj);
+            return it;
+        }
+        return insert(hint, value_type(std::move(key), std::forward<M>(obj)));
     }
 
     inline bool operator==(const trie_map& other) const {

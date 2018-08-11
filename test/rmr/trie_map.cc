@@ -177,7 +177,10 @@ TEST(trie_map, try_emplace_hint_wrong_hint) {
     trie_map t;
 
     auto [hint, _] = t.insert( {"bar", 1} );
-    t.try_emplace(hint, "foobar", 2);
+    auto it = t.try_emplace(hint, "foobar", 2);
+
+    typename trie_map::value_type value{"foobar", 2};
+    EXPECT_EQ(value, *it);
 
     EXPECT_EQ(1, t["bar"]);
     EXPECT_EQ(2, t["barbar"]);
@@ -286,7 +289,10 @@ TEST(trie_map, insert_hint_wrong_hint) {
     trie_map t;
 
     auto [hint, _] = t.insert( {"bar", 1} );
-    t.insert(hint, {"foobar", 2} );
+    auto it = t.insert(hint, {"foobar", 2} );
+
+    typename trie_map::value_type value{"foobar", 2};
+    EXPECT_EQ(value, *it);
 
     EXPECT_EQ(1, t["bar"]);
     EXPECT_EQ(2, t["barbar"]);
@@ -294,7 +300,7 @@ TEST(trie_map, insert_hint_wrong_hint) {
 
 TEST(trie_map, insert_or_assign_and_access) {
     trie_map t;
-    t.insert_or_assign( {"foo", 1} );
+    t.insert_or_assign("foo", 1);
     EXPECT_EQ(1, t["foo"]);
 }
 
@@ -303,18 +309,46 @@ TEST(trie_map, insert_or_assign_twice) {
 
     bool inserted;
     typename trie_map::iterator it1, it2;
-    std::tie(it1, inserted) = t.insert_or_assign( {"foo", 1} );
+    std::tie(it1, inserted) = t.insert_or_assign("foo", 1);
     EXPECT_TRUE(inserted);
 
-    std::tie(it2, inserted) = t.insert_or_assign( {"foo", 2} );
+    std::tie(it2, inserted) = t.insert_or_assign("foo", 2);
     EXPECT_FALSE(inserted);
     EXPECT_EQ(it1, it2);
     EXPECT_EQ(2, t["foo"]);
 }
 
-TEST(trie_map, insert_or_assign_hint) {}
-TEST(trie_map, insert_or_assign_hint_exists) {}
-TEST(trie_map, insert_or_assign_hint_wrong_hint) {}
+TEST(trie_map, insert_or_assign_hint) {
+    trie_map t;
+    auto [hint, _] = t.insert({"foo", 1});
+    auto it = t.insert_or_assign(hint, "foobar", 2);
+
+    typename trie_map::value_type value{"foobar", 2};
+    EXPECT_EQ(value, *it);
+    EXPECT_EQ(2, t["foobar"]);
+}
+
+TEST(trie_map, insert_or_assign_hint_exists) {
+    trie_map t{ {"foobar", 2} };
+    auto [hint, _] = t.insert({"foo", 1});
+    auto it = t.insert_or_assign(hint, "foobar", 3);
+
+    typename trie_map::value_type value{"foobar", 3};
+    EXPECT_EQ(value, *it);
+    EXPECT_EQ(3, t["foobar"]);
+}
+
+TEST(trie_map, insert_or_assign_hint_wrong_hint) {
+    trie_map t;
+    auto [hint, _] = t.insert({"bar", 1});
+    auto it = t.insert_or_assign(hint, "foobar", 2);
+
+    typename trie_map::value_type value{"foobar", 2};
+    EXPECT_EQ(value, *it);
+
+    EXPECT_EQ(1, t["bar"]);
+    EXPECT_EQ(2, t["barbar"]);
+}
 
 TEST(trie_map, copy_constructor) {
     trie_map t;
