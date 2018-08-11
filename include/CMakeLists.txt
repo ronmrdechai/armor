@@ -7,7 +7,7 @@
 
 add_library(Armor INTERFACE)
 target_include_directories(Armor INTERFACE
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
 
@@ -29,4 +29,4 @@ install(FILES
     "${PROJECT_BINARY_DIR}/ArmorConfig.cmake"
     DESTINATION "lib/cmake/Armor"
 )
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/src/rmr" DESTINATION "include")
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/rmr" DESTINATION "include")
