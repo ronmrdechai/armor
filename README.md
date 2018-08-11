@@ -35,8 +35,8 @@ In addition to the `map` containers, _Armor_ provides the same containers in
 
 ### Strings
 
-_Armor_ additional datastuctures for processing of strings. Again, all of the
-following types satisfy the `AllocatorAwareContainer` concept
+_Armor_ provides additional datastuctures for processing of strings. Again, all
+of the following types satisfy the `AllocatorAwareContainer` concept
 requirements and are fully STL compatible.
 
 - [ ] `rope` - An implementation of a Rope-based string.
