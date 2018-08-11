@@ -13,6 +13,8 @@ the near future:
 All of _Armor's_ associative containers are fully STL compatible and satisfy the
 `AllocatorAwareContainer` concept requirements.
 
+#### Trie-based containers
+
 - [x] `trie_map` - An implementation of a Trie based map.
 - [ ] `tst_map` - An implementation of a Ternary Search Tree based map.
 - [ ] `compressed_trie_map` - An implementation of a compressed Trie based map.
@@ -20,7 +22,7 @@ All of _Armor's_ associative containers are fully STL compatible and satisfy the
 - [ ] `hat_trie_map` - An implementation of a
 [HAT Trie](http://crpit.com/confpapers/CRPITV62Askitis.pdf) based map.
 
-<br/>
+#### DAWG-based containers
 
 - [ ] `dawg_map` - An implementation of a Directed Acyclic Word Graph based map.
 - [ ] `compressed_dawg_map` - An implementation of a compressed DAWG based map.
@@ -31,10 +33,10 @@ In addition to the `map` containers, _Armor_ provides the same containers in
 `set` form. For example, if you want to use a `trie_map` as a set, just use
 `trie_set` instead.
 
-### String containers
+### Strings
 
-_Armor_ additional containers for processing of strings. Again, all of the
-following datastructures satisfy the `AllocatorAwareContainer` concept
+_Armor_ additional datastuctures for processing of strings. Again, all of the
+following types satisfy the `AllocatorAwareContainer` concept
 requirements and are fully STL compatible.
 
 - [ ] `rope` - An implementation of a Rope-based string.
