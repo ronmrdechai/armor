@@ -62,8 +62,8 @@ include(CPack)
 add_subdirectory(include)
 
 option(ARMOR_INCLUDE_TESTS "Generate build targets for the Armor unit tests." OFF)
-enable_testing()
 if(ARMOR_INCLUDE_TESTS)
+    enable_testing()
     add_subdirectory(test)
 endif()
 

@@ -11,7 +11,6 @@
 #include <cassert>
 #include <initializer_list>
 #include <iterator>
-#include <limits>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
