@@ -383,11 +383,7 @@ public:
     using iterator = generic_iterator<link_type>;
     using const_iterator = generic_iterator<const link_type>;
 
-    iterator begin() {
-        if (empty()) return end();
-        iterator it(&base_);
-        return ++it;
-    }
+    iterator begin() { return cbegin().remove_const(); }
     const_iterator begin() const { return cbegin(); }
     const_iterator cbegin() const {
         if (empty()) return cend();
