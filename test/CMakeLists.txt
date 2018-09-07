@@ -9,7 +9,6 @@ include(CTest)
 include(GoogleTest)
 
 find_package(GoogleTest 1.8.0)
-include_directories(${GTEST_INCLUDE_DIRS})
 
 file(GLOB test_sources CONFIGURE_DEPENDS "rmr/*.cc")
 
@@ -18,6 +17,7 @@ foreach(source ${test_sources})
     set(target "test_${source_name}")
 
     add_executable(${target} ${source})
-    target_link_libraries(${target} Armor ${GTEST_BOTH_LIBRARIES})
+    target_link_libraries(${target} PRIVATE Armor ${GTEST_BOTH_LIBRARIES})
+    target_include_directories(${target} PRIVATE ${GTEST_INCLUDE_DIRS})
     gtest_discover_tests(${target})
 endforeach()
