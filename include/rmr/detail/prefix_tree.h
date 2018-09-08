@@ -202,8 +202,8 @@ public:
     using allocator_type  = Allocator;
     using reference       = value_type&;
     using const_reference = const value_type&;
-    using pointer         = typename std::allocator_traits<Allocator>::pointer;
-    using const_pointer   = typename std::allocator_traits<Allocator>::const_pointer;
+    using pointer         = typename std::allocator_traits<allocator_type>::pointer;
+    using const_pointer   = typename std::allocator_traits<allocator_type>::const_pointer;
 public:
     using iterator               = prefix_tree_iterator<R, node_type*>;
     using const_iterator         = prefix_tree_iterator<R, const node_type*>;
