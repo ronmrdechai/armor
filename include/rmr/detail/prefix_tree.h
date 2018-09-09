@@ -14,31 +14,29 @@ namespace rmr::detail {
 
 template <typename T, std::size_t R>
 struct prefix_tree_node {
-    using pointer       =       prefix_tree_node*;
-    using const_pointer = const prefix_tree_node*;
-    using value_type    = T;
+    using value_type = T;
 
-    pointer 	children[R];
-    std::size_t parent_index;
-    pointer 	parent;
-	T*			value;
+    prefix_tree_node* children[R];
+    std::size_t       parent_index;
+    prefix_tree_node* parent;
+	T*                value;
 };
 
 template <typename T, std::size_t R>
-std::size_t children_count(typename prefix_tree_node<T, R>::const_pointer n) {
+std::size_t children_count(const prefix_tree_node<T, R>* n) {
 	std::size_t count = 0;	
 	for (auto& child : n->children) count += child != nullptr;
 	return count;
 }
 
 template <typename T, std::size_t R>
-void unlink(typename prefix_tree_node<T, R>::pointer n) {
+void unlink(prefix_tree_node<T, R>* n) {
 	n->parent->children[n->parent_index] = nullptr;
 }
 
 template <typename T, std::size_t R, typename ValueAllocator>
-void delete_node_value(typename prefix_tree_node<T, R>::pointer n, ValueAllocator& va) {
-	if (n != nullptr && n->value = nullptr) {
+void delete_node_value(prefix_tree_node<T, R>* n, ValueAllocator& va) {
+	if (n != nullptr && n->value == nullptr) {
 		std::allocator_traits<ValueAllocator>::destroy(va, n->value);
 		std::allocator_traits<ValueAllocator>::deallocate(va, n->value, 1);
 		n->value = nullptr;
@@ -46,7 +44,7 @@ void delete_node_value(typename prefix_tree_node<T, R>::pointer n, ValueAllocato
 }
 
 template <typename T, std::size_t R, typename NodeAllocator, typename ValueAllocator>
-void clear_node(typename prefix_tree_node<T, R>::pointer n, NodeAllocator& na, ValueAllocator& va) {
+void clear_node(prefix_tree_node<T, R>* n, NodeAllocator& na, ValueAllocator& va) {
 	delete_node_value(n, va);
 
 	for (auto& child : n->children) {
@@ -66,7 +64,8 @@ struct prefix_tree_iterator {
     using difference_type   = std::ptrdiff_t;
     using reference         = value_type&;
     using pointer           = value_type*;
-    using iterator_category = std::bidirectional_iterator_tag;
+    // using iterator_category = std::bidirectional_iterator_tag;
+    using iterator_category = std::forward_iterator_tag;
 
     using node_type = NodeT;
 
@@ -150,15 +149,6 @@ step_up(prefix_tree_iterator<R, NodeT> it) {
 }
 
 template <std::size_t R, typename NodeT>
-prefix_tree_iterator<R, NodeT> next(prefix_tree_iterator<R, NodeT> it) {
-    bool stepped;
-
-    std::tie(it, stepped) = step_down(it);
-    if (stepped) return it;
-    return skip(it);
-}
-
-template <std::size_t R, typename NodeT>
 prefix_tree_iterator<R, NodeT> skip(prefix_tree_iterator<R, NodeT> it) {
     bool stepped;
 
@@ -170,6 +160,15 @@ prefix_tree_iterator<R, NodeT> skip(prefix_tree_iterator<R, NodeT> it) {
         if (stepped) return it;
     }
     return it;
+}
+
+template <std::size_t R, typename NodeT>
+prefix_tree_iterator<R, NodeT> next(prefix_tree_iterator<R, NodeT> it) {
+    bool stepped;
+
+    std::tie(it, stepped) = step_down(it);
+    if (stepped) return it;
+    return skip(it);
 }
 
 template <std::size_t R, typename NodeT>
@@ -205,6 +204,16 @@ public:
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+    // TODO prefix_tree(const prefix_tree&)
+    // TODO prefix_tree(prefix_tree&&)
+    // TODO operator=(const prefix_tree&)
+    // TODO operator=(prefix_tree&&)
+    // TODO void swap(prefix_tree&)
+
+    template <typename... Args>
+    iterator emplace(const_iterator pos, const key_type& key, Args&&... args) {
+        return emplace(remove_const(pos), key, std::forward<Args>(args)...);
+    }
     template <typename... Args>
     iterator emplace(iterator pos, const key_type& key, Args&&... args) {
         auto alloc = get_allocator();
@@ -217,15 +226,25 @@ public:
         return find_key(&impl_.root, key.begin(), key.end());
     }
 
-    // TODO prefix_tree(const prefix_tree&)
-    // TODO prefix_tree(prefix_tree&&)
-    // TODO operator=(const prefix_tree&)
-    // TODO operator=(prefix_tree&&)
-    // TODO void swap(prefix_tree&)
+    iterator erase(const_iterator pos) { return erase(remove_const(pos)); }
+    iterator erase(iterator pos) {
+        iterator next = std::next(pos);
+        erase_node(pos.node);
+        return next;
+    }
 
-    // TODO iterator erase(iterator pos) {}
-    // TODO const_iterator longest_match(const key_type& key) {}
-    // TODO std::pair<const_iterator, const_iterator> prefixed_with(const key_type& key) {}
+    const_iterator longest_match(const key_type& key) const {
+        return longest_match(&impl_.root, key.begin(), key.end());
+    }
+
+    std::pair<const_iterator, const_iterator>
+    prefixed_with(const key_type& key) const {
+        const_iterator first = find_key_unsafe(&impl_.root, key.begin(), key.end());
+        if (first == end()) return { end(), end() };
+
+        auto last = skip(first);
+        return {++first, ++last};
+    }
 
     iterator root() { return remove_const(croot()); }
     const_iterator root() const { return croot(); }
@@ -315,6 +334,43 @@ private:
 
         root = root->children[key_map()(*cur)];
         return find_key_unsafe(root, ++cur, last);
+    }
+
+    void erase_node(node_type* node) {
+        auto value_alloc = get_allocator();
+        auto& node_alloc = get_node_allocator();
+
+        delete_node_value(node, value_alloc);
+        if (children_count(node) == 0) {
+            node_type* parent = node->parent;
+            while (children_count(parent) == 1 && parent != &impl_.root && parent->value == nullptr) {
+                node   = node->parent;
+                parent = node->parent;
+            }
+            unlink(node);
+            clear_node(node, node_alloc, value_alloc);
+        }
+    }
+
+    const node_type* longest_match(
+        const node_type* root,
+        typename key_type::const_iterator cur,
+        typename key_type::const_iterator last
+    ) const {
+        auto pos = longest_match_candidate(root, root->parent, cur, last);
+        while (pos->value == nullptr && pos->parent_index != R) pos = pos->parent;
+        return pos;
+    }
+    const node_type* longest_match_candidate(
+        const node_type* node, const node_type* prev,
+        typename key_type::const_iterator cur,
+        typename key_type::const_iterator last
+    ) const {
+        if (node == nullptr) return prev;
+        if (cur == last)     return node;
+        prev = node;
+        node = node->children[key_map()(*cur)];
+        return longest_match_candidate(node, prev, ++cur, last);
     }
 
     struct prefix_tree_header {
