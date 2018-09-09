@@ -97,11 +97,13 @@ struct prefix_tree_iterator {
     reference operator*() const { return *(node->value); }
     pointer  operator->() const { return   node->value ; }
 
-    bool operator==(const prefix_tree_iterator& other) const {
+    template <typename _NodeT>
+    bool operator==(const prefix_tree_iterator<R, _NodeT>& other) const {
         return (node == other.node);
     }
 
-    bool operator!=(const prefix_tree_iterator& other) const {
+    template <typename _NodeT>
+    bool operator!=(const prefix_tree_iterator<R, _NodeT>& other) const {
         return !(*this == other);
     }
 
@@ -205,12 +207,26 @@ public:
         auto alloc = get_allocator();
         value_type* v = alloc_traits::allocate(alloc, 1);
         alloc_traits::construct(alloc, v, std::forward<Args>(args)...);
-        return iterator(insert_node(pos.node, key, v));
+        return insert_node(pos.node, key, v);
     }
+
+    const_iterator find(const key_type& key) const {
+        return find_key(&impl_.root, key.begin(), key.end());
+    }
+
+    // prefix_tree(const prefix_tree&)
+    // prefix_tree(prefix_tree&&)
+    // operator=(const prefix_tree&)
+    // operator=(prefix_tree&&)
+    // void swap(prefix_tree&)
+
+    // iterator erase(iterator pos) {}
+    // const_iterator longest_match(const key_type& key) {}
+    // std::pair<const_iterator, const_iterator> prefixed_with(const key_type& key) {}
 
     iterator root() { return remove_const(croot()); }
     const_iterator root() const { return croot(); }
-    const_iterator croot() const { return const_iterator(&impl_.root); }
+    const_iterator croot() const { return &impl_.root; }
 
     iterator begin() { return remove_const(cbegin()); }
     const_iterator begin() const { return cbegin(); }
@@ -218,12 +234,11 @@ public:
 
     iterator end() { return remove_const(cend()); }
     const_iterator end() const { return cend(); }
-    const_iterator cend() const { return const_iterator(&impl_.base); }
+    const_iterator cend() const { return &impl_.base; }
 
     size_type size() const { return impl_.size; }
-    bool empty() const { return size() == 0; }
 
-    allocator_type get_allocator() const { return {get_node_allocator()}; }
+    allocator_type get_allocator() const { return get_node_allocator(); }
     key_mapper     key_map()       const { return impl_; }
 
 private:
@@ -248,7 +263,7 @@ private:
         value_type* v,
         node_type*& ret
     ) {
-        if (root == nullptr) root = make_node(parent, parent_index);
+        if (root == nullptr) root = get_node(parent, parent_index);
         if (index == key.size()) {
             if (root->value == nullptr) { root->value = v; ++impl_.size; }
             else { auto alloc = get_allocator(); alloc_traits::deallocate(alloc, v, 1); }
@@ -264,7 +279,7 @@ private:
     const auto& get_node_allocator() const { return impl_; }
           auto& get_node_allocator()       { return impl_; }
 
-    node_type* make_node(node_type* parent, size_type parent_index) {
+    node_type* get_node(node_type* parent, size_type parent_index) {
         auto& node_alloc = get_node_allocator();
         node_type* n = node_alloc_traits::allocate(node_alloc, 1);
         node_alloc_traits::construct(node_alloc, n);
@@ -275,6 +290,28 @@ private:
         n->value = nullptr;
 
         return n;
+    }
+
+    const node_type* find_key(
+        const node_type* root,
+        typename key_type::const_iterator cur,
+        typename key_type::const_iterator last
+    ) const {
+        const node_type* pos = find_key_unsafe(root, cur, last);
+        if (pos->value == nullptr) return &impl_.base;
+        return pos;
+    }
+
+    const node_type* find_key_unsafe(
+        const node_type* root, 
+        typename key_type::const_iterator cur,
+        typename key_type::const_iterator last
+    ) const {
+        if (root == nullptr) return &impl_.base;
+        if (cur == last)     return root;
+
+        root = root->children[key_map()(*cur)];
+        return find_key_unsafe(root, ++cur, last);
     }
 
     struct prefix_tree_header {

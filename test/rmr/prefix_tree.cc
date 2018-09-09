@@ -16,5 +16,8 @@ TEST(prefix_tree, scratch) {
     p.emplace(p.root(), "hello", 42);
     EXPECT_EQ(42, *p.begin());
 
-    EXPECT_EQ(std::distance(p.begin(), p.end()), 1);
+    EXPECT_EQ(1, std::distance(p.begin(), p.end()));
+
+    EXPECT_EQ(42, *p.find("hello"));
+    EXPECT_EQ(p.end(), p.find("bye"));
 }
