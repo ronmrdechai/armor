@@ -12,18 +12,11 @@
 
 namespace rmr::detail {
 
-template <typename...> struct rebind;
-template <template <typename> typename Type, typename... Inner, typename... New>
-struct rebind<Type<Inner...>, New...> {
-    using type = Type<New...>;
-};
-
 template <typename T, std::size_t R>
 struct prefix_tree_node {
     using pointer       =       prefix_tree_node*;
     using const_pointer = const prefix_tree_node*;
-
-    using value_type = T;
+    using value_type    = T;
 
     pointer 	children[R];
     std::size_t parent_index;
@@ -77,21 +70,21 @@ struct prefix_tree_iterator {
 
     using node_type = NodeT;
 
-    node_type link;
+    node_type node;
 
-    prefix_tree_iterator(node_type n = nullptr) : link(std::move(link)) {}
+    prefix_tree_iterator(node_type n = nullptr) : node(n) {}
     prefix_tree_iterator(const prefix_tree_iterator&) = default;
     prefix_tree_iterator& operator=(const prefix_tree_iterator&) = default;
 
     template <typename = std::enable_if_t<std::is_const_v<node_type>>>
     prefix_tree_iterator(const prefix_tree_iterator<R, std::remove_const_t<node_type>>& other) :
-        link(const_cast<const node_type*>(other.link))
+        node(const_cast<const node_type*>(other.node))
     {}
 
     prefix_tree_iterator& operator++() {
         do {
             *this = next(*this);
-        } while(this->link->value == nullptr && this->link->parent_index != R);
+        } while(this->node->value == nullptr && this->node->parent_index != R);
         return *this;
     }
 
@@ -101,11 +94,11 @@ struct prefix_tree_iterator {
         return tmp;
     }
 
-    reference operator*() const { return *(link->value); }
-    pointer  operator->() const { return   link->value ; }
+    reference operator*() const { return *(node->value); }
+    pointer  operator->() const { return   node->value ; }
 
     bool operator==(const prefix_tree_iterator& other) const {
-        return (link == other.link);
+        return (node == other.node);
     }
 
     bool operator!=(const prefix_tree_iterator& other) const {
@@ -113,7 +106,7 @@ struct prefix_tree_iterator {
     }
 
     friend void swap(prefix_tree_iterator& lhs, prefix_tree_iterator& rhs) {
-        std::swap(lhs.link, rhs.link);
+        std::swap(lhs.node, rhs.node);
     }
 };
 
@@ -121,8 +114,8 @@ template <std::size_t R, typename NodeT>
 std::pair<prefix_tree_iterator<R, NodeT>, bool>
 step_down(prefix_tree_iterator<R, NodeT> it) {
     for (std::size_t pos = 0; pos < R; ++pos) {
-        if (it.link->children[pos] != nullptr) {
-            it.link = it.link->children[pos];
+        if (it.node->children[pos] != nullptr) {
+            it.node = it.node->children[pos];
             return {it, true};
         }
     }
@@ -132,12 +125,12 @@ step_down(prefix_tree_iterator<R, NodeT> it) {
 template <std::size_t R, typename NodeT>
 std::pair<prefix_tree_iterator<R, NodeT>, bool>
 step_right(prefix_tree_iterator<R, NodeT> it) {
-    if (it.link->parent_index == R) return {it, false};
+    if (it.node->parent_index == R) return {it, false};
 
-    for (std::size_t pos = it.link->parent_index + 1; pos < R; ++pos) {
-        NodeT* parent = it.link->parent;
+    for (std::size_t pos = it.node->parent_index + 1; pos < R; ++pos) {
+        NodeT parent = it.node->parent;
         if (parent->children[pos] != nullptr) {
-            it.link = parent->children[pos];
+            it.node = parent->children[pos];
             return {it, true};
         }
     }
@@ -147,7 +140,7 @@ step_right(prefix_tree_iterator<R, NodeT> it) {
 template <std::size_t R, typename NodeT>
 std::pair<prefix_tree_iterator<R, NodeT>, bool>
 step_up(prefix_tree_iterator<R, NodeT> it) {
-    it.link = it.link->parent;
+    it.node = it.node->parent;
     return step_right(it);
 }
 
@@ -167,7 +160,7 @@ prefix_tree_iterator<R, NodeT> skip(prefix_tree_iterator<R, NodeT> it) {
     std::tie(it, stepped) = step_right(it);
     if (stepped) return it;
 
-    while (it.link->parent_index != R) {
+    while (it.node->parent_index != R) {
         std::tie(it, stepped) = step_up(it);
         if (stepped) return it;
     }
@@ -175,12 +168,9 @@ prefix_tree_iterator<R, NodeT> skip(prefix_tree_iterator<R, NodeT> it) {
 }
 
 template <std::size_t R, typename NodeT>
-prefix_tree_iterator<R, std::remove_const_t<NodeT>> remove_const(
-    prefix_tree_iterator<R, NodeT> it
-) {
-    return prefix_tree_iterator<R, std::remove_const_t<NodeT>>(
-        const_cast<std::remove_const_t<NodeT>>(it.link)
-    );
+auto remove_const(prefix_tree_iterator<R, NodeT> it) {
+    using non_const_node = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<NodeT>>>;
+    return prefix_tree_iterator<R, non_const_node>(const_cast<non_const_node>(it.node));
 }
 
 template <typename T, std::size_t R, typename KeyMapper, typename Key, typename Allocator>
@@ -189,50 +179,42 @@ class prefix_tree {
         std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>,
         "KeyMapper is not invocable on std::size_t or does not return std::size_t"
     );
-    using node_type    = prefix_tree_node<T, R>;
-    using node_alloc   = rebind<Allocator, node_type>;
-    using alloc_traits = std::allocator_traits<node_alloc>;
+    using alloc_traits        = std::allocator_traits<Allocator>;
+    using node_type           = prefix_tree_node<T, R>;
+    using node_allocator_type = typename alloc_traits::template rebind_alloc<node_type>;
+    using node_alloc_traits   = typename alloc_traits::template rebind_traits<node_type>;
 public:
-    using key_type        = Key;
-    using char_type       = typename key_type::value_type;
-    using value_type      = T;
-    using size_type       = std::size_t;
-    using difference_type = std::ptrdiff_t;
-    using key_mapper      = KeyMapper;
-    using allocator_type  = Allocator;
-    using reference       = value_type&;
-    using const_reference = const value_type&;
-    using pointer         = typename std::allocator_traits<allocator_type>::pointer;
-    using const_pointer   = typename std::allocator_traits<allocator_type>::const_pointer;
-public:
+    using key_type               = Key;
+    using char_type              = typename key_type::value_type;
+    using value_type             = T;
+    using size_type              = std::size_t;
+    using difference_type        = std::ptrdiff_t;
+    using key_mapper             = KeyMapper;
+    using allocator_type         = Allocator;
+    using reference              = value_type&;
+    using const_reference        = const value_type&;
+    using pointer                = typename alloc_traits::pointer;
+    using const_pointer          = typename alloc_traits::const_pointer;
     using iterator               = prefix_tree_iterator<R, node_type*>;
     using const_iterator         = prefix_tree_iterator<R, const node_type*>;
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    node_type* insert_node(const key_type& key, node_type* n) {
-        return insert_node(&impl_.root, 0, key, n);
+    template <typename... Args>
+    iterator emplace(iterator pos, const key_type& key, Args&&... args) {
+        auto alloc = get_allocator();
+        value_type* v = alloc_traits::allocate(alloc, 1);
+        alloc_traits::construct(alloc, v, std::forward<Args>(args)...);
+        return iterator(insert_node(pos.node, key, v));
     }
-    node_type* insert_node(const node_type* hint, const key_type& key, node_type* n) {
-        size_type rank = 0;
-        const node_type* cur = hint;
-        while (cur != &impl_.root) { ++rank; cur = cur->parent; }
-        return insert_node(hint, rank, key, n);
-    }
-    node_type* insert_node(const node_type* _hint, size_type rank, const key_type& key, node_type* n) {
-        node_type* hint = const_cast<node_type*>(_hint);
-        node_type* ret;
-        insert_node(hint, hint->parent, hint->parent_index, key, rank, n, ret);
-        return ret;
-    }
+
+    iterator root() { return remove_const(croot()); }
+    const_iterator root() const { return croot(); }
+    const_iterator croot() const { return const_iterator(&impl_.root); }
 
     iterator begin() { return remove_const(cbegin()); }
     const_iterator begin() const { return cbegin(); }
-    const_iterator cbegin() const {
-        if (empty()) return cend();
-        const_iterator it(&impl_.base);
-        return ++it;
-    }
+    const_iterator cbegin() const { return ++const_iterator(&impl_.base); }
 
     iterator end() { return remove_const(cend()); }
     const_iterator end() const { return cend(); }
@@ -241,30 +223,58 @@ public:
     size_type size() const { return impl_.size; }
     bool empty() const { return size() == 0; }
 
-    node_alloc& get_allocator() { return static_cast<node_alloc&>(impl_); }
-    key_mapper& key_map() { return static_cast<key_mapper&>(impl_); }
+    allocator_type get_allocator() const { return {get_node_allocator()}; }
+    key_mapper     key_map()       const { return impl_; }
 
 private:
+    node_type* insert_node(const node_type* hint, const key_type& key, value_type* v) {
+        size_type rank = 0;
+        const node_type* cur = hint;
+        while (cur != &impl_.root) { ++rank; cur = cur->parent; }
+        return insert_node(hint, rank, key, v);
+    }
+    node_type* insert_node(const node_type* _hint, size_type rank, const key_type& key, value_type* v) {
+        node_type* hint = const_cast<node_type*>(_hint);
+        node_type* ret;
+        insert_node(hint, hint->parent, hint->parent_index, key, rank, v, ret);
+        return ret;
+    }
     node_type* insert_node(
         node_type* root,
         node_type* parent,
         size_type parent_index,
         const key_type& key,
         size_type index,
-        node_type* n,
+        value_type* v,
         node_type*& ret
     ) {
         if (root == nullptr) root = make_node(parent, parent_index);
         if (index == key.size()) {
-            if (root->value == nullptr) { root->value = n; ++impl_.size; }
-            else                         alloc_traits::deallocate(get_allocator(), n, 1);
+            if (root->value == nullptr) { root->value = v; ++impl_.size; }
+            else { auto alloc = get_allocator(); alloc_traits::deallocate(alloc, v, 1); }
             ret = root;
         } else {
-            size_type parent_index = key_map(key[index]);
+            size_type parent_index = key_map()(key[index]);
             auto& child = root->children[parent_index];
-            child = insert_node(child, root, parent_index, key, index + 1, n, ret);
+            child = insert_node(child, root, parent_index, key, index + 1, v, ret);
         }
         return root;
+    }
+
+    const auto& get_node_allocator() const { return impl_; }
+          auto& get_node_allocator()       { return impl_; }
+
+    node_type* make_node(node_type* parent, size_type parent_index) {
+        auto& node_alloc = get_node_allocator();
+        node_type* n = node_alloc_traits::allocate(node_alloc, 1);
+        node_alloc_traits::construct(node_alloc, n);
+
+        std::fill(std::begin(n->children), std::end(n->children), nullptr);
+        n->parent = parent;
+        n->parent_index = parent_index;
+        n->value = nullptr;
+
+        return n;
     }
 
     struct prefix_tree_header {
@@ -283,34 +293,35 @@ private:
         }
 
         void reset() {
-            for (std::size_t i = 0; i < R; ++i) {
-                root.children[i] = nullptr;
-                base.children[i] = nullptr;
-            }
+            std::fill(std::begin(base.children), std::end(base.children), nullptr);
             base.children[0] = &root;
             base.parent_index = R;
+            base.value = nullptr;
 
+            std::fill(std::begin(root.children), std::end(root.children), nullptr);
             root.parent = &base;
             root.parent_index = 0;
+            root.value = nullptr;
+
             size = 0;
         }
     };
 
-    struct prefix_tree_impl : prefix_tree_header, key_mapper, node_alloc {
+    struct prefix_tree_impl : prefix_tree_header, key_mapper, node_allocator_type {
         prefix_tree_impl(prefix_tree_impl&&) = default;
-        prefix_tree_impl() : prefix_tree_header(), key_mapper(), node_alloc() {}
+        prefix_tree_impl() : prefix_tree_header(), key_mapper(), node_allocator_type() {}
         prefix_tree_impl(prefix_tree_header&& header) :
             prefix_tree_header(std::move(header)),
-            key_mapper(), node_alloc()
+            key_mapper(), node_allocator_type()
         {}
         prefix_tree_impl(prefix_tree_header&& header, key_mapper km) :
             prefix_tree_header(std::move(header)),
-            key_mapper(std::move(km)), node_alloc()
+            key_mapper(std::move(km)), node_allocator_type()
         {}
-        prefix_tree_impl(prefix_tree_header&& header, key_mapper km, node_alloc nl) :
+        prefix_tree_impl(prefix_tree_header&& header, key_mapper km, node_allocator_type alloc) :
             prefix_tree_header(std::move(header)),
             key_mapper(std::move(km)),
-            node_alloc(std::move(nl))
+            node_allocator_type(std::move(alloc))
         {}
     };
 

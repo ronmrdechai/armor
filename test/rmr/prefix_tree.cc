@@ -11,4 +11,10 @@ using prefix_tree = rmr::detail::prefix_tree<
 
 TEST(prefix_tree, scratch) {
     prefix_tree p;
+    EXPECT_EQ(p.begin(), p.end());
+
+    p.emplace(p.root(), "hello", 42);
+    EXPECT_EQ(42, *p.begin());
+
+    EXPECT_EQ(std::distance(p.begin(), p.end()), 1);
 }
