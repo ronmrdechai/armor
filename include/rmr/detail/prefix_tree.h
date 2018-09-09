@@ -94,6 +94,9 @@ struct prefix_tree_iterator {
         return tmp;
     }
 
+    // TODO prefix_tree_iterator& operator--() {}
+    // TODO prefix_tree_iterator operator--(int) {}
+
     reference operator*() const { return *(node->value); }
     pointer  operator->() const { return   node->value ; }
 
@@ -214,15 +217,15 @@ public:
         return find_key(&impl_.root, key.begin(), key.end());
     }
 
-    // prefix_tree(const prefix_tree&)
-    // prefix_tree(prefix_tree&&)
-    // operator=(const prefix_tree&)
-    // operator=(prefix_tree&&)
-    // void swap(prefix_tree&)
+    // TODO prefix_tree(const prefix_tree&)
+    // TODO prefix_tree(prefix_tree&&)
+    // TODO operator=(const prefix_tree&)
+    // TODO operator=(prefix_tree&&)
+    // TODO void swap(prefix_tree&)
 
-    // iterator erase(iterator pos) {}
-    // const_iterator longest_match(const key_type& key) {}
-    // std::pair<const_iterator, const_iterator> prefixed_with(const key_type& key) {}
+    // TODO iterator erase(iterator pos) {}
+    // TODO const_iterator longest_match(const key_type& key) {}
+    // TODO std::pair<const_iterator, const_iterator> prefixed_with(const key_type& key) {}
 
     iterator root() { return remove_const(croot()); }
     const_iterator root() const { return croot(); }
