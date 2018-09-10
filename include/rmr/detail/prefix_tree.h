@@ -64,8 +64,7 @@ struct prefix_tree_iterator {
     using difference_type   = std::ptrdiff_t;
     using reference         = value_type&;
     using pointer           = value_type*;
-    // using iterator_category = std::bidirectional_iterator_tag;
-    using iterator_category = std::forward_iterator_tag;
+    using iterator_category = std::bidirectional_iterator_tag;
 
     using node_type = NodeT;
 
@@ -83,7 +82,7 @@ struct prefix_tree_iterator {
     prefix_tree_iterator& operator++() {
         do {
             *this = next(*this);
-        } while(this->node->value == nullptr && this->node->parent_index != R);
+        } while(node->value == nullptr && node->parent_index != R);
         return *this;
     }
 
@@ -93,8 +92,18 @@ struct prefix_tree_iterator {
         return tmp;
     }
 
-    // TODO prefix_tree_iterator& operator--() {}
-    // TODO prefix_tree_iterator operator--(int) {}
+    prefix_tree_iterator& operator--() {
+        do {
+            *this = prev(*this);
+        } while(node->value == nullptr && node->parent_index != R);
+        return *this;
+    }
+
+    prefix_tree_iterator operator--(int) {
+        prefix_tree_iterator tmp = *this;
+        ++(*this);
+        return tmp;
+    }
 
     reference operator*() const { return *(node->value); }
     pointer  operator->() const { return   node->value ; }
@@ -116,8 +125,22 @@ struct prefix_tree_iterator {
 
 template <std::size_t R, typename NodeT>
 std::pair<prefix_tree_iterator<R, NodeT>, bool>
-step_down(prefix_tree_iterator<R, NodeT> it) {
+step_down_forward(prefix_tree_iterator<R, NodeT> it) {
     for (std::size_t pos = 0; pos < R; ++pos) {
+        if (it.node->children[pos] != nullptr) {
+            it.node = it.node->children[pos];
+            return {it, true};
+        }
+    }
+    return {it, false};
+}
+
+template <std::size_t R, typename NodeT>
+std::pair<prefix_tree_iterator<R, NodeT>, bool>
+step_down_backward(prefix_tree_iterator<R, NodeT> it) {
+    for (std::size_t pos_ = R; pos_ > 0; --pos_) {
+        std::size_t pos = pos_ - 1;
+
         if (it.node->children[pos] != nullptr) {
             it.node = it.node->children[pos];
             return {it, true};
@@ -143,9 +166,38 @@ step_right(prefix_tree_iterator<R, NodeT> it) {
 
 template <std::size_t R, typename NodeT>
 std::pair<prefix_tree_iterator<R, NodeT>, bool>
-step_up(prefix_tree_iterator<R, NodeT> it) {
+step_left(prefix_tree_iterator<R, NodeT> it) {
+    if (it.node->parent_index == 0) return {it, false};
+
+    for (std::size_t pos_ = it.node->parent_index; pos_ > 0; --pos_) {
+        std::size_t pos = pos_ - 1;
+
+        NodeT parent = it.node->parent;
+        if (parent->children[pos] != nullptr) {
+            it.node = parent->children[pos];
+
+            bool stepped;
+            do std::tie(it, stepped) = step_down_backward(it); while (stepped);
+
+            return {it, true};
+        }
+    }
+    return {it, false};
+}
+
+template <std::size_t R, typename NodeT>
+std::pair<prefix_tree_iterator<R, NodeT>, bool>
+step_up_forward(prefix_tree_iterator<R, NodeT> it) {
     it.node = it.node->parent;
     return step_right(it);
+}
+
+template <std::size_t R, typename NodeT>
+std::pair<prefix_tree_iterator<R, NodeT>, bool>
+step_up_backward(prefix_tree_iterator<R, NodeT> it) {
+    it.node = it.node->parent;
+    if (it.node->value != nullptr) return {it, true};
+    else                           return step_left(it);
 }
 
 template <std::size_t R, typename NodeT>
@@ -156,7 +208,7 @@ prefix_tree_iterator<R, NodeT> skip(prefix_tree_iterator<R, NodeT> it) {
     if (stepped) return it;
 
     while (it.node->parent_index != R) {
-        std::tie(it, stepped) = step_up(it);
+        std::tie(it, stepped) = step_up_forward(it);
         if (stepped) return it;
     }
     return it;
@@ -166,9 +218,26 @@ template <std::size_t R, typename NodeT>
 prefix_tree_iterator<R, NodeT> next(prefix_tree_iterator<R, NodeT> it) {
     bool stepped;
 
-    std::tie(it, stepped) = step_down(it);
+    std::tie(it, stepped) = step_down_forward(it);
     if (stepped) return it;
     return skip(it);
+}
+
+template <std::size_t R, typename NodeT>
+prefix_tree_iterator<R, NodeT> prev(prefix_tree_iterator<R, NodeT> it) {
+    bool stepped;
+
+    std::tie(it, stepped) = step_down_backward(it);
+    if (stepped) return it;
+
+    std::tie(it, stepped) = step_left(it);
+    if (stepped) return it;
+
+    while (it.node->parent_index != R) {
+        std::tie(it, stepped) = step_up_backward(it);
+        if (stepped) return it;
+    }
+    return it;
 }
 
 template <std::size_t R, typename NodeT>
@@ -241,9 +310,12 @@ public:
     prefixed_with(const key_type& key) const {
         const_iterator first = find_key_unsafe(&impl_.root, key.begin(), key.end());
         if (first == end()) return { end(), end() };
-
         auto last = skip(first);
-        return {++first, ++last};
+
+        if ( last.node->value == nullptr) ++last;
+        if (first.node->value == nullptr) ++first;
+
+        return {first, last};
     }
 
     iterator root() { return remove_const(croot()); }
@@ -257,6 +329,14 @@ public:
     iterator end() { return remove_const(cend()); }
     const_iterator end() const { return cend(); }
     const_iterator cend() const { return &impl_.base; }
+
+    reverse_iterator rbegin() { return reverse_iterator(end()); }
+    const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
+    const_reverse_iterator crbegin() const { return const_reverse_iterator(cend()); }
+
+    reverse_iterator rend() { return reverse_iterator(begin()); }
+    const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
+    const_reverse_iterator crend() const { return const_reverse_iterator(cbegin()); }
 
     size_type size() const { return impl_.size; }
 
