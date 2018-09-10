@@ -269,9 +269,11 @@ public:
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     // TODO prefix_tree(const prefix_tree&)
-    // TODO prefix_tree(prefix_tree&&)
     // TODO operator=(const prefix_tree&)
+
+    // TODO prefix_tree(prefix_tree&&)
     // TODO operator=(prefix_tree&&)
+
     // TODO void swap(prefix_tree&)
 
     template <typename... Args>
@@ -451,13 +453,13 @@ private:
     struct prefix_tree_header {
         using node_type = prefix_tree_node<T, R>;
 
-        node_type   base;
-        node_type   root;
-        std::size_t size;
+        node_type base;
+        node_type root;
+        size_type size;
 
         prefix_tree_header() { reset(); }
         prefix_tree_header(prefix_tree_header&& other) : prefix_tree_header() {
-            for (std::size_t i = 0; i < R; ++i)
+            for (size_type i = 0; i < R; ++i)
                 root.children[i] = other.root.children[i];
             size = other.size;
             other.reset();
