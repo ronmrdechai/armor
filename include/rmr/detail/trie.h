@@ -66,11 +66,9 @@ struct trie_iterator {
     using pointer           = value_type*;
     using iterator_category = std::bidirectional_iterator_tag;
 
-    using node_type = NodeT;
+    NodeT node;
 
-    node_type node;
-
-    trie_iterator(node_type n = nullptr) : node(n) {}
+    trie_iterator(NodeT n = nullptr) : node(n) {}
     trie_iterator(const trie_iterator&) = default;
     trie_iterator& operator=(const trie_iterator&) = default;
 
