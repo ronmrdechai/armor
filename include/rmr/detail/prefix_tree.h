@@ -74,11 +74,6 @@ struct prefix_tree_iterator {
     prefix_tree_iterator(const prefix_tree_iterator&) = default;
     prefix_tree_iterator& operator=(const prefix_tree_iterator&) = default;
 
-    template <typename = std::enable_if_t<std::is_const_v<node_type>>>
-    prefix_tree_iterator(const prefix_tree_iterator<R, std::remove_const_t<node_type>>& other) :
-        node(const_cast<const node_type*>(other.node))
-    {}
-
     prefix_tree_iterator& operator++() {
         do {
             *this = next(*this);
