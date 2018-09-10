@@ -13,29 +13,29 @@
 namespace rmr::detail {
 
 template <typename T, std::size_t R>
-struct prefix_tree_node {
+struct trie_node {
     using value_type = T;
 
-    prefix_tree_node* children[R];
-    std::size_t       parent_index;
-    prefix_tree_node* parent;
-	T*                value;
+    trie_node*  children[R];
+    std::size_t parent_index;
+    trie_node*  parent;
+	T*          value;
 };
 
 template <typename T, std::size_t R>
-std::size_t children_count(const prefix_tree_node<T, R>* n) {
+std::size_t children_count(const trie_node<T, R>* n) {
 	std::size_t count = 0;	
 	for (auto& child : n->children) count += child != nullptr;
 	return count;
 }
 
 template <typename T, std::size_t R>
-void unlink(prefix_tree_node<T, R>* n) {
+void unlink(trie_node<T, R>* n) {
 	n->parent->children[n->parent_index] = nullptr;
 }
 
 template <typename T, std::size_t R, typename ValueAllocator>
-void delete_node_value(prefix_tree_node<T, R>* n, ValueAllocator& va) {
+void delete_node_value(trie_node<T, R>* n, ValueAllocator& va) {
 	if (n != nullptr && n->value == nullptr) {
 		std::allocator_traits<ValueAllocator>::destroy(va, n->value);
 		std::allocator_traits<ValueAllocator>::deallocate(va, n->value, 1);
@@ -44,7 +44,7 @@ void delete_node_value(prefix_tree_node<T, R>* n, ValueAllocator& va) {
 }
 
 template <typename T, std::size_t R, typename NodeAllocator, typename ValueAllocator>
-void clear_node(prefix_tree_node<T, R>* n, NodeAllocator& na, ValueAllocator& va) {
+void clear_node(trie_node<T, R>* n, NodeAllocator& na, ValueAllocator& va) {
 	delete_node_value(n, va);
 
 	for (auto& child : n->children) {
@@ -59,7 +59,7 @@ void clear_node(prefix_tree_node<T, R>* n, NodeAllocator& na, ValueAllocator& va
 }
 
 template <std::size_t R, typename NodeT>
-struct prefix_tree_iterator {
+struct trie_iterator {
     using value_type        = typename std::remove_pointer_t<NodeT>::value_type;
     using difference_type   = std::ptrdiff_t;
     using reference         = value_type&;
@@ -70,32 +70,32 @@ struct prefix_tree_iterator {
 
     node_type node;
 
-    prefix_tree_iterator(node_type n = nullptr) : node(n) {}
-    prefix_tree_iterator(const prefix_tree_iterator&) = default;
-    prefix_tree_iterator& operator=(const prefix_tree_iterator&) = default;
+    trie_iterator(node_type n = nullptr) : node(n) {}
+    trie_iterator(const trie_iterator&) = default;
+    trie_iterator& operator=(const trie_iterator&) = default;
 
-    prefix_tree_iterator& operator++() {
+    trie_iterator& operator++() {
         do {
             *this = next(*this);
         } while(node->value == nullptr && node->parent_index != R);
         return *this;
     }
 
-    prefix_tree_iterator operator++(int) {
-        prefix_tree_iterator tmp = *this;
+    trie_iterator operator++(int) {
+        trie_iterator tmp = *this;
         ++(*this);
         return tmp;
     }
 
-    prefix_tree_iterator& operator--() {
+    trie_iterator& operator--() {
         do {
             *this = prev(*this);
         } while(node->value == nullptr && node->parent_index != R);
         return *this;
     }
 
-    prefix_tree_iterator operator--(int) {
-        prefix_tree_iterator tmp = *this;
+    trie_iterator operator--(int) {
+        trie_iterator tmp = *this;
         ++(*this);
         return tmp;
     }
@@ -104,23 +104,23 @@ struct prefix_tree_iterator {
     pointer  operator->() const { return   node->value ; }
 
     template <typename _NodeT>
-    bool operator==(const prefix_tree_iterator<R, _NodeT>& other) const {
+    bool operator==(const trie_iterator<R, _NodeT>& other) const {
         return (node == other.node);
     }
 
     template <typename _NodeT>
-    bool operator!=(const prefix_tree_iterator<R, _NodeT>& other) const {
+    bool operator!=(const trie_iterator<R, _NodeT>& other) const {
         return !(*this == other);
     }
 
-    friend void swap(prefix_tree_iterator& lhs, prefix_tree_iterator& rhs) {
+    friend void swap(trie_iterator& lhs, trie_iterator& rhs) {
         std::swap(lhs.node, rhs.node);
     }
 };
 
 template <std::size_t R, typename NodeT>
-std::pair<prefix_tree_iterator<R, NodeT>, bool>
-step_down_forward(prefix_tree_iterator<R, NodeT> it) {
+std::pair<trie_iterator<R, NodeT>, bool>
+step_down_forward(trie_iterator<R, NodeT> it) {
     for (std::size_t pos = 0; pos < R; ++pos) {
         if (it.node->children[pos] != nullptr) {
             it.node = it.node->children[pos];
@@ -131,8 +131,8 @@ step_down_forward(prefix_tree_iterator<R, NodeT> it) {
 }
 
 template <std::size_t R, typename NodeT>
-std::pair<prefix_tree_iterator<R, NodeT>, bool>
-step_down_backward(prefix_tree_iterator<R, NodeT> it) {
+std::pair<trie_iterator<R, NodeT>, bool>
+step_down_backward(trie_iterator<R, NodeT> it) {
     for (std::size_t pos_ = R; pos_ > 0; --pos_) {
         std::size_t pos = pos_ - 1;
 
@@ -145,8 +145,8 @@ step_down_backward(prefix_tree_iterator<R, NodeT> it) {
 }
 
 template <std::size_t R, typename NodeT>
-std::pair<prefix_tree_iterator<R, NodeT>, bool>
-step_right(prefix_tree_iterator<R, NodeT> it) {
+std::pair<trie_iterator<R, NodeT>, bool>
+step_right(trie_iterator<R, NodeT> it) {
     if (it.node->parent_index == R) return {it, false};
 
     for (std::size_t pos = it.node->parent_index + 1; pos < R; ++pos) {
@@ -160,8 +160,8 @@ step_right(prefix_tree_iterator<R, NodeT> it) {
 }
 
 template <std::size_t R, typename NodeT>
-std::pair<prefix_tree_iterator<R, NodeT>, bool>
-step_left(prefix_tree_iterator<R, NodeT> it) {
+std::pair<trie_iterator<R, NodeT>, bool>
+step_left(trie_iterator<R, NodeT> it) {
     if (it.node->parent_index == 0) return {it, false};
 
     for (std::size_t pos_ = it.node->parent_index; pos_ > 0; --pos_) {
@@ -181,22 +181,22 @@ step_left(prefix_tree_iterator<R, NodeT> it) {
 }
 
 template <std::size_t R, typename NodeT>
-std::pair<prefix_tree_iterator<R, NodeT>, bool>
-step_up_forward(prefix_tree_iterator<R, NodeT> it) {
+std::pair<trie_iterator<R, NodeT>, bool>
+step_up_forward(trie_iterator<R, NodeT> it) {
     it.node = it.node->parent;
     return step_right(it);
 }
 
 template <std::size_t R, typename NodeT>
-std::pair<prefix_tree_iterator<R, NodeT>, bool>
-step_up_backward(prefix_tree_iterator<R, NodeT> it) {
+std::pair<trie_iterator<R, NodeT>, bool>
+step_up_backward(trie_iterator<R, NodeT> it) {
     it.node = it.node->parent;
     if (it.node->value != nullptr) return {it, true};
     else                           return step_left(it);
 }
 
 template <std::size_t R, typename NodeT>
-prefix_tree_iterator<R, NodeT> skip(prefix_tree_iterator<R, NodeT> it) {
+trie_iterator<R, NodeT> skip(trie_iterator<R, NodeT> it) {
     bool stepped;
 
     std::tie(it, stepped) = step_right(it);
@@ -210,7 +210,7 @@ prefix_tree_iterator<R, NodeT> skip(prefix_tree_iterator<R, NodeT> it) {
 }
 
 template <std::size_t R, typename NodeT>
-prefix_tree_iterator<R, NodeT> next(prefix_tree_iterator<R, NodeT> it) {
+trie_iterator<R, NodeT> next(trie_iterator<R, NodeT> it) {
     bool stepped;
 
     std::tie(it, stepped) = step_down_forward(it);
@@ -219,7 +219,7 @@ prefix_tree_iterator<R, NodeT> next(prefix_tree_iterator<R, NodeT> it) {
 }
 
 template <std::size_t R, typename NodeT>
-prefix_tree_iterator<R, NodeT> prev(prefix_tree_iterator<R, NodeT> it) {
+trie_iterator<R, NodeT> prev(trie_iterator<R, NodeT> it) {
     bool stepped;
 
     std::tie(it, stepped) = step_down_backward(it);
@@ -236,19 +236,19 @@ prefix_tree_iterator<R, NodeT> prev(prefix_tree_iterator<R, NodeT> it) {
 }
 
 template <std::size_t R, typename NodeT>
-auto remove_const(prefix_tree_iterator<R, NodeT> it) {
+auto remove_const(trie_iterator<R, NodeT> it) {
     using non_const_node = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<NodeT>>>;
-    return prefix_tree_iterator<R, non_const_node>(const_cast<non_const_node>(it.node));
+    return trie_iterator<R, non_const_node>(const_cast<non_const_node>(it.node));
 }
 
 template <typename T, std::size_t R, typename KeyMapper, typename Key, typename Allocator>
-class prefix_tree {
+class trie {
     static_assert(
         std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>,
         "KeyMapper is not invocable on std::size_t or does not return std::size_t"
     );
     using alloc_traits        = std::allocator_traits<Allocator>;
-    using node_type           = prefix_tree_node<T, R>;
+    using node_type           = trie_node<T, R>;
     using node_allocator_type = typename alloc_traits::template rebind_alloc<node_type>;
     using node_alloc_traits   = typename alloc_traits::template rebind_traits<node_type>;
 public:
@@ -263,18 +263,18 @@ public:
     using const_reference        = const value_type&;
     using pointer                = typename alloc_traits::pointer;
     using const_pointer          = typename alloc_traits::const_pointer;
-    using iterator               = prefix_tree_iterator<R, node_type*>;
-    using const_iterator         = prefix_tree_iterator<R, const node_type*>;
+    using iterator               = trie_iterator<R, node_type*>;
+    using const_iterator         = trie_iterator<R, const node_type*>;
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    // TODO prefix_tree(const prefix_tree&)
-    // TODO operator=(const prefix_tree&)
+    // TODO trie(const trie&)
+    // TODO operator=(const trie&)
 
-    // TODO prefix_tree(prefix_tree&&)
-    // TODO operator=(prefix_tree&&)
+    // TODO trie(trie&&)
+    // TODO operator=(trie&&)
 
-    // TODO void swap(prefix_tree&)
+    // TODO void swap(trie&)
 
     template <typename... Args>
     iterator emplace(const_iterator pos, const key_type& key, Args&&... args) {
@@ -450,15 +450,15 @@ private:
         return longest_match_candidate(node, prev, ++cur, last);
     }
 
-    struct prefix_tree_header {
-        using node_type = prefix_tree_node<T, R>;
+    struct trie_header {
+        using node_type = trie_node<T, R>;
 
         node_type base;
         node_type root;
         size_type size;
 
-        prefix_tree_header() { reset(); }
-        prefix_tree_header(prefix_tree_header&& other) : prefix_tree_header() {
+        trie_header() { reset(); }
+        trie_header(trie_header&& other) : trie_header() {
             for (size_type i = 0; i < R; ++i)
                 root.children[i] = other.root.children[i];
             size = other.size;
@@ -480,25 +480,25 @@ private:
         }
     };
 
-    struct prefix_tree_impl : prefix_tree_header, key_mapper, node_allocator_type {
-        prefix_tree_impl(prefix_tree_impl&&) = default;
-        prefix_tree_impl() : prefix_tree_header(), key_mapper(), node_allocator_type() {}
-        prefix_tree_impl(prefix_tree_header&& header) :
-            prefix_tree_header(std::move(header)),
+    struct trie_impl : trie_header, key_mapper, node_allocator_type {
+        trie_impl(trie_impl&&) = default;
+        trie_impl() : trie_header(), key_mapper(), node_allocator_type() {}
+        trie_impl(trie_header&& header) :
+            trie_header(std::move(header)),
             key_mapper(), node_allocator_type()
         {}
-        prefix_tree_impl(prefix_tree_header&& header, key_mapper km) :
-            prefix_tree_header(std::move(header)),
+        trie_impl(trie_header&& header, key_mapper km) :
+            trie_header(std::move(header)),
             key_mapper(std::move(km)), node_allocator_type()
         {}
-        prefix_tree_impl(prefix_tree_header&& header, key_mapper km, node_allocator_type alloc) :
-            prefix_tree_header(std::move(header)),
+        trie_impl(trie_header&& header, key_mapper km, node_allocator_type alloc) :
+            trie_header(std::move(header)),
             key_mapper(std::move(km)),
             node_allocator_type(std::move(alloc))
         {}
     };
 
-    prefix_tree_impl impl_;
+    trie_impl impl_;
 };
 
 } // namespace rmr::detail
