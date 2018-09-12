@@ -275,7 +275,10 @@ public:
         impl_(std::move(km), node_allocator_type(std::move(alloc)))
     {}
 
-    trie(const trie& other) : trie(other.key_map(), other.get_allocator()) {
+    trie(const trie& other) : trie(
+        other.key_map(), 
+        alloc_traits::select_on_container_copy_construction(other.get_allocator())
+    ) {
         copy_nodes(&other.impl_.root, &impl_.root, nullptr);
         impl_.size = other.impl_.size;
     }
@@ -298,10 +301,56 @@ public:
     }
     ~trie() { clear(); }
 
-    // TODO trie& operator=(const trie& other);
-    // TODO trie& operator=(trie&& other);
+    trie& operator=(const trie& other) {
+        clear();
+        impl_.size = other.impl_.size;
+        static_cast<key_mapper&>(impl_) = other.key_map();
+        if (alloc_traits::propagate_on_container_copy_assignment::value) {
+            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();     
+        }
+        copy_nodes(&other.impl_.root, &impl_.root, nullptr);
+        return *this;
+    }
 
-    // TODO void swap(trie&)
+    trie& operator=(trie&& other) noexcept(
+        alloc_traits::is_always_equal::value && std::is_nothrow_move_assignable<key_mapper>::value
+    ) {
+        clear();
+        impl_.size = other.impl_.size;
+        static_cast<key_mapper&>(impl_) = other.key_map();
+        if (alloc_traits::propagate_on_container_move_assignment::value)
+            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();     
+
+        auto other_alloc = other.get_allocator();
+        if (!alloc_traits::propagate_on_container_move_assignment::value &&
+                get_allocator() != other.get_allocator())
+            move_nodes(other_alloc, &other.impl_.root, &impl_.root, nullptr);
+        else impl_ = std::move(other.impl_);
+
+        other.clear();
+        return *this;
+    }
+
+    void swap(trie& other) noexcept(
+        alloc_traits::is_always_equal::value && std::is_nothrow_swappable<key_mapper>::value
+    ) {
+        if (alloc_traits::propagate_on_container_swap::value) {
+            node_allocator_type& this_alloc = impl_;
+            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();     
+            other.get_node_allocator() = this_alloc;
+        }
+        key_mapper this_key_map = key_map();
+        static_cast<key_mapper&>(impl_) = other.key_map();
+        static_cast<key_mapper&>(other.impl_) = this_key_map;
+        for (size_type i = 0; i < R; ++i) {
+            std::swap(impl_.root.children[i], other.impl_.root.children[i]);
+            if (impl_.root.children[i] != nullptr)
+                impl_.root.children[i]->parent = &impl_.root;
+            if (other.impl_.root.children[i] != nullptr)
+                other.impl_.root.children[i]->parent = &other.impl_.root;
+        }
+        std::swap(impl_.size, other.impl_.size);
+    }
 
     template <typename... Args>
     iterator emplace(const_iterator pos, const key_type& key, Args&&... args) {
@@ -394,7 +443,7 @@ private:
         }
         for (size_type i = 0; i < R; ++i) {
             if (src->children[i] != nullptr)
-                dst->children[i] = move_nodes(src->children[i], dst->children[i], dst);
+                dst->children[i] = move_nodes(alloc, src->children[i], dst->children[i], dst);
         }
         return dst;
     }

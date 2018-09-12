@@ -68,4 +68,36 @@ TEST(trie, scratch) {
     EXPECT_EQ(0u, copy.size());
     EXPECT_EQ(copy.end(), copy.find("foo"));
     EXPECT_EQ(tv, mv);
+
+    trie assign;
+    assign = move;
+    EXPECT_EQ(8u, assign.size());
+    std::vector<int> av(assign.begin(), assign.end());
+    EXPECT_EQ(mv, av);
+
+    trie swap;
+    swap.emplace(swap.root(), "thing", 1);
+    swap.emplace(swap.root(), "stuff", 2);
+    assign.swap(swap);
+
+    EXPECT_EQ(8u, swap.size());
+    EXPECT_EQ(8u, std::distance(swap.begin(), swap.end()));
+    EXPECT_EQ(0, *swap.find("aa"));
+    EXPECT_EQ(1, *swap.find("aaa"));
+
+    EXPECT_EQ(2u, assign.size());
+    EXPECT_EQ(2u, std::distance(assign.begin(), assign.end()));
+    EXPECT_EQ(1, *assign.find("thing"));
+    EXPECT_EQ(2, *assign.find("stuff"));
+
+    std::swap(assign, swap);
+    EXPECT_EQ(8u, assign.size());
+    EXPECT_EQ(8u, std::distance(assign.begin(), assign.end()));
+    EXPECT_EQ(0, *assign.find("aa"));
+    EXPECT_EQ(1, *assign.find("aaa"));
+
+    EXPECT_EQ(2u, swap.size());
+    EXPECT_EQ(2u, std::distance(swap.begin(), swap.end()));
+    EXPECT_EQ(1, *swap.find("thing"));
+    EXPECT_EQ(2, *swap.find("stuff"));
 }
