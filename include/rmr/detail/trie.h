@@ -12,6 +12,12 @@
 
 namespace rmr::detail {
 
+template <typename Alloc, typename Pointer>
+inline void destroy_and_deallocate(Alloc& alloc, Pointer&& p) {
+    std::allocator_traits<Alloc>::destroy(alloc, std::forward<Pointer>(p));
+    std::allocator_traits<Alloc>::deallocate(alloc, std::forward<Pointer>(p), 1);
+}
+
 template <typename T, std::size_t R>
 struct trie_node {
     using value_type = T;
@@ -36,9 +42,8 @@ void unlink(trie_node<T, R>* n) {
 
 template <typename T, std::size_t R, typename ValueAllocator>
 void delete_node_value(trie_node<T, R>* n, ValueAllocator& va) {
-	if (n != nullptr && n->value == nullptr) {
-		std::allocator_traits<ValueAllocator>::destroy(va, n->value);
-		std::allocator_traits<ValueAllocator>::deallocate(va, n->value, 1);
+	if (n != nullptr && n->value != nullptr) {
+        destroy_and_deallocate(va, n->value);
 		n->value = nullptr;
 	}
 }
@@ -50,9 +55,7 @@ void clear_node(trie_node<T, R>* n, NodeAllocator& na, ValueAllocator& va) {
 	for (auto& child : n->children) {
 		if (child != nullptr) {
 			clear_node(child, na, va);	
-
-			std::allocator_traits<NodeAllocator>::destroy(na, child);
-			std::allocator_traits<NodeAllocator>::deallocate(na, child, 1);
+            destroy_and_deallocate(va, n->value);
 			child = nullptr;
 		}
 	}
@@ -266,11 +269,37 @@ public:
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    // TODO trie(const trie&)
-    // TODO operator=(const trie&)
+    trie() = default;
+    explicit trie(allocator_type alloc) : impl_(node_allocator_type(std::move(alloc))) {}
+    explicit trie(key_mapper km, allocator_type alloc) :
+        impl_(std::move(km), node_allocator_type(std::move(alloc)))
+    {}
 
-    // TODO trie(trie&&)
-    // TODO operator=(trie&&)
+    trie(const trie& other) : trie(other.key_map(), other.get_allocator()) {
+        copy_nodes(&other.impl_.root, &impl_.root, nullptr);
+        impl_.size = other.impl_.size;
+    }
+    trie(const trie& other, allocator_type alloc) : trie(other.key_map(), std::move(alloc)) {
+        copy_nodes(&other.impl_.root, &impl_.root, nullptr);
+        impl_.size = other.impl_.size;
+    }
+
+    trie(trie&& other) : trie(std::move(other.key_map()), std::move(other.get_allocator())) {
+        impl_ = std::move(other.impl_);
+    }
+    trie(trie&& other, allocator_type alloc) : trie(std::move(other.key_map()), std::move(alloc)) {
+        if (alloc != other.get_allocator()) {
+            auto other_alloc = other.get_allocator();
+            move_nodes(other_alloc, &other.impl_.root, &impl_.root, nullptr);
+            other.clear();
+        } else {
+            impl_ = std::move(other.impl_);
+        }
+    }
+    ~trie() { clear(); }
+
+    // TODO trie& operator=(const trie& other);
+    // TODO trie& operator=(trie&& other);
 
     // TODO void swap(trie&)
 
@@ -280,10 +309,7 @@ public:
     }
     template <typename... Args>
     iterator emplace(iterator pos, const key_type& key, Args&&... args) {
-        auto alloc = get_allocator();
-        value_type* v = alloc_traits::allocate(alloc, 1);
-        alloc_traits::construct(alloc, v, std::forward<Args>(args)...);
-        return insert_node(pos.node, key, v);
+        return insert_node(pos.node, key, make_value(std::forward<Args>(args)...));
     }
 
     const_iterator find(const key_type& key) const {
@@ -294,6 +320,7 @@ public:
     iterator erase(iterator pos) {
         iterator next = std::next(pos);
         erase_node(pos.node);
+        impl_.size -= 1;
         return next;
     }
 
@@ -313,32 +340,65 @@ public:
         return {first, last};
     }
 
-    iterator root() { return remove_const(croot()); }
-    const_iterator root() const { return croot(); }
-    const_iterator croot() const { return &impl_.root; }
+    iterator root() noexcept { return remove_const(croot()); }
+    const_iterator root() const noexcept { return croot(); }
+    const_iterator croot() const noexcept { return &impl_.root; }
 
-    iterator begin() { return remove_const(cbegin()); }
-    const_iterator begin() const { return cbegin(); }
-    const_iterator cbegin() const { return ++const_iterator(&impl_.base); }
+    iterator begin() noexcept { return remove_const(cbegin()); }
+    const_iterator begin() const noexcept { return cbegin(); }
+    const_iterator cbegin() const noexcept { return ++const_iterator(&impl_.base); }
 
-    iterator end() { return remove_const(cend()); }
-    const_iterator end() const { return cend(); }
-    const_iterator cend() const { return &impl_.base; }
+    iterator end() noexcept { return remove_const(cend()); }
+    const_iterator end() const noexcept { return cend(); }
+    const_iterator cend() const noexcept { return &impl_.base; }
 
-    reverse_iterator rbegin() { return reverse_iterator(end()); }
-    const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
-    const_reverse_iterator crbegin() const { return const_reverse_iterator(cend()); }
+    reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+    const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
+    const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
 
-    reverse_iterator rend() { return reverse_iterator(begin()); }
-    const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
-    const_reverse_iterator crend() const { return const_reverse_iterator(cbegin()); }
+    reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+    const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
+    const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
 
-    size_type size() const { return impl_.size; }
+    size_type size() const noexcept { return impl_.size; }
+
+    void clear() noexcept {
+        auto value_alloc = get_allocator();
+        auto& node_alloc = get_node_allocator();
+        clear_node(&impl_.root, node_alloc, value_alloc);
+        impl_.size = 0;
+    }
 
     allocator_type get_allocator() const { return get_node_allocator(); }
     key_mapper     key_map()       const { return impl_; }
 
 private:
+    node_type* copy_nodes(const node_type* src, node_type* dst, node_type* parent) {
+        if (dst == nullptr) dst = make_node(parent, src->parent_index);
+
+        if (src->value != nullptr) dst->value = make_value(*src->value);
+        for (size_type i = 0; i < R; ++i) {
+            if (src->children[i] != nullptr)
+                dst->children[i] = copy_nodes(src->children[i], dst->children[i], dst);
+        }
+        return dst;
+    }
+
+    node_type* move_nodes(allocator_type& alloc, node_type* src, node_type* dst, node_type* parent) {
+        if (dst == nullptr) dst = make_node(parent, src->parent_index);
+
+        if (src->value != nullptr) {
+            dst->value = make_value(std::move(*src->value));
+            destroy_and_deallocate(alloc, src->value);
+            src->value = nullptr; 
+        }
+        for (size_type i = 0; i < R; ++i) {
+            if (src->children[i] != nullptr)
+                dst->children[i] = move_nodes(src->children[i], dst->children[i], dst);
+        }
+        return dst;
+    }
+
     node_type* insert_node(const node_type* hint, const key_type& key, value_type* v) {
         size_type rank = 0;
         const node_type* cur = hint;
@@ -360,10 +420,10 @@ private:
         value_type* v,
         node_type*& ret
     ) {
-        if (root == nullptr) root = get_node(parent, parent_index);
+        if (root == nullptr) root = make_node(parent, parent_index);
         if (index == key.size()) {
             if (root->value == nullptr) { root->value = v; ++impl_.size; }
-            else { auto alloc = get_allocator(); alloc_traits::deallocate(alloc, v, 1); }
+            else { auto alloc = get_allocator(); destroy_and_deallocate(alloc, v); }
             ret = root;
         } else {
             size_type parent_index = key_map()(key[index]);
@@ -376,7 +436,15 @@ private:
     const auto& get_node_allocator() const { return impl_; }
           auto& get_node_allocator()       { return impl_; }
 
-    node_type* get_node(node_type* parent, size_type parent_index) {
+    template <typename... Args>
+    value_type* make_value(Args&&... args) {
+        auto alloc = get_allocator();
+        value_type* v = alloc_traits::allocate(alloc, 1);
+        alloc_traits::construct(alloc, v, std::forward<Args>(args)...);
+        return v;
+    }
+
+    node_type* make_node(node_type* parent, size_type parent_index) {
         auto& node_alloc = get_node_allocator();
         node_type* n = node_alloc_traits::allocate(node_alloc, 1);
         node_alloc_traits::construct(node_alloc, n);
@@ -456,11 +524,14 @@ private:
         size_type size;
 
         trie_header() { reset(); }
-        trie_header(trie_header&& other) : trie_header() {
-            for (size_type i = 0; i < R; ++i)
+        trie_header& operator=(trie_header&& other) {
+            for (size_type i = 0; i < R; ++i) {
                 root.children[i] = other.root.children[i];
+                if (root.children[i] != nullptr) root.children[i]->parent = &root;
+            }
             size = other.size;
             other.reset();
+            return *this;
         }
 
         void reset() {
@@ -479,21 +550,14 @@ private:
     };
 
     struct trie_impl : trie_header, key_mapper, node_allocator_type {
-        trie_impl(trie_impl&&) = default;
-        trie_impl() : trie_header(), key_mapper(), node_allocator_type() {}
-        trie_impl(trie_header&& header) :
-            trie_header(std::move(header)),
-            key_mapper(), node_allocator_type()
+        trie_impl() = default;
+        trie_impl(node_allocator_type alloc) :
+            trie_header(), key_mapper(), node_allocator_type(std::move(alloc))
         {}
-        trie_impl(trie_header&& header, key_mapper km) :
-            trie_header(std::move(header)),
-            key_mapper(std::move(km)), node_allocator_type()
+        trie_impl(key_mapper km, node_allocator_type alloc) :
+            trie_header(), key_mapper(std::move(km)), node_allocator_type(std::move(alloc))
         {}
-        trie_impl(trie_header&& header, key_mapper km, node_allocator_type alloc) :
-            trie_header(std::move(header)),
-            key_mapper(std::move(km)),
-            node_allocator_type(std::move(alloc))
-        {}
+        trie_impl& operator=(trie_impl&&) = default;
     };
 
     trie_impl impl_;

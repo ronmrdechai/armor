@@ -45,4 +45,27 @@ TEST(trie, scratch) {
 
     std::reverse(v.begin(), v.end());
     EXPECT_EQ(r, v);
+
+    trie copy(t);
+    EXPECT_EQ(8u, t.size());
+    EXPECT_EQ(8u, copy.size());
+    std::vector<int> tv(   t.begin(),    t.end());
+    std::vector<int> cv(copy.begin(), copy.end());
+    EXPECT_EQ(tv, cv);
+
+    t.clear();
+    EXPECT_EQ(0u, t.size());
+    EXPECT_EQ(0u, std::distance(t.begin(), t.end()));
+    EXPECT_EQ(t.end(), t.find("foo"));
+
+    cv = std::vector<int>(copy.begin(), copy.end());
+    EXPECT_EQ(tv, cv);
+
+    trie move(std::move(copy));
+
+    EXPECT_EQ(8u, move.size());
+    std::vector<int> mv(move.begin(), move.end());
+    EXPECT_EQ(0u, copy.size());
+    EXPECT_EQ(copy.end(), copy.find("foo"));
+    EXPECT_EQ(tv, mv);
 }
