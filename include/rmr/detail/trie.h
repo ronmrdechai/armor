@@ -244,10 +244,6 @@ auto remove_const(trie_iterator<R, NodeT> it) {
 
 template <typename T, std::size_t R, typename KeyMapper, typename Key, typename Allocator>
 class trie {
-    static_assert(
-        std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>,
-        "KeyMapper is not invocable on std::size_t or does not return std::size_t"
-    );
     using alloc_traits        = std::allocator_traits<Allocator>;
     using node_type           = trie_node<T, R>;
     using node_allocator_type = typename alloc_traits::template rebind_alloc<node_type>;
@@ -288,7 +284,7 @@ public:
     }
 
     trie(trie&& other) : trie(std::move(other.key_map()), std::move(other.get_allocator())) {
-        impl_ = std::move(other.impl_);
+        static_cast<trie_header&>(impl_) = std::move(static_cast<trie_header&>(other.impl_));
     }
     trie(trie&& other, allocator_type alloc) : trie(std::move(other.key_map()), std::move(alloc)) {
         if (alloc != other.get_allocator()) {
@@ -296,7 +292,7 @@ public:
             move_nodes(other_alloc, &other.impl_.root, &impl_.root, nullptr);
             other.clear();
         } else {
-            impl_ = std::move(other.impl_);
+            static_cast<trie_header&>(impl_) = std::move(static_cast<trie_header&>(other.impl_));
         }
     }
     ~trie() { clear(); }
@@ -316,16 +312,16 @@ public:
         alloc_traits::is_always_equal::value && std::is_nothrow_move_assignable<key_mapper>::value
     ) {
         clear();
-        impl_.size = other.impl_.size;
         static_cast<key_mapper&>(impl_) = other.key_map();
         if (alloc_traits::propagate_on_container_move_assignment::value)
             static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();     
 
         auto other_alloc = other.get_allocator();
         if (!alloc_traits::propagate_on_container_move_assignment::value &&
-                get_allocator() != other.get_allocator())
+                get_allocator() != other.get_allocator()) {
             move_nodes(other_alloc, &other.impl_.root, &impl_.root, nullptr);
-        else impl_ = std::move(other.impl_);
+            impl_.size = other.impl_.size;
+        } else { static_cast<trie_header&>(impl_) = std::move(static_cast<trie_header&>(other.impl_)); }
 
         other.clear();
         return *this;
