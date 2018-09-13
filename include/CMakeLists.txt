@@ -23,7 +23,15 @@ configure_package_config_file(
     INSTALL_DESTINATION lib/cmake/Armor
 )
 install(TARGETS Armor EXPORT ArmorTargets)
-install(EXPORT ArmorTargets DESTINATION "lib/cmake/Armor")
+install(EXPORT
+    ArmorTargets
+    NAMESPACE Armor::
+    DESTINATION "lib/cmake/Armor"
+)
+export(EXPORT ArmorTargets
+    NAMESPACE Armor::
+    FILE ${PROJECT_BINARY_DIR}/ArmorTargets.cmake
+)
 install(FILES
     "${PROJECT_BINARY_DIR}/ArmorConfigVersion.cmake"
     "${PROJECT_BINARY_DIR}/ArmorConfig.cmake"
