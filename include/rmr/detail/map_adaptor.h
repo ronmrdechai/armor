@@ -49,12 +49,12 @@ public:
     map_adaptor(map_adaptor&& other) = default;
     map_adaptor(map_adaptor&& other, allocator_type alloc) : trie_(std::move(other), std::move(alloc)) {}
 
-    map_adaptor(std::initializer_list<value_type> init,
+    map_adaptor(std::initializer_list<value_type> ilist,
         key_mapper km = key_mapper(),
         allocator_type alloc = allocator_type()
-    ) : map_adaptor(init.begin(), init.end(), std::move(km), std::move(alloc)) {}
-    map_adaptor(std::initializer_list<value_type> init, allocator_type alloc) :
-        map_adaptor(init.begin(), init.end(), std::move(alloc)) {}
+    ) : map_adaptor(ilist.begin(), ilist.end(), std::move(km), std::move(alloc)) {}
+    map_adaptor(std::initializer_list<value_type> ilist, allocator_type alloc) :
+        map_adaptor(ilist.begin(), ilist.end(), std::move(alloc)) {}
 
     map_adaptor& operator=(const map_adaptor&) = default;
     map_adaptor& operator=(map_adaptor&&) noexcept(
@@ -62,9 +62,23 @@ public:
         && std::is_nothrow_move_assignable<key_mapper>::value
     ) = default;
 
-    map_adaptor& operator=(std::initializer_list<value_type> init) { return *this = map_adaptor(init); }
+    map_adaptor& operator=(std::initializer_list<value_type> ilist) { return *this = map_adaptor(ilist); }
 
     allocator_type get_allocator() const { return trie_.get_allocator(); }
+
+    mapped_type& at(const key_type& key) {
+        iterator it = find(key);
+        if (it == end()) throw std::out_of_range("rmr::at");
+        return it->second;
+    }
+    const mapped_type& at(const key_type& key) const {
+        const_iterator it = find(key);
+        if (it == end()) throw std::out_of_range("rmr::at");
+        return it->second;
+    }
+
+    mapped_type& operator[](const key_type& key) { return try_emplace(key).first->second; }
+    mapped_type& operator[](key_type&& key) { return try_emplace(std::move(key)).first->second; }
 
     iterator begin() noexcept { return trie_.begin(); }
     const_iterator begin() const noexcept { return trie_.begin(); }
@@ -88,9 +102,176 @@ public:
 
     void clear() noexcept { trie_.clear(); }
 
+    std::pair<iterator, bool> insert(const value_type& value) {
+        return emplace(value);
+    }
+    template <typename P, typename = std::enable_if_t<std::is_constructible_v<value_type, P&&>>>
+    std::pair<iterator, bool> insert(P&& value) {
+        return emplace(std::forward<P>(value));
+    }
+    std::pair<iterator, bool> insert(value_type&& value) {
+        return emplace(std::move(value));
+    }
+
+    iterator insert(const_iterator hint, const value_type& value)
+    { return emplace_hint(hint, value); }
+    template <typename P, typename = std::enable_if_t<std::is_constructible_v<value_type, P&&>>>
+    iterator insert(const_iterator hint, P&& value)
+    { return emplace_hint(hint, std::forward<P>(value)); }
+    iterator insert(const_iterator hint, value_type&& value)
+    { return emplace_hint(hint, std::move(value)); }
+
+    template <typename InputIt>
+    void insert(InputIt first, InputIt last) { while (first != last) insert(*(first++)); }
+    void insert(std::initializer_list<value_type> ilist) { insert(ilist.begin(), ilist.end()); }
+
+    // TODO insert_return_type insert(node_type&& nh);
+    // TODO iterator insert(const_iterator hint, node_type&& nh);
+
+    template <typename M>
+    std::pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj) {
+        const_iterator it = find(k);
+        if (it == end()) return insert({ k, std::forward<M>(obj) });
+
+        it->second = std::forward<M>(obj);
+        return { it, false };
+    }
+    template <typename M>
+    std::pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj) {
+        const_iterator it = find(k);
+        if (it == end()) return insert({ std::move(k), std::forward<M>(obj) });
+
+        it->second = std::forward<M>(obj);
+        return { it, false };
+    }
+
+    template <typename M>
+    iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj) {
+        const_iterator it = find(k);
+        if (it == end()) return insert({ hint, k, std::forward<M>(obj) });
+
+        it->second = std::forward<M>(obj);
+        return { it, false };
+    }
+    template <typename M>
+    iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj) {
+        const_iterator it = find(k);
+        if (it == end()) return insert({ hint, std::move(k), std::forward<M>(obj) });
+
+        it->second = std::forward<M>(obj);
+        return { it, false };
+    }
+
+    template <typename... Args>
+    std::pair<iterator, bool> emplace(Args&&... args) {
+        size_type pre = size();
+        const_iterator it = emplace_hint(hint, std::forward<Args>(args)...);
+        return { it, size() > pre };
+    }
+    template <typename... Args>
+    iterator emplace_hint(const_iterator hint, Args&&... args ) {
+        value_type o(std::forward<Args>(args)...);
+        return trie_.emplace(hint, o.first, std::move(o));
+    }
+    template <typename... Args>
+    std::pair<iterator, bool> try_emplace(const key_type& k, Args&&... args) {
+        const_iterator it = find(key);
+        if (it == end()) return emplace(std::piecewise_construct,
+            std::forward_as_tuple(k), std::forward_as_tuple(std::forward<Args>(args)...)
+        );
+        return { it, false };
+    }
+    template <typename... Args>
+    std::pair<iterator, bool> try_emplace(key_type&& k, Args&&... args) {
+        const_iterator it = find(key);
+        if (it == end()) return emplace(std::piecewise_construct,
+            std::forward_as_tuple(std::move(k)), std::forward_as_tuple(std::forward<Args>(args)...)
+        );
+        return { it, false };
+    }
+    template <typename... Args>
+    iterator try_emplace(const_iterator hint, const key_type& k, Args&&... args) {
+        const_iterator it = find(key);
+        if (it == end()) return emplace_hint(hint, std::piecewise_construct,
+            std::forward_as_tuple(k), std::forward_as_tuple(std::forward<Args>(args)...)
+        );
+        return it;
+    }
+    template <typename... Args>
+    iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args) {
+        const_iterator it = find(key);
+        if (it == end()) return emplace_hint(hint, std::piecewise_construct,
+            std::forward_as_tuple(std::move(k)), std::forward_as_tuple(std::forward<Args>(args)...)
+        );
+        return it;
+    }
+
+    iterator erase(const_iterator pos) { return trie_.erase(pos); }
+    iterator erase(iterator pos) { return trie_.erase(pos); }
+    iterator erase(const_iterator first, const_iterator last) {
+        if (first == begin() && last == end()) clear();
+        else while (first != last) erase(first++);
+        return last;
+    }
+    size_type erase(const key_type& key) {
+        const_iterator it = find(key);
+        if (it == end()) return 0;
+        erase(it);
+        return 1;
+    }
+
+    void swap(map_adaptor& other) noexcept(noexcept(trie_.swap(other.trie_)))
+    { trie_.swap(other.trie_); }
+
+    // TODO node_type extract(const_iterator position);
+    // TODO node_type extract(const key_type& k);
+    // TODO template <typename _Trie> void merge(map_adaptor<T, _Trie>& source);
+    // TODO template <typename _Trie> void merge(map_adaptor<T, _Trie>&& source);
+
+    size_type count(const key_type& key) const { return find(key) != end(); }
+
+    iterator find(const key_type& key) { return trie_.find(key); }
+    const_iterator find(const key_type& key) const { return trie_.find(key); }
+
+    std::pair<iterator, iterator> prefixed_with(const key_type& key)
+    { return trie_.prefixed_with(key); }
+    std::pair<const_iterator, const_iterator> prefixed_with(const key_type& key) const
+    { return trie_.prefixed_with(key); }
+
+    iterator longest_match(const key_type& key)
+    { return trie_.longest_match(key); }
+    const_iterator longest_match(const key_type& key) const
+    { return trie_.longest_match(key); }
+
+    key_mapper key_map() const { return trie_.key_map(); } 
+
 private:
     Trie trie_;
 };
+
+template <typename T, typename Trie>
+inline bool operator==(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>& y)
+{ return x.size() == y.size() && std::equal(x.begin(), x.end(), y.begin()); }
+
+template <typename T, typename Trie>
+inline bool operator!=(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>& y)
+{ return !(x == y); }
+
+template <typename T, typename Trie>
+inline bool operator<(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>& y)
+{ return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end()); }
+
+template <typename T, typename Trie>
+inline bool operator<=(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>& y)
+{ return !(y < x); }
+
+template <typename T, typename Trie>
+inline bool operator>(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>& y)
+{ return y < x; }
+
+template <typename T, typename Trie>
+inline bool operator>(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>& y)
+{ return !(x < y); }
 
 } // namespace rmr::detail
 
