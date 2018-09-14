@@ -8,7 +8,13 @@
 #pragma once
 
 #include <algorithm>
+#include <initializer_list>
 #include <stdexcept>
+#include <tuple>
+#include <utility>
+
+#include <rmr/detail/insert_return_type.h>
+#include <rmr/detail/node_handle.h>
 
 namespace rmr::detail {
 
@@ -277,26 +283,3 @@ inline bool operator>(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>&
 { return !(x < y); }
 
 } // namespace rmr::detail
-
-#if 0
-template <
-    typename T,
-    std::size_t R,
-    typename KeyMapper = identity<std::size_t>,
-    typename Key = std::string,
-    typename Allocator = std::allocator<std::pair<T, const Key>>
->
-class trie_map : public detail::map_adaptor<
-    T, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
-> {
-    static_assert(
-        std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>,
-        "KeyMapper is not invocable on std::size_t or does not return std::size_t"
-    );
-    using base_type = detail::map_adaptor<
-        T, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
-    >;
-public:
-    using base_type::base_type;
-};
-#endif
