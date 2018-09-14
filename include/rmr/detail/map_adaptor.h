@@ -7,6 +7,9 @@
 
 #pragma once
 
+#include <algorithm>
+#include <stdexcept>
+
 namespace rmr::detail {
 
 template <typename T, typename Trie>
