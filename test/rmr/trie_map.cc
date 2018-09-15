@@ -263,6 +263,7 @@ TEST(trie_map, insert_hint) {
     EXPECT_EQ(2, t["foobar"]);
 }
 
+#if 0
 TEST(trie_map, insert_hint_handle) {
     trie_map t{ {"foobar", 3} };
 
@@ -273,6 +274,7 @@ TEST(trie_map, insert_hint_handle) {
     EXPECT_EQ(1, t["foo"]);
     EXPECT_EQ(3, t["foobar"]);
 }
+#endif
 
 TEST(trie_map, insert_hint_exists) {
     trie_map t{ {"foobar", 3} };
@@ -529,6 +531,7 @@ TEST(trie_map, erase_returns_iterator) {
     EXPECT_EQ("bax", it->first);
 }
 
+#if 0
 TEST(trie_map, extract_erases) {
     trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
     t.extract("foo");
@@ -618,6 +621,7 @@ TEST(trie_map, merge_move) {
     EXPECT_EQ(5u, t.size());
     EXPECT_EQ(0u, s.size());
 }
+#endif
 
 TEST(trie_map, prefixed_with) {
     std::vector<std::string> v{ "rubens", "ruber", "rubicon", "rubicundus" };
@@ -627,7 +631,7 @@ TEST(trie_map, prefixed_with) {
 
     EXPECT_EQ(4u, std::distance(first, last));
     std::size_t i = 0;
-    for (auto it = first; it != last; ++it) v[i++] = it->first;
+    for (auto it = first; it != last; ++it) EXPECT_EQ(v[i++], it->first);
 }
 
 TEST(trie_map, prefixed_with_empty_range) {
@@ -738,11 +742,13 @@ TEST(trie_map, get_key_map) {
     EXPECT_EQ(m.v, t.key_map().v);
 }
 
-/* TEST(trie_map, radix) { */
-/*     trie_map t; */
-/*     EXPECT_EQ(127u, t.radix()); */
-/*     EXPECT_EQ(127u, trie_map::radix()); */
-/* } */
+#if 0
+TEST(trie_map, radix) {
+    trie_map t;
+    EXPECT_EQ(127u, t.radix());
+    EXPECT_EQ(127u, trie_map::radix());
+}
+#endif
 
 TEST(trie_map, DISABLED_does_not_leak) {
     EXPECT_TRUE(false) << "Not implemented";

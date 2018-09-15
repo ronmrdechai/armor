@@ -141,7 +141,7 @@ public:
 
     template <typename M>
     std::pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj) {
-        const_iterator it = find(k);
+        iterator it = find(k);
         if (it == end()) return insert({ k, std::forward<M>(obj) });
 
         it->second = std::forward<M>(obj);
@@ -149,7 +149,7 @@ public:
     }
     template <typename M>
     std::pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj) {
-        const_iterator it = find(k);
+        iterator it = find(k);
         if (it == end()) return insert({ std::move(k), std::forward<M>(obj) });
 
         it->second = std::forward<M>(obj);
@@ -158,25 +158,25 @@ public:
 
     template <typename M>
     iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj) {
-        const_iterator it = find(k);
-        if (it == end()) return insert({ hint, k, std::forward<M>(obj) });
+        iterator it = find(k);
+        if (it == end()) return insert(hint, { k, std::forward<M>(obj) });
 
         it->second = std::forward<M>(obj);
-        return { it, false };
+        return it;
     }
     template <typename M>
     iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj) {
-        const_iterator it = find(k);
-        if (it == end()) return insert({ hint, std::move(k), std::forward<M>(obj) });
+        iterator it = find(k);
+        if (it == end()) return insert(hint, { std::move(k), std::forward<M>(obj) });
 
         it->second = std::forward<M>(obj);
-        return { it, false };
+        return it;
     }
 
     template <typename... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {
         size_type pre = size();
-        const_iterator it = emplace_hint(trie_.root(), std::forward<Args>(args)...);
+        iterator it = emplace_hint(trie_.root(), std::forward<Args>(args)...);
         return { it, size() > pre };
     }
     template <typename... Args>
@@ -225,7 +225,7 @@ public:
         return remove_const(last);
     }
     size_type erase(const key_type& k) {
-        const_iterator it = find(k);
+        iterator it = find(k);
         if (it == end()) return 0;
         erase(it);
         return 1;
@@ -241,16 +241,18 @@ public:
 
     size_type count(const key_type& k) const { return find(k) != end(); }
 
-    iterator find(const key_type& k) { return trie_.find(k); }
+    iterator find(const key_type& k) { return remove_const(trie_.find(k)); }
     const_iterator find(const key_type& k) const { return trie_.find(k); }
 
-    std::pair<iterator, iterator> prefixed_with(const key_type& k)
-    { return trie_.prefixed_with(k); }
+    std::pair<iterator, iterator> prefixed_with(const key_type& k) {
+        auto p = trie_.prefixed_with(k);
+        return { remove_const(p.first), remove_const(p.second) };
+    }
     std::pair<const_iterator, const_iterator> prefixed_with(const key_type& k) const
     { return trie_.prefixed_with(k); }
 
     iterator longest_match(const key_type& k)
-    { return trie_.longest_match(k); }
+    { return remove_const(trie_.longest_match(k)); }
     const_iterator longest_match(const key_type& k) const
     { return trie_.longest_match(k); }
 

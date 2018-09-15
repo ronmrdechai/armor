@@ -51,7 +51,6 @@ void clear_node(trie_node<T, R>* n, NodeAllocator& na, ValueAllocator& va) {
 	for (auto& child : n->children) {
 		if (child != nullptr) {
 			clear_node(child, na, va);	
-            destroy_and_deallocate(va, n->value);
 			child = nullptr;
 		}
 	}
@@ -362,7 +361,7 @@ public:
         return insert_node(pos.node, key, make_value(std::forward<Args>(args)...));
     }
 
-    iterator find(const key_type& key) const {
+    const_iterator find(const key_type& key) const {
         return find_key(&impl_.root, key.begin(), key.end());
     }
 
@@ -374,18 +373,17 @@ public:
         return next;
     }
 
-    iterator longest_match(const key_type& key) const {
+    const_iterator longest_match(const key_type& key) const {
         return longest_match(&impl_.root, key.begin(), key.end());
     }
 
-    std::pair<iterator, iterator> prefixed_with(const key_type& key) const {
-        iterator first = find_key_unsafe(&impl_.root, key.begin(), key.end());
+    std::pair<const_iterator, const_iterator>
+    prefixed_with(const key_type& key) const {
+        const_iterator first = find_key_unsafe(&impl_.root, key.begin(), key.end());
         if (first == end()) return { end(), end() };
         auto last = skip(first);
 
-        if ( last.node->value == nullptr) ++last;
         if (first.node->value == nullptr) ++first;
-
         return {first, last};
     }
 
