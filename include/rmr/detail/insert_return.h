@@ -7,7 +7,7 @@
 
 #pragma once
 
-namespace rmr::detail {
+namespace rmr {
 
 template <typename Iterator, typename NodeType> struct insert_return {
     Iterator position;
@@ -15,4 +15,4 @@ template <typename Iterator, typename NodeType> struct insert_return {
     NodeType node;
 };
 
-} // namespace rmr::detail
+} // namespace rmr

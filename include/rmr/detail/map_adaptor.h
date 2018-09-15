@@ -13,8 +13,8 @@
 #include <tuple>
 #include <utility>
 
-#include <rmr/detail/insert_return_type.h>
-#include <rmr/detail/node_handle.h>
+#include <rmr/insert_return.h>
+#include <rmr/node_handle.h>
 
 namespace rmr::detail {
 
@@ -37,6 +37,9 @@ public:
     using const_iterator         = typename Trie::const_iterator;
     using reverse_iterator       = typename Trie::reverse_iterator;
     using const_reverse_iterator = typename Trie::const_reverse_iterator;
+
+    using node_type          = node_handle<key_type, value_type, allocator_type>;
+    using insert_return_type = insert_return<iterator, node_type>;
 
     map_adaptor() = default;
 
