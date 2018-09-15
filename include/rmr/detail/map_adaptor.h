@@ -13,7 +13,6 @@
 #include <tuple>
 #include <utility>
 
-#include <rmr/insert_return.h>
 #include <rmr/node_handle.h>
 
 namespace rmr::detail {
@@ -39,7 +38,7 @@ public:
     using const_reverse_iterator = typename Trie::const_reverse_iterator;
 
     using node_type          = node_handle<key_type, value_type, allocator_type>;
-    using insert_return_type = insert_return<iterator, node_type>;
+    using insert_return_type = node_insert_return<iterator, node_type>;
 
     map_adaptor() = default;
 
@@ -78,19 +77,19 @@ public:
 
     allocator_type get_allocator() const { return trie_.get_allocator(); }
 
-    mapped_type& at(const key_type& key) {
-        iterator it = find(key);
+    mapped_type& at(const key_type& k) {
+        iterator it = find(k);
         if (it == end()) throw std::out_of_range("rmr::at");
         return it->second;
     }
-    const mapped_type& at(const key_type& key) const {
-        const_iterator it = find(key);
+    const mapped_type& at(const key_type& k) const {
+        const_iterator it = find(k);
         if (it == end()) throw std::out_of_range("rmr::at");
         return it->second;
     }
 
-    mapped_type& operator[](const key_type& key) { return try_emplace(key).first->second; }
-    mapped_type& operator[](key_type&& key) { return try_emplace(std::move(key)).first->second; }
+    mapped_type& operator[](const key_type& k) { return try_emplace(k).first->second; }
+    mapped_type& operator[](key_type&& k) { return try_emplace(std::move(k)).first->second; }
 
     iterator begin() noexcept { return trie_.begin(); }
     const_iterator begin() const noexcept { return trie_.begin(); }
@@ -137,8 +136,8 @@ public:
     void insert(InputIt first, InputIt last) { while (first != last) insert(*(first++)); }
     void insert(std::initializer_list<value_type> ilist) { insert(ilist.begin(), ilist.end()); }
 
-    // TODO insert_return_type insert(node_type&& nh);
-    // TODO iterator insert(const_iterator hint, node_type&& nh);
+    insert_return_type insert(node_type&& nh); // TODO
+    iterator insert(const_iterator hint, node_type&& nh); // TODO
 
     template <typename M>
     std::pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj) {
@@ -177,7 +176,7 @@ public:
     template <typename... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {
         size_type pre = size();
-        const_iterator it = emplace_hint(hint, std::forward<Args>(args)...);
+        const_iterator it = emplace_hint(trie_.root(), std::forward<Args>(args)...);
         return { it, size() > pre };
     }
     template <typename... Args>
@@ -187,7 +186,7 @@ public:
     }
     template <typename... Args>
     std::pair<iterator, bool> try_emplace(const key_type& k, Args&&... args) {
-        const_iterator it = find(key);
+        iterator it = find(k);
         if (it == end()) return emplace(std::piecewise_construct,
             std::forward_as_tuple(k), std::forward_as_tuple(std::forward<Args>(args)...)
         );
@@ -195,7 +194,7 @@ public:
     }
     template <typename... Args>
     std::pair<iterator, bool> try_emplace(key_type&& k, Args&&... args) {
-        const_iterator it = find(key);
+        iterator it = find(k);
         if (it == end()) return emplace(std::piecewise_construct,
             std::forward_as_tuple(std::move(k)), std::forward_as_tuple(std::forward<Args>(args)...)
         );
@@ -203,7 +202,7 @@ public:
     }
     template <typename... Args>
     iterator try_emplace(const_iterator hint, const key_type& k, Args&&... args) {
-        const_iterator it = find(key);
+        iterator it = find(k);
         if (it == end()) return emplace_hint(hint, std::piecewise_construct,
             std::forward_as_tuple(k), std::forward_as_tuple(std::forward<Args>(args)...)
         );
@@ -211,7 +210,7 @@ public:
     }
     template <typename... Args>
     iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args) {
-        const_iterator it = find(key);
+        iterator it = find(k);
         if (it == end()) return emplace_hint(hint, std::piecewise_construct,
             std::forward_as_tuple(std::move(k)), std::forward_as_tuple(std::forward<Args>(args)...)
         );
@@ -223,37 +222,37 @@ public:
     iterator erase(const_iterator first, const_iterator last) {
         if (first == begin() && last == end()) clear();
         else while (first != last) erase(first++);
-        return last;
+        return remove_const(last);
     }
-    size_type erase(const key_type& key) {
-        const_iterator it = find(key);
+    size_type erase(const key_type& k) {
+        const_iterator it = find(k);
         if (it == end()) return 0;
         erase(it);
         return 1;
     }
 
-    void swap(map_adaptor& other) noexcept(noexcept(trie_.swap(other.trie_)))
+    void swap(map_adaptor& other) noexcept(noexcept(std::declval<Trie>().swap(std::declval<Trie>())))
     { trie_.swap(other.trie_); }
 
-    // TODO node_type extract(const_iterator position);
-    // TODO node_type extract(const key_type& k);
-    // TODO template <typename _Trie> void merge(map_adaptor<T, _Trie>& source);
-    // TODO template <typename _Trie> void merge(map_adaptor<T, _Trie>&& source);
+    node_type extract(const_iterator position); // TODO
+    node_type extract(const key_type& k); // TODO
+    template <typename _Trie> void merge(map_adaptor<T, _Trie>& source); // TODO
+    template <typename _Trie> void merge(map_adaptor<T, _Trie>&& source); // TODO
 
-    size_type count(const key_type& key) const { return find(key) != end(); }
+    size_type count(const key_type& k) const { return find(k) != end(); }
 
-    iterator find(const key_type& key) { return trie_.find(key); }
-    const_iterator find(const key_type& key) const { return trie_.find(key); }
+    iterator find(const key_type& k) { return trie_.find(k); }
+    const_iterator find(const key_type& k) const { return trie_.find(k); }
 
-    std::pair<iterator, iterator> prefixed_with(const key_type& key)
-    { return trie_.prefixed_with(key); }
-    std::pair<const_iterator, const_iterator> prefixed_with(const key_type& key) const
-    { return trie_.prefixed_with(key); }
+    std::pair<iterator, iterator> prefixed_with(const key_type& k)
+    { return trie_.prefixed_with(k); }
+    std::pair<const_iterator, const_iterator> prefixed_with(const key_type& k) const
+    { return trie_.prefixed_with(k); }
 
-    iterator longest_match(const key_type& key)
-    { return trie_.longest_match(key); }
-    const_iterator longest_match(const key_type& key) const
-    { return trie_.longest_match(key); }
+    iterator longest_match(const key_type& k)
+    { return trie_.longest_match(k); }
+    const_iterator longest_match(const key_type& k) const
+    { return trie_.longest_match(k); }
 
     key_mapper key_map() const { return trie_.key_map(); } 
 
@@ -282,7 +281,7 @@ inline bool operator>(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>&
 { return y < x; }
 
 template <typename T, typename Trie>
-inline bool operator>(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>& y)
+inline bool operator>=(const map_adaptor<T, Trie>& x, const map_adaptor<T, Trie>& y)
 { return !(x < y); }
 
 } // namespace rmr::detail

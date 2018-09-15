@@ -18,7 +18,7 @@ template <
     std::size_t R,
     typename KeyMapper = identity<std::size_t>,
     typename Key = std::string,
-    typename Allocator = std::allocator<std::pair<T, const Key>>
+    typename Allocator = std::allocator<std::pair<const Key, T>>
 >
 class trie_map : public detail::map_adaptor<
     T, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>

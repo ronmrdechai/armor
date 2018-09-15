@@ -65,10 +65,19 @@ struct trie_iterator {
     using pointer           = value_type*;
     using iterator_category = std::bidirectional_iterator_tag;
 
+    using non_const_node_type = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<NodeT>>>;
+    static constexpr bool is_const_iterator = std::is_const_v<std::remove_pointer_t<NodeT>>;
+
     NodeT node;
 
     trie_iterator(NodeT n = nullptr) : node(n) {}
     trie_iterator(const trie_iterator&) = default;
+
+    template <typename = std::enable_if_t<is_const_iterator>>
+    trie_iterator(const trie_iterator<R, non_const_node_type>& other) :
+        node(const_cast<NodeT>(other.node))
+    {}
+
     trie_iterator& operator=(const trie_iterator&) = default;
 
     trie_iterator& operator++() {
@@ -353,7 +362,7 @@ public:
         return insert_node(pos.node, key, make_value(std::forward<Args>(args)...));
     }
 
-    const_iterator find(const key_type& key) const {
+    iterator find(const key_type& key) const {
         return find_key(&impl_.root, key.begin(), key.end());
     }
 
@@ -365,13 +374,12 @@ public:
         return next;
     }
 
-    const_iterator longest_match(const key_type& key) const {
+    iterator longest_match(const key_type& key) const {
         return longest_match(&impl_.root, key.begin(), key.end());
     }
 
-    std::pair<const_iterator, const_iterator>
-    prefixed_with(const key_type& key) const {
-        const_iterator first = find_key_unsafe(&impl_.root, key.begin(), key.end());
+    std::pair<iterator, iterator> prefixed_with(const key_type& key) const {
+        iterator first = find_key_unsafe(&impl_.root, key.begin(), key.end());
         if (first == end()) return { end(), end() };
         auto last = skip(first);
 

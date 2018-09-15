@@ -24,6 +24,8 @@ public:
 
 protected:
     constexpr node_handle_common() noexcept : ptr_(nullptr), empty_() {}
+    node_handle_common(typename alloc_traits::pointer ptr, allocator_type alloc) :
+        ptr_(ptr), alloc_(std::move(alloc)) {}
 
     node_handle_common(node_handle_common&& other) noexcept : ptr_(other.ptr_), alloc_(other.alloc_)
     { other.ptr_ = nullptr; other.alloc_.~allocator_type(); }
@@ -62,10 +64,11 @@ private:
         allocator_type alloc(alloc_);
         detail::destroy_and_deallocate(alloc, ptr_);
     }
-}
+};
 
 template <typename Key, typename Value, typename Allocator>
 class node_handle : public node_handle_common<Allocator> {
+    using alloc_traits = std::allocator_traits<Allocator>;
 public:
     constexpr node_handle() noexcept = default;
     node_handle(node_handle&&) noexcept = default;
@@ -79,7 +82,9 @@ public:
     key_type& key() const noexcept { return *pkey_; }
     mapped_type& mapped() const noexcept { return *pmapped_; }
 
-    void swap(node_handle&& other) noexcept {
+    void swap(node_handle&& other) noexcept(
+        alloc_traits::propagate_on_container_swap::value || alloc_traits::is_always_equal::value
+    ) {
         swap_(other);
         using std::swap;
         swap(pkey_, other.pkey_);
@@ -87,8 +92,8 @@ public:
     }
 
 private:
-    node_handle(typename alloc_traits::pointer ptr, allocator_type alloc) :
-        node_handle_common(ptr, alloc)
+    node_handle(typename alloc_traits::pointer ptr, Allocator alloc) :
+        node_handle_common<Allocator>(ptr, std::move(alloc))
     {
         if (ptr) {
             auto& key = const_cast<Key&>(ptr->first);
@@ -102,7 +107,9 @@ private:
 
     using pointer_traits = std::pointer_traits<typename alloc_traits::pointer>;
     template <typename T>
-    using pointer_traits_of = typename pointer_traits::template rebind<std::remove_reference_t<T>>;
+    using pointer_traits_of = std::pointer_traits<
+        typename pointer_traits::template rebind<std::remove_reference_t<T>>
+    >;
 
     typename pointer_traits_of<Key>::pointer pkey_;
     typename pointer_traits_of<typename Value::second_type>::pointer pmapped_;
@@ -116,5 +123,12 @@ private:
 
 template <typename Value, typename Allocator>
 class node_handle<Value, Value, Allocator> : public node_handle_common<Allocator> { /* TODO */ };
+
+template <typename Iterator, typename NodeType>
+struct node_insert_return {
+    Iterator position = Iterator();
+    bool inserted = false;
+    NodeType node;
+};
 
 } // namespace rmr

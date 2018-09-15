@@ -738,11 +738,11 @@ TEST(trie_map, get_key_map) {
     EXPECT_EQ(m.v, t.key_map().v);
 }
 
-TEST(trie_map, radix) {
-    trie_map t;
-    EXPECT_EQ(127u, t.radix());
-    EXPECT_EQ(127u, trie_map::radix());
-}
+/* TEST(trie_map, radix) { */
+/*     trie_map t; */
+/*     EXPECT_EQ(127u, t.radix()); */
+/*     EXPECT_EQ(127u, trie_map::radix()); */
+/* } */
 
 TEST(trie_map, DISABLED_does_not_leak) {
     EXPECT_TRUE(false) << "Not implemented";
