@@ -32,6 +32,8 @@ class trie_map : public detail::map_adaptor<
     >;
 public:
     using base_type::base_type;
+
+    static constexpr std::size_t radix() { return R; }
 };
 
 } // namespace rmr

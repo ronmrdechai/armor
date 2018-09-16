@@ -742,6 +742,64 @@ TEST(trie_map, get_key_map) {
     EXPECT_EQ(m.v, t.key_map().v);
 }
 
+TEST(trie_map, radix) {
+    trie_map t;
+    EXPECT_EQ(127u, t.radix());
+    EXPECT_EQ(127u, trie_map::radix());
+}
+
+template <typename... Ts> struct make_void { typedef void type;};
+template <typename... Ts> using void_t = typename make_void<Ts...>::type;
+
+template <typename, typename = void_t<>>
+struct has_iterator : std::false_type {};
+template <typename T>
+struct has_iterator<T, void_t<typename T::iterator>> : std::true_type {};
+template <typename, typename = void_t<>>
+struct has_const_iterator : std::false_type {};
+template <typename T>
+struct has_const_iterator<T, void_t<typename T::const_iterator>> : std::true_type {};
+template <typename, typename = void_t<>>
+struct has_reverse_iterator : std::false_type {};
+template <typename T>
+struct has_reverse_iterator<T, void_t<typename T::reverse_iterator>> : std::true_type {};
+template <typename, typename = void_t<>>
+struct has_const_reverse_iterator : std::false_type {};
+template <typename T>
+struct has_const_reverse_iterator<T, void_t<typename T::const_reverse_iterator>> : std::true_type {};
+template <typename, typename = void_t<>>
+struct has_node_type : std::false_type {};
+template <typename T>
+struct has_node_type<T, void_t<typename T::node_type>> : std::true_type {};
+template <typename, typename = void_t<>>
+struct has_insert_return_type : std::false_type {};
+template <typename T>
+struct has_insert_return_type<T, void_t<typename T::insert_return_type>> : std::true_type {};
+
+
+TEST(trie_map, typedefs) {
+    using value_type = std::pair<const std::string, int>;
+
+    EXPECT_TRUE((std::is_same_v<std::string, typename trie_map::key_type>));
+    EXPECT_TRUE((std::is_same_v<int, typename trie_map::mapped_type>));
+    EXPECT_TRUE((std::is_same_v<value_type, typename trie_map::value_type>));
+    EXPECT_TRUE((std::is_same_v<std::size_t, typename trie_map::size_type>));
+    EXPECT_TRUE((std::is_same_v<std::ptrdiff_t, typename trie_map::difference_type>));
+    EXPECT_TRUE((std::is_same_v<rmr::identity<std::size_t>, typename trie_map::key_mapper>));
+    EXPECT_TRUE((std::is_same_v<std::allocator<value_type>, typename trie_map::allocator_type>));
+    EXPECT_TRUE((std::is_same_v<value_type&, typename trie_map::reference>));
+    EXPECT_TRUE((std::is_same_v<const value_type&, typename trie_map::const_reference>));
+    EXPECT_TRUE((std::is_same_v<value_type*, typename trie_map::pointer>));
+    EXPECT_TRUE((std::is_same_v<const value_type*, typename trie_map::const_pointer>));
+
+    EXPECT_TRUE(has_iterator<trie_map>::value);
+    EXPECT_TRUE(has_const_iterator<trie_map>::value);
+    EXPECT_TRUE(has_reverse_iterator<trie_map>::value);
+    EXPECT_TRUE(has_const_reverse_iterator<trie_map>::value);
+    EXPECT_TRUE(has_node_type<trie_map>::value);
+    EXPECT_TRUE(has_insert_return_type<trie_map>::value);
+}
+
 TEST(trie_map, DISABLED_does_not_leak) {
     EXPECT_TRUE(false) << "Not implemented";
 }
