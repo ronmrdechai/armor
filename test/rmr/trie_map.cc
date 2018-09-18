@@ -531,7 +531,6 @@ TEST(trie_map, erase_returns_iterator) {
     EXPECT_EQ("bax", it->first);
 }
 
-#if 0
 TEST(trie_map, extract_erases) {
     trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
     t.extract("foo");
@@ -547,6 +546,7 @@ TEST(trie_map, extract_gives_valid_handle) {
     EXPECT_EQ(1, nh.mapped());
 }
 
+#if 0
 TEST(trie_map, extract_reinsertion) {
     trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
     auto nh = t.extract("foo");

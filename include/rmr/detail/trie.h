@@ -361,6 +361,9 @@ public:
         return insert_node(pos.node, key, make_value(std::forward<Args>(args)...));
     }
 
+    iterator find(const key_type& key) {
+        return remove_const(const_cast<const trie&>(*this).find(key));
+    }
     const_iterator find(const key_type& key) const {
         return find_key(&impl_.root, key.begin(), key.end());
     }
@@ -373,10 +376,17 @@ public:
         return next;
     }
 
-    const_iterator longest_match(const key_type& key) const {
-        return longest_match(&impl_.root, key.begin(), key.end());
-    }
+    pointer extract(const_iterator pos) { return extract_value(remove_const(pos).node); }
 
+    iterator longest_match(const key_type& key) 
+    { return remove_const(const_cast<const trie&>(*this).longest_match(key)); }
+    const_iterator longest_match(const key_type& key) const
+    { return longest_match(&impl_.root, key.begin(), key.end()); }
+
+    std::pair<iterator, iterator> prefixed_with(const key_type& key) {
+        std::pair<const_iterator, const_iterator> p = prefixed_with(key);
+        return { remove_const(p.first), remove_const(p.second) };
+    }
     std::pair<const_iterator, const_iterator>
     prefixed_with(const key_type& key) const {
         const_iterator first = find_key_unsafe(&impl_.root, key.begin(), key.end());
@@ -446,13 +456,13 @@ private:
         return dst;
     }
 
-    node_type* insert_node(const node_type* hint, const key_type& key, value_type* v) {
+    node_type* insert_node(const node_type* hint, const key_type& key, pointer v) {
         size_type rank = 0;
         const node_type* cur = hint;
         while (cur != &impl_.root) { ++rank; cur = cur->parent; }
         return insert_node(hint, rank, key, v);
     }
-    node_type* insert_node(const node_type* _hint, size_type rank, const key_type& key, value_type* v) {
+    node_type* insert_node(const node_type* _hint, size_type rank, const key_type& key, pointer v) {
         node_type* hint = const_cast<node_type*>(_hint);
         node_type* ret;
         insert_node(hint, hint->parent, hint->parent_index, key, rank, v, ret);
@@ -464,7 +474,7 @@ private:
         size_type parent_index,
         const key_type& key,
         size_type index,
-        value_type* v,
+        pointer v,
         node_type*& ret
     ) {
         if (root == nullptr) root = make_node(parent, parent_index);
@@ -484,9 +494,9 @@ private:
           auto& get_node_allocator()       { return impl_; }
 
     template <typename... Args>
-    value_type* make_value(Args&&... args) {
+    pointer make_value(Args&&... args) {
         auto alloc = get_allocator();
-        value_type* v = alloc_traits::allocate(alloc, 1);
+        pointer v = alloc_traits::allocate(alloc, 1);
         alloc_traits::construct(alloc, v, std::forward<Args>(args)...);
         return v;
     }
@@ -540,6 +550,12 @@ private:
             unlink(node);
             clear_node(node, node_alloc, value_alloc);
         }
+    }
+
+    pointer extract_value(node_type* node) {
+        pointer v(std::move(node->value));
+        node->value = nullptr;
+        return v;
     }
 
     const node_type* longest_match(

@@ -11,6 +11,10 @@
 
 namespace rmr {
 
+namespace detail {
+template <typename T, typename Trie> class map_adaptor;
+} // namespace detail
+
 template <typename Allocator>
 class node_handle_common {
     using alloc_traits = std::allocator_traits<Allocator>;
@@ -118,7 +122,7 @@ private:
     static typename pointer_traits_of<T>::pointer pointer_to(T& o)
     { return pointer_traits_of<T>::pointer_to(o); }
 
-    template <typename T, typename Trie> friend class map_adaptor;
+    template <typename T, typename Trie> friend class detail::map_adaptor;
 };
 
 template <typename Value, typename Allocator>

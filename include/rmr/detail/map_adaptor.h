@@ -234,25 +234,24 @@ public:
     void swap(map_adaptor& other) noexcept(noexcept(std::declval<Trie>().swap(std::declval<Trie>())))
     { trie_.swap(other.trie_); }
 
-    node_type extract(const_iterator position); // TODO
-    node_type extract(const key_type& k); // TODO
+    node_type extract(const_iterator pos) { return node_type(trie_.extract(pos), get_allocator()); }
+    node_type extract(const key_type& k) { return extract(find(k)); }
+
     template <typename _Trie> void merge(map_adaptor<T, _Trie>& source); // TODO
     template <typename _Trie> void merge(map_adaptor<T, _Trie>&& source); // TODO
 
     size_type count(const key_type& k) const { return find(k) != end(); }
 
-    iterator find(const key_type& k) { return remove_const(trie_.find(k)); }
+    iterator find(const key_type& k) { return trie_.find(k); }
     const_iterator find(const key_type& k) const { return trie_.find(k); }
 
-    std::pair<iterator, iterator> prefixed_with(const key_type& k) {
-        auto p = trie_.prefixed_with(k);
-        return { remove_const(p.first), remove_const(p.second) };
-    }
+    std::pair<iterator, iterator> prefixed_with(const key_type& k)
+    { return trie_.prefixed_with(k); }
     std::pair<const_iterator, const_iterator> prefixed_with(const key_type& k) const
     { return trie_.prefixed_with(k); }
 
     iterator longest_match(const key_type& k)
-    { return remove_const(trie_.longest_match(k)); }
+    { return trie_.longest_match(k); }
     const_iterator longest_match(const key_type& k) const
     { return trie_.longest_match(k); }
 
