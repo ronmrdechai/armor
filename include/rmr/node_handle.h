@@ -125,7 +125,6 @@ private:
     { return pointer_traits_of<T>::pointer_to(o); }
 
     template <typename T, typename Trie> friend class detail::map_adaptor;
-    template <typename T, typename Trie> friend class detail::set_adaptor;
 };
 
 template <typename Value, typename Allocator>
@@ -140,7 +139,7 @@ public:
 
     using value_type = Value;
 
-    value_type& value() const noexcept { return *ptr_; }
+    value_type& value() const noexcept { return *this->ptr_; }
 
     void swap(node_handle&& other) noexcept(
         alloc_traits::propagate_on_container_swap::value || alloc_traits::is_always_equal::value

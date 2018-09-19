@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <rmr/detail/map_adaptor.h>
+#include <rmr/detail/set_adaptor.h>
 #include <rmr/detail/trie.h>
 #include <rmr/functors.h>
 
@@ -19,15 +19,15 @@ template <
     typename Key = std::string,
     typename Allocator = std::allocator<Key>
 >
-class trie_set : public detail::map_adaptor<
-    T, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
+class trie_set : public detail::set_adaptor<
+    Key, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
 > {
     static_assert(
         std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>,
         "KeyMapper is not invocable on std::size_t or does not return std::size_t"
     );
-    using base_type = detail::map_adaptor<
-        T, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
+    using base_type = detail::set_adaptor<
+        Key, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
     >;
 public:
     using base_type::base_type;
