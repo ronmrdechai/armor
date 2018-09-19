@@ -132,8 +132,26 @@ template <typename Value, typename Allocator>
 class node_handle<Value, Value, Allocator> : public node_handle_common<Allocator> {
     using alloc_traits = std::allocator_traits<Allocator>;
 public:
+    constexpr node_handle() noexcept = default;
+    node_handle(node_handle&&) noexcept = default;
+    ~node_handle() = default;
+
+    node_handle& operator=(node_handle&&) noexcept = default;
+
+    using value_type = Value;
+
+    value_type& value() const noexcept { return *ptr_; }
+
+    void swap(node_handle&& other) noexcept(
+        alloc_traits::propagate_on_container_swap::value || alloc_traits::is_always_equal::value
+    ) { swap_(other); }
 
 private:
+    node_handle(typename alloc_traits::pointer ptr, Allocator alloc) :
+        node_handle_common<Allocator>(ptr, std::move(alloc)) {}
+
+    value_type& key() const noexcept { return value(); }
+
     template <typename T, typename Trie> friend class detail::set_adaptor;
 };
 
