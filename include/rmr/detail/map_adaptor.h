@@ -136,8 +136,33 @@ public:
     void insert(InputIt first, InputIt last) { while (first != last) insert(*(first++)); }
     void insert(std::initializer_list<value_type> ilist) { insert(ilist.begin(), ilist.end()); }
 
-    insert_return_type insert(node_type&& nh); // TODO
-    iterator insert(const_iterator hint, node_type&& nh); // TODO
+    insert_return_type insert(node_type&& nh) {
+        insert_return_type ret;
+        if (nh.empty()) {
+            ret.position = end();
+        } else {
+            iterator it = find(nh.key());
+            if (it == end()) {
+                ret.position = trie_.reinsert(trie_.root(), nh.key(), nh.ptr_);
+                nh.ptr_ = nullptr;
+                ret.inserted = true;
+            } else {
+                ret.node = std::move(nh);
+                ret.position = it;
+                ret.inserted = false;
+            }
+        }
+        return ret;
+    }
+    iterator insert(const_iterator hint, node_type&& nh) { 
+        if (nh.empty()) return end();
+        iterator it = find(nh.key());
+        if (it == end()) {
+            it = trie_.reinsert(hint, nh.key(), nh.ptr_);
+            nh.ptr_ = nullptr;
+        }
+        return it;
+    }
 
     template <typename M>
     std::pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj) {
@@ -237,8 +262,16 @@ public:
     node_type extract(const_iterator pos) { return node_type(trie_.extract(pos), get_allocator()); }
     node_type extract(const key_type& k) { return extract(find(k)); }
 
-    template <typename _Trie> void merge(map_adaptor<T, _Trie>& source); // TODO
-    template <typename _Trie> void merge(map_adaptor<T, _Trie>&& source); // TODO
+    template <typename _Trie>
+    void merge(map_adaptor<T, _Trie>& source) {
+        for (auto it = source.begin(), last = source.end(); it != last;) {
+            auto pos = it++;
+            if (find(pos->first) != end()) continue;
+            insert(source.extract(pos));
+        }
+    }
+    template <typename _Trie>
+    void merge(map_adaptor<T, _Trie>&& source) { merge(source); }
 
     size_type count(const key_type& k) const { return find(k) != end(); }
 

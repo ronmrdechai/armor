@@ -263,7 +263,6 @@ TEST(trie_map, insert_hint) {
     EXPECT_EQ(2, t["foobar"]);
 }
 
-#if 0
 TEST(trie_map, insert_hint_handle) {
     trie_map t{ {"foobar", 3} };
 
@@ -274,7 +273,6 @@ TEST(trie_map, insert_hint_handle) {
     EXPECT_EQ(1, t["foo"]);
     EXPECT_EQ(3, t["foobar"]);
 }
-#endif
 
 TEST(trie_map, insert_hint_exists) {
     trie_map t{ {"foobar", 3} };
@@ -534,6 +532,7 @@ TEST(trie_map, erase_returns_iterator) {
 TEST(trie_map, extract_erases) {
     trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
     t.extract("foo");
+    EXPECT_EQ(2u, t.size());
 
     ASSERT_THROW(t.at("foo") = 1, std::out_of_range);
 }
@@ -546,7 +545,6 @@ TEST(trie_map, extract_gives_valid_handle) {
     EXPECT_EQ(1, nh.mapped());
 }
 
-#if 0
 TEST(trie_map, extract_reinsertion) {
     trie_map t{ {"foo", 1}, {"bar", 1}, {"baz", 1} };
     auto nh = t.extract("foo");
@@ -621,7 +619,6 @@ TEST(trie_map, merge_move) {
     EXPECT_EQ(5u, t.size());
     EXPECT_EQ(0u, s.size());
 }
-#endif
 
 TEST(trie_map, prefixed_with) {
     std::vector<std::string> v{ "rubens", "ruber", "rubicon", "rubicundus" };

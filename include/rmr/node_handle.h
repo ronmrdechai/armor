@@ -36,12 +36,13 @@ protected:
 
     ~node_handle_common() { destroy(); alloc_.~allocator_type(); }
 
-    node_handle_common& operator=(node_handle_common&& other) {
+    node_handle_common& operator=(node_handle_common&& other) noexcept {
         destroy();
         ptr_ = other.ptr_;
         if (alloc_traits::propagate_on_container_move_assignment::value) alloc_ = std::move(other.alloc_);
         other.ptr_ = nullptr;
         other.alloc_.~allocator_type();
+        return *this;
     }
 
     void swap_(node_handle_common& other) noexcept {

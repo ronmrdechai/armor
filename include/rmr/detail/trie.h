@@ -353,20 +353,21 @@ public:
     }
 
     template <typename... Args>
-    iterator emplace(const_iterator pos, const key_type& key, Args&&... args) {
-        return emplace(remove_const(pos), key, std::forward<Args>(args)...);
-    }
+    iterator emplace(const_iterator pos, const key_type& key, Args&&... args)
+    { return emplace(remove_const(pos), key, std::forward<Args>(args)...); }
     template <typename... Args>
-    iterator emplace(iterator pos, const key_type& key, Args&&... args) {
-        return insert_node(pos.node, key, make_value(std::forward<Args>(args)...));
-    }
+    iterator emplace(iterator pos, const key_type& key, Args&&... args)
+    { return insert_node(pos.node, key, make_value(std::forward<Args>(args)...)); }
 
-    iterator find(const key_type& key) {
-        return remove_const(const_cast<const trie&>(*this).find(key));
-    }
-    const_iterator find(const key_type& key) const {
-        return find_key(&impl_.root, key.begin(), key.end());
-    }
+    iterator reinsert(const_iterator pos, const key_type& key, const_pointer p)
+    { return reinsert(remove_const(pos), key, const_cast<pointer>(p)); }
+    iterator reinsert(iterator pos, const key_type& key, pointer p)
+    { return insert_node(pos.node, key, p); }
+
+    iterator find(const key_type& key)
+    { return remove_const(const_cast<const trie&>(*this).find(key)); }
+    const_iterator find(const key_type& key) const
+    { return find_key(&impl_.root, key.begin(), key.end()); }
 
     iterator erase(const_iterator pos) { return erase(remove_const(pos)); }
     iterator erase(iterator pos) {
@@ -384,7 +385,7 @@ public:
     { return longest_match(&impl_.root, key.begin(), key.end()); }
 
     std::pair<iterator, iterator> prefixed_with(const key_type& key) {
-        std::pair<const_iterator, const_iterator> p = prefixed_with(key);
+        auto p = const_cast<const trie&>(*this).prefixed_with(key);
         return { remove_const(p.first), remove_const(p.second) };
     }
     std::pair<const_iterator, const_iterator>
@@ -555,6 +556,7 @@ private:
     pointer extract_value(node_type* node) {
         pointer v(std::move(node->value));
         node->value = nullptr;
+        impl_.size--;
         return v;
     }
 
