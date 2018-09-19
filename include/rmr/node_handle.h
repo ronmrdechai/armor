@@ -13,6 +13,7 @@ namespace rmr {
 
 namespace detail {
 template <typename T, typename Trie> class map_adaptor;
+template <typename T, typename Trie> class set_adaptor;
 } // namespace detail
 
 template <typename Allocator>
@@ -124,10 +125,17 @@ private:
     { return pointer_traits_of<T>::pointer_to(o); }
 
     template <typename T, typename Trie> friend class detail::map_adaptor;
+    template <typename T, typename Trie> friend class detail::set_adaptor;
 };
 
 template <typename Value, typename Allocator>
-class node_handle<Value, Value, Allocator> : public node_handle_common<Allocator> { /* TODO */ };
+class node_handle<Value, Value, Allocator> : public node_handle_common<Allocator> {
+    using alloc_traits = std::allocator_traits<Allocator>;
+public:
+
+private:
+    template <typename T, typename Trie> friend class detail::set_adaptor;
+};
 
 template <typename Iterator, typename NodeType>
 struct node_insert_return {
