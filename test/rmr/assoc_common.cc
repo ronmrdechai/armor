@@ -27,8 +27,7 @@ TYPED_TEST(assoc_common, default_distance_is_0) {
     EXPECT_EQ(0u, std::distance(t.begin(), t.end()));
 }
 
-TYPED_TEST(assoc_common, roman_trie_size_is_7) {
-    TypeParam t = test::roman_trie<TypeParam>;
+TYPED_TEST(assoc_common, roman_trie_size_is_7) { TypeParam t = test::roman_trie<TypeParam>;
     EXPECT_EQ(7u, t.size());
 }
 
@@ -223,6 +222,28 @@ TYPED_TEST(assoc_common, less_equals) {
     EXPECT_LE(g, g);
 }
 
+TYPED_TEST(assoc_common, typedefs) {
+    using value_type = typename TypeParam::value_type;
+
+    EXPECT_TRUE((std::is_same_v<std::string, typename TypeParam::key_type>));
+    EXPECT_TRUE((std::is_same_v<value_type, typename TypeParam::value_type>));
+    EXPECT_TRUE((std::is_same_v<std::size_t, typename TypeParam::size_type>));
+    EXPECT_TRUE((std::is_same_v<std::ptrdiff_t, typename TypeParam::difference_type>));
+    EXPECT_TRUE((std::is_same_v<rmr::identity<std::size_t>, typename TypeParam::key_mapper>));
+    EXPECT_TRUE((std::is_same_v<std::allocator<value_type>, typename TypeParam::allocator_type>));
+    EXPECT_TRUE((std::is_same_v<value_type&, typename TypeParam::reference>));
+    EXPECT_TRUE((std::is_same_v<const value_type&, typename TypeParam::const_reference>));
+    EXPECT_TRUE((std::is_same_v<value_type*, typename TypeParam::pointer>));
+    EXPECT_TRUE((std::is_same_v<const value_type*, typename TypeParam::const_pointer>));
+
+    EXPECT_TRUE(test::has_iterator<TypeParam>::value);
+    EXPECT_TRUE(test::has_const_iterator<TypeParam>::value);
+    EXPECT_TRUE(test::has_reverse_iterator<TypeParam>::value);
+    EXPECT_TRUE(test::has_const_reverse_iterator<TypeParam>::value);
+    EXPECT_TRUE(test::has_node_type<TypeParam>::value);
+    EXPECT_TRUE(test::has_insert_return_type<TypeParam>::value);
+}
+
 // TODO constructors
 // TODO assignment
 // TODO inserts
@@ -230,4 +251,3 @@ TYPED_TEST(assoc_common, less_equals) {
 // TODO erase, count, find, extract, merge
 // TODO swap
 // TODO prefixed_with, longest_match
-// TODO typedefs

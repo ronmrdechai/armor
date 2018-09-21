@@ -64,4 +64,23 @@ template <typename T> void assert_empty(const T& t) {
     EXPECT_EQ(0u, std::distance(t.begin(), t.end()));
 }
 
+namespace detail {
+template <typename... Ts> struct make_void { typedef void type;};
+template <typename... Ts> using void_t = typename make_void<Ts...>::type;
+} // namespace detail
+
+#define DEFINE_HAS(member)\
+    template <typename, typename = detail::void_t<>> struct has_##member : std::false_type {};\
+    template <typename T> struct has_##member<T, detail::void_t<typename T::member>> : std::true_type {}
+
+DEFINE_HAS(iterator);
+DEFINE_HAS(const_iterator);
+DEFINE_HAS(reverse_iterator);
+DEFINE_HAS(const_reverse_iterator);
+DEFINE_HAS(node_type);
+DEFINE_HAS(insert_return_type);
+DEFINE_HAS(mapped_type);
+
+#undef DEFINE_HAS
+
 } // namespace test
