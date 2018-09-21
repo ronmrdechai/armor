@@ -28,33 +28,77 @@ TYPED_TEST(assoc_common, default_distance_is_0) {
 }
 
 TYPED_TEST(assoc_common, roman_trie_size_is_7) {
-    TypeParam t = test::roman_trie<TypeParam>();
+    TypeParam t = test::roman_trie<TypeParam>;
     EXPECT_EQ(7u, t.size());
 }
 
 TYPED_TEST(assoc_common, roman_trie_distance_is_7) {
-    TypeParam t = test::roman_trie<TypeParam>();
+    TypeParam t = test::roman_trie<TypeParam>;
     EXPECT_EQ(7u, std::distance(t.begin(), t.end()));
 }
 
 TYPED_TEST(assoc_common, empty_after_clear) {
-    TypeParam t = test::roman_trie<TypeParam>();
+    TypeParam t = test::roman_trie<TypeParam>;
     t.clear();
     test::assert_empty(t);
 }
 
 TYPED_TEST(assoc_common, empty_after_move_construct) {
-    TypeParam t = test::roman_trie<TypeParam>();
+    TypeParam t = test::roman_trie<TypeParam>;
     TypeParam(std::move(t));
 
     test::assert_empty(t);
 }
 
 TYPED_TEST(assoc_common, empty_after_move_assign) {
-    TypeParam t = test::roman_trie<TypeParam>();
+    TypeParam t = test::roman_trie<TypeParam>;
     TypeParam{} = std::move(t);
 
     test::assert_empty(t);
+}
+
+TYPED_TEST(assoc_common, iteration_is_sorted) {
+    TypeParam t = test::roman_trie<TypeParam>;
+
+    std::vector<typename TypeParam::key_type> unsorted;
+    std::transform(t.begin(), t.end(), std::back_inserter(unsorted), test::value_to_key<TypeParam>);
+
+    std::vector<typename TypeParam::key_type> sorted = unsorted;
+    std::sort(sorted.begin(), sorted.end());
+
+    EXPECT_EQ(unsorted, sorted);
+}
+
+TYPED_TEST(assoc_common, reverse_iteration_is_reverse_sorted) {
+    TypeParam t = test::roman_trie<TypeParam>;
+
+    std::vector<typename TypeParam::key_type> unsorted;
+    std::transform(t.rbegin(), t.rend(), std::back_inserter(unsorted), test::value_to_key<TypeParam>);
+
+    std::vector<typename TypeParam::key_type> sorted = unsorted;
+    std::sort(sorted.begin(), sorted.end());
+    std::reverse(sorted.begin(), sorted.end());
+
+    EXPECT_EQ(unsorted, sorted);
+}
+
+TYPED_TEST(assoc_common, reverse_iteration_covers_whole_container) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    EXPECT_EQ(std::distance(t.begin(), t.end()), std::distance(t.rbegin(), t.rend()));
+}
+
+TYPED_TEST(assoc_common, reverse_iteration_is_reversed) {
+    TypeParam t = test::roman_trie<TypeParam>;
+
+    std::vector<typename TypeParam::key_type> not_reversed;
+    std::transform(t.begin(), t.end(), std::back_inserter(not_reversed), test::value_to_key<TypeParam>);
+
+    std::vector<typename TypeParam::key_type> reversed;
+    std::transform(t.rbegin(), t.rend(), std::back_inserter(reversed), test::value_to_key<TypeParam>);
+
+    std::reverse(not_reversed.begin(), not_reversed.end());
+
+    EXPECT_EQ(not_reversed, reversed);
 }
 
 TYPED_TEST(assoc_common, max_size_is_uint64_max) {
@@ -133,48 +177,52 @@ TYPED_TEST(assoc_common, insert_initializer_list_size_increase) {
 }
 
 TYPED_TEST(assoc_common, equals) {
-    TypeParam t = test::roman_trie<TypeParam>();
-    TypeParam s = test::roman_trie<TypeParam>();
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s = test::roman_trie<TypeParam>;
+
     EXPECT_EQ(t, s);
 }
 
 TYPED_TEST(assoc_common, not_equals) {
-    TypeParam t = test::roman_trie<TypeParam>();
-    TypeParam s = test::roman_trie<TypeParam>();
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s = test::roman_trie<TypeParam>;
     s.erase("romane");
 
     EXPECT_NE(t, s);
 }
 
 TYPED_TEST(assoc_common, greater) {
-    TypeParam l = test::less_trie<TypeParam>();
-    TypeParam g = test::greater_trie<TypeParam>();
+    TypeParam l = test::less_trie<TypeParam>;
+    TypeParam g = test::greater_trie<TypeParam>;
+
     EXPECT_GT(g, l);
 }
 
 TYPED_TEST(assoc_common, greater_equals) {
-    TypeParam l = test::less_trie<TypeParam>();
-    TypeParam g = test::greater_trie<TypeParam>();
+    TypeParam l = test::less_trie<TypeParam>;
+    TypeParam g = test::greater_trie<TypeParam>;
+
     EXPECT_GE(g, g);
     EXPECT_GE(g, l);
     EXPECT_GE(l, l);
 }
 
 TYPED_TEST(assoc_common, less) {
-    TypeParam l = test::less_trie<TypeParam>();
-    TypeParam g = test::greater_trie<TypeParam>();
+    TypeParam l = test::less_trie<TypeParam>;
+    TypeParam g = test::greater_trie<TypeParam>;
+
     EXPECT_LT(l, g);
 }
 
 TYPED_TEST(assoc_common, less_equals) {
-    TypeParam l = test::less_trie<TypeParam>();
-    TypeParam g = test::greater_trie<TypeParam>();
+    TypeParam l = test::less_trie<TypeParam>;
+    TypeParam g = test::greater_trie<TypeParam>;
+
     EXPECT_LE(l, l);
     EXPECT_LE(l, g);
     EXPECT_LE(g, g);
 }
 
-// TODO iteration, reverse iteration
 // TODO constructors
 // TODO assignment
 // TODO inserts

@@ -86,13 +86,13 @@ public:
     const_iterator end() const noexcept { return trie_.end(); }
     const_iterator cend() const noexcept { return trie_.cend(); }
 
-    iterator rbegin() noexcept { return trie_.rbegin(); }
-    const_iterator rbegin() const noexcept { return trie_.rbegin(); }
-    const_iterator crbegin() const noexcept { return trie_.crbegin(); }
+    reverse_iterator rbegin() noexcept { return trie_.rbegin(); }
+    const_reverse_iterator rbegin() const noexcept { return trie_.rbegin(); }
+    const_reverse_iterator crbegin() const noexcept { return trie_.crbegin(); }
 
-    iterator rend() noexcept { return trie_.rend(); }
-    const_iterator rend() const noexcept { return trie_.rend(); }
-    const_iterator crend() const noexcept { return trie_.crend(); }
+    reverse_iterator rend() noexcept { return trie_.rend(); }
+    const_reverse_iterator rend() const noexcept { return trie_.rend(); }
+    const_reverse_iterator crend() const noexcept { return trie_.crend(); }
 
     [[nodiscard]] bool empty() const noexcept { return size() == 0; }
     size_type size() const noexcept { return trie_.size(); }
