@@ -20,28 +20,6 @@ using assoc_common_types = testing::Types<trie_map, trie_set>;
 
 namespace test {
 
-template <typename T> T roman_trie;
-template <> trie_map roman_trie<trie_map>{
-    {"romane", 1},
-    {"romanus", 1},
-    {"romulus", 1},
-    {"rubens", 1},
-    {"ruber", 1},
-    {"rubicon", 1},
-    {"rubicundus", 1}
-};
-template <> trie_set roman_trie<trie_set>{
-    "romane", "romanus", "romulus", "rubens", "ruber", "rubicon", "rubicundus"
-};
-
-template <typename T> T less_trie;
-template <> trie_map less_trie<trie_map>{ {"aaa", 1}, {"bbb", 1}, {"ccc", 1} };
-template <> trie_set less_trie<trie_set>{ "aaa", "bbb", "ccc" };
-
-template <typename T> T greater_trie;
-template <> trie_map greater_trie<trie_map>{ {"bbb", 1}, {"ccc", 1}, {"ddd", 1} };
-template <> trie_set greater_trie<trie_set>{ "bbb", "ccc", "ddd" };
-
 template <typename T> typename T::value_type key_to_value(typename T::key_type) = delete;
 template <> typename trie_map::value_type key_to_value<trie_map>(typename trie_map::key_type k) {
     return { k, typename trie_map::mapped_type{} };
@@ -65,6 +43,12 @@ Container make_container(Keys... keys) {
     (void)_;
     return c;
 }
+
+template <typename T> T less_trie = make_container<T>("aaa", "bbb", "ccc");
+template <typename T> T greater_trie = make_container<T>("bbb", "ccc", "ddd");
+template <typename T> T roman_trie = make_container<T>(
+    "romane", "romanus", "romulus", "rubens", "ruber", "rubicon", "rubicundus"
+);
 
 template <typename T> void assert_empty(const T& t) {
     EXPECT_TRUE(t.empty());
