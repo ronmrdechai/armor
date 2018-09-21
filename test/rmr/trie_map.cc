@@ -797,6 +797,12 @@ TEST(trie_map, typedefs) {
     EXPECT_TRUE(has_insert_return_type<trie_map>::value);
 }
 
+TEST(trie_map, roman_trie_size) {
+    trie_map t = fixtures::roman_trie;
+    EXPECT_EQ(7u, t.size());
+    EXPECT_EQ(7u, std::distance(t.begin(), t.end()));
+}
+
 TEST(trie_map, DISABLED_does_not_leak) {
     EXPECT_TRUE(false) << "Not implemented";
 }

@@ -12,8 +12,7 @@
 namespace rmr {
 
 namespace detail {
-template <typename T, typename Trie> class map_adaptor;
-template <typename T, typename Trie> class set_adaptor;
+template <typename Derived, typename Trie> class adaptor_base;
 } // namespace detail
 
 template <typename Allocator>
@@ -124,7 +123,7 @@ private:
     static typename pointer_traits_of<T>::pointer pointer_to(T& o)
     { return pointer_traits_of<T>::pointer_to(o); }
 
-    template <typename T, typename Trie> friend class detail::map_adaptor;
+    template <typename Derived, typename Trie> friend class detail::adaptor_base;
 };
 
 template <typename Value, typename Allocator>
@@ -151,7 +150,7 @@ private:
 
     value_type& key() const noexcept { return value(); }
 
-    template <typename T, typename Trie> friend class detail::set_adaptor;
+    template <typename Derived, typename Trie> friend class detail::adaptor_base;
 };
 
 template <typename Iterator, typename NodeType>

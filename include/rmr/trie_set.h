@@ -20,14 +20,14 @@ template <
     typename Allocator = std::allocator<Key>
 >
 class trie_set : public detail::set_adaptor<
-    Key, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
+    detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
 > {
     static_assert(
         std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>,
         "KeyMapper is not invocable on std::size_t or does not return std::size_t"
     );
     using base_type = detail::set_adaptor<
-        Key, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
+        detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
     >;
 public:
     using base_type::base_type;
