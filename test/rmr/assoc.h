@@ -58,6 +58,14 @@ template <> typename trie_set::key_type value_to_key<trie_set>(typename trie_set
     return v;
 }
 
+template <typename Container, typename... Keys>
+Container make_container(Keys... keys) {
+    Container c;
+    int _[]{ (c.insert(key_to_value<Container>(keys)), 0)... };
+    (void)_;
+    return c;
+}
+
 template <typename T> void assert_empty(const T& t) {
     EXPECT_TRUE(t.empty());
     EXPECT_EQ(0u, t.size());

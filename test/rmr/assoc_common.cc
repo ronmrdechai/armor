@@ -175,6 +175,54 @@ TYPED_TEST(assoc_common, insert_initializer_list_size_increase) {
     EXPECT_EQ(3u, t.size());
 }
 
+TYPED_TEST(assoc_common, prefixed_with) {
+    std::vector<std::string> v{ "rubens", "ruber", "rubicon", "rubicundus" };
+    TypeParam t = test::roman_trie<TypeParam>;
+
+    auto [first, last] = t.prefixed_with("rub");
+
+    EXPECT_EQ(4u, std::distance(first, last));
+    std::size_t i = 0;
+    for (auto it = first; it != last; ++it) EXPECT_EQ(v[i++], test::value_to_key<TypeParam>(*it));
+}
+
+TYPED_TEST(assoc_common, prefixed_with_empty_range) {
+    TypeParam t = test::roman_trie<TypeParam>;
+
+    auto [first, last] = t.prefixed_with("rob");
+    EXPECT_EQ(first, last);
+}
+
+TYPED_TEST(assoc_common, longest_match) {
+    TypeParam t = test::make_container<TypeParam>("foo", "foobar", "baz");
+    auto it = t.longest_match("fooba");
+
+    ASSERT_NE(t.end(), it);
+    EXPECT_EQ("foo", test::value_to_key<TypeParam>(*it));
+}
+
+TYPED_TEST(assoc_common, longest_match_has_key) {
+    TypeParam t = test::make_container<TypeParam>("foo", "foobar", "baz");
+    auto it = t.longest_match("foobar");
+
+    ASSERT_NE(t.end(), it);
+    EXPECT_EQ("foobar", test::value_to_key<TypeParam>(*it));
+}
+
+TYPED_TEST(assoc_common, longest_match_no_key) {
+    TypeParam t = test::make_container<TypeParam>("foo", "foobar", "baz");
+    auto it = t.longest_match("qux");
+
+    EXPECT_EQ(t.end(), it);
+}
+
+TYPED_TEST(assoc_common, longest_match_empty) {
+    TypeParam t;
+    auto it = t.longest_match("foo");
+
+    EXPECT_EQ(t.end(), it);
+}
+
 TYPED_TEST(assoc_common, equals) {
     TypeParam t = test::roman_trie<TypeParam>;
     TypeParam s = test::roman_trie<TypeParam>;
@@ -250,4 +298,3 @@ TYPED_TEST(assoc_common, typedefs) {
 // TODO emplaces
 // TODO erase, count, find, extract, merge
 // TODO swap
-// TODO prefixed_with, longest_match
