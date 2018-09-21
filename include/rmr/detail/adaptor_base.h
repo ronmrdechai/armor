@@ -198,6 +198,15 @@ public:
 protected:
     Trie trie_;
 
+    template <typename _Derived, typename _Trie>
+    void merge_(adaptor_base<_Derived, _Trie>& source) {
+        for (auto it = source.begin(), last = source.end(); it != last;) {
+            auto pos = it++;
+            if (find(pos->first) != end()) continue;
+            insert(source.extract(pos));
+        }
+    }
+
 private:
     derived_type& derived() { return static_cast<derived_type&>(*this); }
     const derived_type& derived() const { return static_cast<const derived_type&>(*this); }
