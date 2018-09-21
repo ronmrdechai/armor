@@ -186,6 +186,14 @@ TYPED_TEST(assoc_common, prefixed_with) {
     for (auto it = first; it != last; ++it) EXPECT_EQ(v[i++], test::value_to_key<TypeParam>(*it));
 }
 
+TYPED_TEST(assoc_common, prefixed_with_includes_prefix) {
+    TypeParam t = test::make_container<TypeParam>("foo", "bar", "aa", "aaa", "aab", "aac", "aad", "ab");
+
+    auto [first, last] = t.prefixed_with("aa");
+
+    EXPECT_EQ(5u, std::distance(first, last));
+}
+
 TYPED_TEST(assoc_common, prefixed_with_empty_range) {
     TypeParam t = test::roman_trie<TypeParam>;
 
