@@ -38,7 +38,7 @@ public:
     template <typename... Args>
     iterator emplace_hint(const_iterator hint, Args&&... args ) {
         value_type o(std::forward<Args>(args)...);
-        return this->trie_.emplace(hint, o, std::move(o));
+        return this->trie_.emplace(hint, o, o);
     }
 
     template <typename _Trie> void merge(set_adaptor<_Trie>& source) { this->merge_(source); }

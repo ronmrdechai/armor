@@ -87,7 +87,7 @@ public:
     template <typename... Args>
     iterator emplace_hint(const_iterator hint, Args&&... args ) {
         value_type o(std::forward<Args>(args)...);
-        return this->trie_.emplace(hint, o.first, std::move(o));
+        return this->trie_.emplace(hint, o.first, o);
     }
     template <typename... Args>
     std::pair<iterator, bool> try_emplace(const key_type& k, Args&&... args) {
