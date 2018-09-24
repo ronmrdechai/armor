@@ -36,13 +36,8 @@ template <> typename trie_set::key_type value_to_key<trie_set>(typename trie_set
     return v;
 }
 
-template <typename Container, typename... Keys>
-Container make_container(Keys... keys) {
-    Container c;
-    int _[]{ (c.insert(key_to_value<Container>(keys)), 0)... };
-    (void)_;
-    return c;
-}
+template <typename T, typename... Keys>
+T make_container(Keys... keys) { return T( { key_to_value<T>(keys)... } ); }
 
 template <typename T> T less_trie = make_container<T>("aaa", "bbb", "ccc");
 template <typename T> T greater_trie = make_container<T>("bbb", "ccc", "ddd");
