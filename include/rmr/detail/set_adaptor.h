@@ -41,7 +41,14 @@ public:
         return this->trie_.emplace(hint, o, o);
     }
 
-    template <typename _Trie> void merge(set_adaptor<_Trie>& source) { this->merge_(source); }
+    template <typename _Trie>
+    void merge(set_adaptor<_Trie>& source) {
+        for (auto it = source.begin(), last = source.end(); it != last;) {
+            auto pos = it++;
+            if (this->find(*pos) != this->end()) continue;
+            this->insert(source.extract(pos));
+        }
+    }
     template <typename _Trie> void merge(set_adaptor<_Trie>&& source) { merge(source); }
 };
 

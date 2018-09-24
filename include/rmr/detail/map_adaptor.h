@@ -122,7 +122,14 @@ public:
         return it;
     }
 
-    template <typename _Trie> void merge(map_adaptor<T, _Trie>& source) { this->merge_(source); }
+    template <typename _Trie>
+    void merge(map_adaptor<T, _Trie>& source) {
+        for (auto it = source.begin(), last = source.end(); it != last;) {
+            auto pos = it++;
+            if (this->find(pos->first) != this->end()) continue;
+            this->insert(source.extract(pos));
+        }
+    }
     template <typename _Trie> void merge(map_adaptor<T, _Trie>&& source) { merge(source); }
 };
 

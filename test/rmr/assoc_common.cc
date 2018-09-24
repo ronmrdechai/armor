@@ -165,6 +165,33 @@ TYPED_TEST(assoc_common, old_data_gone_after_move_assignment) {
     EXPECT_EQ(s.end(), s.find("foo"));
 }
 
+TYPED_TEST(assoc_common, swap) {
+    TypeParam t = TestFixture::make_container("foo");
+    TypeParam s = TestFixture::make_container("bar");
+
+    swap(t, s);
+
+    EXPECT_EQ(t.end(), t.find("foo"));
+    EXPECT_NE(t.end(), t.find("bar"));
+
+    EXPECT_EQ(s.end(), s.find("bar"));
+    EXPECT_NE(s.end(), s.find("foo"));
+}
+
+TYPED_TEST(assoc_common, swap_and_modify) {
+    TypeParam t = TestFixture::make_container("foo");
+    TypeParam s = TestFixture::make_container("bar");
+
+    swap(t, s);
+    t.erase("bar");
+
+    EXPECT_EQ(t.end(), t.find("foo"));
+    EXPECT_EQ(t.end(), t.find("bar"));
+
+    EXPECT_EQ(s.end(), s.find("bar"));
+    EXPECT_NE(s.end(), s.find("foo"));
+}
+
 TYPED_TEST(assoc_common, empty_after_clear) {
     TypeParam t = TestFixture::roman_trie;
     t.clear();
@@ -317,7 +344,7 @@ TYPED_TEST(assoc_common, insert_initializer_list_size_increase) {
 }
 
 TYPED_TEST(assoc_common, insert_prefix) {
-    TypeParam t{ TestFixture::key_to_value("foobar") };
+    TypeParam t = TestFixture::make_container("foobar");
     auto [it, inserted] = t.insert( TestFixture::key_to_value("foo") );
 
     EXPECT_TRUE(inserted);
@@ -326,12 +353,397 @@ TYPED_TEST(assoc_common, insert_prefix) {
 }
 
 TYPED_TEST(assoc_common, insert_sufix) {
-    TypeParam t{ TestFixture::key_to_value("foo") };
+    TypeParam t = TestFixture::make_container("foo");
     auto [it, inserted] = t.insert( TestFixture::key_to_value("foobar") );
 
     EXPECT_TRUE(inserted);
     EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
     EXPECT_EQ("foo", TestFixture::value_to_key(*t.find("foo")));
+}
+
+TYPED_TEST(assoc_common, insert_hint_size_change) {
+    TypeParam t = TestFixture::make_container("foo");
+    auto hint = t.find("foo");
+
+    t.insert(hint, TestFixture::key_to_value("foobar"));
+    EXPECT_EQ(2u, t.size());
+}
+
+TYPED_TEST(assoc_common, insert_hint_exists_size_no_change) {
+    TypeParam t = TestFixture::make_container("foo", "foobar");
+    auto hint = t.find("foo");
+
+    t.insert(hint, TestFixture::key_to_value("foobar"));
+    EXPECT_EQ(2u, t.size());
+}
+
+TYPED_TEST(assoc_common, insert_hint_return_value) {
+    TypeParam t = TestFixture::make_container("foo");
+    auto hint = t.find("foo");
+
+    auto it = t.insert(hint, TestFixture::key_to_value("foobar"));
+    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
+}
+
+TYPED_TEST(assoc_common, insert_hint_wrong_hint) {
+    TypeParam t = TestFixture::make_container("bar");
+    auto hint = t.find("bar");
+
+    auto it = t.insert(hint, TestFixture::key_to_value("foobar"));
+    EXPECT_NE(t.end(), t.find("barbar"));
+    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
+}
+
+TYPED_TEST(assoc_common, insert_handle_size_change) {
+    TypeParam t = TestFixture::roman_trie;
+    typename TypeParam::node_type handle = t.extract("romulus");
+
+    t.insert(std::move(handle));
+    EXPECT_EQ(7u, t.size());
+}
+
+TYPED_TEST(assoc_common, insert_handle_exists_size_no_change) {
+    TypeParam t = TestFixture::roman_trie;
+    typename TypeParam::node_type handle = t.extract("romulus");
+
+    TypeParam s = TestFixture::roman_trie;
+
+    s.insert(std::move(handle));
+    EXPECT_EQ(7u, s.size());
+}
+
+TYPED_TEST(assoc_common, insert_empty_handle_size_no_chage) {
+    TypeParam t = TestFixture::roman_trie;
+    typename TypeParam::node_type handle;
+
+    t.insert(std::move(handle));
+    EXPECT_EQ(7u, t.size());
+}
+
+TYPED_TEST(assoc_common, insert_handle_return_value) {
+    TypeParam t = TestFixture::roman_trie;
+    typename TypeParam::node_type handle = t.extract("romulus");
+
+    auto insert_return = t.insert(std::move(handle));
+    EXPECT_TRUE(insert_return.inserted);
+    EXPECT_TRUE(insert_return.node.empty());
+    EXPECT_EQ("romulus", TestFixture::value_to_key(*insert_return.position));
+}
+
+TYPED_TEST(assoc_common, insert_handle_exists_return_value) {
+    TypeParam t = TestFixture::roman_trie;
+    typename TypeParam::node_type handle = t.extract("romulus");
+
+    TypeParam s = TestFixture::roman_trie;
+
+    auto insert_return = s.insert(std::move(handle));
+    EXPECT_FALSE(insert_return.inserted);
+    EXPECT_FALSE(insert_return.node.empty());
+    EXPECT_EQ("romulus", TestFixture::value_to_key(*insert_return.position));
+}
+
+TYPED_TEST(assoc_common, insert_empty_handle_return_value) {
+    TypeParam t = TestFixture::roman_trie;
+    typename TypeParam::node_type handle;
+
+    auto insert_return = t.insert(std::move(handle));
+    EXPECT_FALSE(insert_return.inserted);
+    EXPECT_TRUE(insert_return.node.empty());
+    EXPECT_EQ(t.end(), insert_return.position);
+}
+
+TYPED_TEST(assoc_common, insert_hint_handle_size_change) {
+    TypeParam t = TestFixture::roman_trie;
+    auto hint = t.find("romulus");
+
+    t.insert(hint, t.extract("romulus"));
+    EXPECT_EQ(7u, t.size());
+}
+
+TYPED_TEST(assoc_common, insert_hint_handle_exists_size_no_change) {
+    TypeParam t = TestFixture::roman_trie;
+    TypeParam s = TestFixture::roman_trie;
+    auto hint = t.find("romulus");
+
+    t.insert(hint, s.extract("romulus"));
+    EXPECT_EQ(7u, t.size());
+}
+
+TYPED_TEST(assoc_common, insert_hint_handle_return_type) {
+    TypeParam t = TestFixture::roman_trie;
+    auto hint = t.find("romulus");
+
+    auto it = t.insert(hint, t.extract("romulus"));
+    EXPECT_EQ("romulus", TestFixture::value_to_key(*it));
+}
+
+TYPED_TEST(assoc_common, emplace_size_change) {
+    TypeParam t;
+    t.emplace( TestFixture::key_to_value("foo") );
+    EXPECT_EQ(1u, t.size());
+    t.emplace( TestFixture::key_to_value("bar") );
+    EXPECT_EQ(2u, t.size());
+}
+
+TYPED_TEST(assoc_common, emplace_existing_size_no_change) {
+    TypeParam t;
+    t.emplace( TestFixture::key_to_value("foo") );
+    EXPECT_EQ(1u, t.size());
+    t.emplace( TestFixture::key_to_value("foo") );
+    EXPECT_EQ(1u, t.size());
+}
+
+TYPED_TEST(assoc_common, emplace_return_value) {
+    TypeParam t;
+    auto [it, inserted] = t.emplace( TestFixture::key_to_value("foo") );
+
+    EXPECT_TRUE(inserted);
+    ASSERT_NE(t.end(), it);
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
+}
+
+TYPED_TEST(assoc_common, emplace_existing_return_value) {
+    TypeParam t;
+
+    t.emplace( TestFixture::key_to_value("foo") );
+
+    auto [it, inserted] = t.emplace( TestFixture::key_to_value("foo") );
+
+    EXPECT_FALSE(inserted);
+    ASSERT_NE(t.end(), it);
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
+}
+
+TYPED_TEST(assoc_common, emplace_hint_size_change) {
+    TypeParam t{ TestFixture::key_to_value("foo") };
+    auto hint = t.find("foo");
+
+    t.emplace_hint(hint, TestFixture::key_to_value("foobar"));
+    EXPECT_EQ(2u, t.size());
+}
+
+TYPED_TEST(assoc_common, emplace_hint_existing_size_no_change) {
+    TypeParam t{ TestFixture::key_to_value("foo"), TestFixture::key_to_value("foobar") };
+    auto hint = t.find("foo");
+
+    t.emplace_hint(hint, TestFixture::key_to_value("foobar"));
+    EXPECT_EQ(2u, t.size());
+}
+
+TYPED_TEST(assoc_common, emplace_hint_return_value) {
+    TypeParam t{ TestFixture::key_to_value("bar") };
+    auto hint = t.find("bar");
+
+    auto it = t.emplace_hint(hint, TestFixture::key_to_value("foobar"));
+    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
+}
+
+TYPED_TEST(assoc_common, emplace_hint_wrong_hint) {
+    TypeParam t{ TestFixture::key_to_value("bar") };
+    auto hint = t.find("bar");
+
+    auto it = t.emplace_hint(hint, TestFixture::key_to_value("foobar"));
+    EXPECT_NE(t.end(), t.find("barbar"));
+    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
+}
+
+TYPED_TEST(assoc_common, erase_not_empty) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+
+    t.erase("foo");
+    EXPECT_EQ(t.end(), t.find("foo"));
+    EXPECT_NE(t.end(), t.find("bar"));
+    EXPECT_NE(t.end(), t.find("baz"));
+
+    t.erase("bar");
+    EXPECT_EQ(t.end(), t.find("bar"));
+    EXPECT_NE(t.end(), t.find("baz"));
+}
+
+TYPED_TEST(assoc_common, erase_empty) {
+    TypeParam t = TestFixture::make_container("foo");
+
+    t.erase("foo");
+
+    EXPECT_EQ(t.end(), t.find("foo"));
+    // make sure container still works
+    t.insert( TestFixture::key_to_value("bar") );
+    EXPECT_NE(t.end(), t.find("bar"));
+}
+
+TYPED_TEST(assoc_common, erase_prefix) {
+    TypeParam t = TestFixture::make_container("foo", "foobar", "bar");
+    t.erase("foo");
+
+    EXPECT_EQ(t.end(), t.find("foo"));
+    EXPECT_NE(t.end(), t.find("foobar"));
+    EXPECT_NE(t.end(), t.find("bar"));
+}
+
+TYPED_TEST(assoc_common, erase_suffix) {
+    TypeParam t = TestFixture::make_container("foo", "foobar", "bar");
+    t.erase("foobar");
+
+    EXPECT_EQ(t.end(), t.find("foobar"));
+    EXPECT_NE(t.end(), t.find("foo"));
+    EXPECT_NE(t.end(), t.find("bar"));
+}
+
+TYPED_TEST(assoc_common, erase_iterator) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+
+    /* typename TypeParam::const_iterator it = t.find("foo"); */
+    auto it = t.find("foo");
+    t.erase(it);
+
+    EXPECT_EQ(t.end(), t.find("foo"));
+    EXPECT_NE(t.end(), t.find("bar"));
+    EXPECT_NE(t.end(), t.find("baz"));
+}
+
+TYPED_TEST(assoc_common, erase_size_change) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+    t.erase("foo");
+    EXPECT_EQ(2u, t.size());
+
+    t.erase("bar");
+    EXPECT_EQ(1u, t.size());
+}
+
+TYPED_TEST(assoc_common, erase_not_existsing_size_no_change) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+    t.erase("foobar");
+    EXPECT_EQ(3u, t.size());
+}
+
+TYPED_TEST(assoc_common, erase_not_existsing) {
+    TypeParam t = TestFixture::make_container("bar", "baz");
+
+    t.erase("foo");
+    EXPECT_NE(t.end(), t.find("bar"));
+    EXPECT_NE(t.end(), t.find("baz"));
+}
+
+TYPED_TEST(assoc_common, erase_return_value) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+
+    EXPECT_EQ(1u, t.erase("foo"));
+    EXPECT_EQ(0u, t.erase("foo"));
+}
+
+TYPED_TEST(assoc_common, erase_range) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "bax", "bay", "baz");
+
+    auto [first, last] = t.prefixed_with("ba");
+    t.erase(first, last);
+
+    EXPECT_NE(t.end(), t.find("foo"));
+    EXPECT_NE(t.end(), t.find("baz"));
+
+    EXPECT_EQ(t.end(), t.find("bar"));
+    EXPECT_EQ(t.end(), t.find("bax"));
+    EXPECT_EQ(t.end(), t.find("bay"));
+}
+
+TYPED_TEST(assoc_common, erase_range_return_value) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "bax", "bay", "baz");
+
+    auto [first, last] = t.prefixed_with("ba");
+    EXPECT_EQ(last, t.erase(first, last));
+}
+
+TYPED_TEST(assoc_common, erase_empty_range) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+
+    auto first = t.find("foo");
+    auto last  = t.find("foo");
+
+    t.erase(first, last);
+    EXPECT_NE(t.end(), t.find("foo"));
+    EXPECT_NE(t.end(), t.find("bar"));
+    EXPECT_NE(t.end(), t.find("baz"));
+}
+
+TYPED_TEST(assoc_common, default_count_is_zero) {
+    TypeParam t;
+    EXPECT_EQ(0u, t.count("foo"));
+}
+
+TYPED_TEST(assoc_common, count_increase_after_insert) {
+    TypeParam t;
+    t.insert( TestFixture::key_to_value("foo") );
+    EXPECT_EQ(1u, t.count("foo"));
+}
+
+TYPED_TEST(assoc_common, find_existant) {
+    TypeParam t;
+    t.insert( TestFixture::key_to_value("foo") );
+
+    auto it = t.find("foo");
+    ASSERT_NE(t.end(), t.find("foo"));
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
+}
+
+TYPED_TEST(assoc_common, find_non_existant) {
+    TypeParam t;
+
+    EXPECT_EQ(t.end(), t.find("foo"));
+}
+
+TYPED_TEST(assoc_common, extract_erases) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+
+    t.extract("foo");
+    EXPECT_EQ(t.end(), t.find("foo"));
+}
+
+TYPED_TEST(assoc_common, extract_size_change) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+
+    t.extract("foo");
+    EXPECT_EQ(2u, t.size());
+}
+
+TYPED_TEST(assoc_common, extract_gives_valid_handle) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+    auto nh = t.extract("foo");
+
+    EXPECT_FALSE(nh.empty());
+}
+
+TYPED_TEST(assoc_common, merge_all) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+    TypeParam s = TestFixture::make_container("qux", "quux");
+
+    t.merge(s);
+
+    EXPECT_EQ(5u, t.size());
+    EXPECT_EQ(0u, s.size());
+    EXPECT_NE(t.end(), t.find("qux"));
+    EXPECT_NE(t.end(), t.find("quux"));
+    EXPECT_EQ(s.end(), s.find("qux"));
+    EXPECT_EQ(s.end(), s.find("quux"));
+}
+
+TYPED_TEST(assoc_common, merge_partial) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+    TypeParam s = TestFixture::make_container("baz", "qux");
+
+    t.merge(s);
+
+    EXPECT_EQ(4u, t.size());
+    EXPECT_EQ(1u, s.size());
+    EXPECT_NE(s.end(), s.find("baz"));
+}
+
+TYPED_TEST(assoc_common, merge_moved) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+    TypeParam s = TestFixture::make_container("qux", "quux");
+
+    t.merge(std::move(s));
+
+    EXPECT_EQ(5u, t.size());
+    EXPECT_EQ(0u, s.size());
 }
 
 TYPED_TEST(assoc_common, prefixed_with) {
@@ -351,6 +763,15 @@ TYPED_TEST(assoc_common, prefixed_with_includes_prefix) {
     auto [first, last] = t.prefixed_with("aa");
 
     EXPECT_EQ(5u, std::distance(first, last));
+}
+
+TYPED_TEST(assoc_common, prefixed_whole_container) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "aa", "aaa", "aab", "aac", "aad", "ab");
+
+    auto [first, last] = t.prefixed_with("");
+
+    EXPECT_EQ(t.begin(), first);
+    EXPECT_EQ(t.end(), last);
 }
 
 TYPED_TEST(assoc_common, prefixed_with_empty_range) {
@@ -458,8 +879,3 @@ TYPED_TEST(assoc_common, typedefs) {
     EXPECT_TRUE(TestFixture::has_node_type);
     EXPECT_TRUE(TestFixture::has_insert_return_type);
 }
-
-// TODO emplaces
-// TODO erase, count, find, extract, merge
-// TODO swap
-// TODO leaks

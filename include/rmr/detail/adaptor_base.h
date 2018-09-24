@@ -175,6 +175,10 @@ public:
     void swap(adaptor_base& other) noexcept(noexcept(std::declval<Trie>().swap(std::declval<Trie>())))
     { trie_.swap(other.trie_); }
 
+    friend void swap(adaptor_base& lhs, adaptor_base& rhs) noexcept(
+        noexcept(std::declval<adaptor_base>().swap(std::declval<adaptor_base>()))
+    ) { lhs.swap(rhs); }
+
     node_type extract(const_iterator pos) { return node_type(trie_.extract(pos), get_allocator()); }
     node_type extract(const key_type& k) { return extract(find(k)); }
 
@@ -197,15 +201,6 @@ public:
 
 protected:
     Trie trie_;
-
-    template <typename _Derived, typename _Trie>
-    void merge_(adaptor_base<_Derived, _Trie>& source) {
-        for (auto it = source.begin(), last = source.end(); it != last;) {
-            auto pos = it++;
-            if (find(pos->first) != end()) continue;
-            insert(source.extract(pos));
-        }
-    }
 
 private:
     derived_type& derived() { return static_cast<derived_type&>(*this); }
