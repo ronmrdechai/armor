@@ -27,13 +27,122 @@ TYPED_TEST(assoc_common, default_distance_is_0) {
     EXPECT_EQ(0u, std::distance(t.begin(), t.end()));
 }
 
-TYPED_TEST(assoc_common, roman_trie_size_is_7) { TypeParam t = test::roman_trie<TypeParam>;
+TYPED_TEST(assoc_common, roman_trie_size_is_7) {
+    TypeParam t = test::roman_trie<TypeParam>;
     EXPECT_EQ(7u, t.size());
 }
 
 TYPED_TEST(assoc_common, roman_trie_distance_is_7) {
     TypeParam t = test::roman_trie<TypeParam>;
     EXPECT_EQ(7u, std::distance(t.begin(), t.end()));
+}
+
+TYPED_TEST(assoc_common, copy_constructor) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s(t);
+
+    EXPECT_EQ(t, s);
+}
+
+TYPED_TEST(assoc_common, change_original_after_copy_construction) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s(t);
+
+    t.erase("romulus");
+    EXPECT_NE(t, s);
+}
+
+TYPED_TEST(assoc_common, change_copy_after_copy_construction) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s(t);
+
+    s.erase("romulus");
+    EXPECT_NE(t, s);
+}
+
+TYPED_TEST(assoc_common, move_constructor) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s(std::move(t));
+
+    EXPECT_EQ(test::roman_trie<TypeParam>, s);
+    EXPECT_TRUE(t.empty());
+}
+
+TYPED_TEST(assoc_common, iterator_constructor) {
+    std::vector<typename TypeParam::value_type> v {
+        test::key_to_value<TypeParam>("bar"),
+        test::key_to_value<TypeParam>("baz"),
+        test::key_to_value<TypeParam>("foo")
+    };
+
+    TypeParam t(v.begin(), v.end());
+    EXPECT_TRUE(std::equal(t.begin(), t.end(), v.begin()));
+}
+
+TYPED_TEST(assoc_common, initializer_list_constructor) {
+    std::vector<typename TypeParam::value_type> v {
+        test::key_to_value<TypeParam>("bar"),
+        test::key_to_value<TypeParam>("baz"),
+        test::key_to_value<TypeParam>("foo")
+    };
+
+    TypeParam t{
+        test::key_to_value<TypeParam>("bar"),
+        test::key_to_value<TypeParam>("baz"),
+        test::key_to_value<TypeParam>("foo")
+    };
+    EXPECT_TRUE(std::equal(t.begin(), t.end(), v.begin()));
+}
+
+TYPED_TEST(assoc_common, copy_assignment) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s;
+    s = t;
+
+    EXPECT_EQ(t, s);
+}
+
+TYPED_TEST(assoc_common, change_original_after_copy_assignment) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s;
+    s = t;
+
+    t.erase("romulus");
+    EXPECT_NE(t, s);
+}
+
+TYPED_TEST(assoc_common, change_copy_after_copy_assignment) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s;
+    s = t;
+
+    s.erase("romulus");
+    EXPECT_NE(t, s);
+}
+
+TYPED_TEST(assoc_common, old_data_gone_after_copy_assignment) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s{ test::key_to_value<TypeParam>("foo") };
+    s = t;
+
+    EXPECT_EQ(s.end(), s.find("foo"));
+}
+
+TYPED_TEST(assoc_common, move_assignment) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s;
+    s = std::move(t);
+
+    EXPECT_EQ(test::roman_trie<TypeParam>, s);
+    EXPECT_TRUE(t.empty());
+}
+
+TYPED_TEST(assoc_common, old_data_gone_after_move_assignment) {
+    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam s{ test::key_to_value<TypeParam>("foo") };
+    s = std::move(t);
+
+    EXPECT_EQ(s.end(), s.find("foo"));
 }
 
 TYPED_TEST(assoc_common, empty_after_clear) {
@@ -300,8 +409,6 @@ TYPED_TEST(assoc_common, typedefs) {
     EXPECT_TRUE(test::has_insert_return_type<TypeParam>::value);
 }
 
-// TODO constructors
-// TODO assignment
 // TODO inserts
 // TODO emplaces
 // TODO erase, count, find, extract, merge
