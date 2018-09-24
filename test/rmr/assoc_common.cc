@@ -9,7 +9,15 @@
 
 #include "assoc.h"
 
-template <typename T> struct assoc_common : testing::Test {
+template <typename T>
+struct assoc_common : testing::Test {
+    bool has_iterator               = test::has_iterator<T>::value;
+    bool has_const_iterator         = test::has_const_iterator<T>::value;
+    bool has_reverse_iterator       = test::has_reverse_iterator<T>::value;
+    bool has_const_reverse_iterator = test::has_const_reverse_iterator<T>::value;
+    bool has_node_type              = test::has_node_type<T>::value;
+    bool has_insert_return_type     = test::has_insert_return_type<T>::value;
+
     T less_trie    = test::less_trie<T>;
     T greater_trie = test::greater_trie<T>;
     T roman_trie   = test::roman_trie<T>;
@@ -20,7 +28,6 @@ template <typename T> struct assoc_common : testing::Test {
     value_to_key(const typename T::value_type& v) { return test::value_to_key<T>(v); }
     template <typename... Keys>
     static T make_container(Keys&&... keys) { return test::make_container<T>(std::forward<Keys>(keys)...); }
-
     static void assert_empty(const T& t) { test::assert_empty<T>(t); }
 };
 TYPED_TEST_CASE(assoc_common, assoc_common_types);
@@ -268,8 +275,20 @@ TYPED_TEST(assoc_common, insert_lvalue_reference) {
     TypeParam t;
 
     typename TypeParam::value_type v = TestFixture::key_to_value("foo");
-    t.insert(v);
-    EXPECT_EQ(1u, t.size());
+    auto [it, inserted] = t.insert(v);
+
+    EXPECT_TRUE(inserted);
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
+}
+
+TYPED_TEST(assoc_common, insert_moved) {
+    TypeParam t;
+
+    typename TypeParam::value_type v = TestFixture::key_to_value("foo");
+    auto [it, inserted] = t.insert(std::move(v));
+
+    EXPECT_TRUE(inserted);
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
 }
 
 TYPED_TEST(assoc_common, insert_range_size_increase) {
@@ -295,6 +314,24 @@ TYPED_TEST(assoc_common, insert_initializer_list_size_increase) {
     });
 
     EXPECT_EQ(3u, t.size());
+}
+
+TYPED_TEST(assoc_common, insert_prefix) {
+    TypeParam t{ TestFixture::key_to_value("foobar") };
+    auto [it, inserted] = t.insert( TestFixture::key_to_value("foo") );
+
+    EXPECT_TRUE(inserted);
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
+    EXPECT_EQ("foobar", TestFixture::value_to_key(*t.find("foobar")));
+}
+
+TYPED_TEST(assoc_common, insert_sufix) {
+    TypeParam t{ TestFixture::key_to_value("foo") };
+    auto [it, inserted] = t.insert( TestFixture::key_to_value("foobar") );
+
+    EXPECT_TRUE(inserted);
+    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
+    EXPECT_EQ("foo", TestFixture::value_to_key(*t.find("foo")));
 }
 
 TYPED_TEST(assoc_common, prefixed_with) {
@@ -414,15 +451,15 @@ TYPED_TEST(assoc_common, typedefs) {
     EXPECT_TRUE((std::is_same_v<value_type*, typename TypeParam::pointer>));
     EXPECT_TRUE((std::is_same_v<const value_type*, typename TypeParam::const_pointer>));
 
-    EXPECT_TRUE(test::has_iterator<TypeParam>::value);
-    EXPECT_TRUE(test::has_const_iterator<TypeParam>::value);
-    EXPECT_TRUE(test::has_reverse_iterator<TypeParam>::value);
-    EXPECT_TRUE(test::has_const_reverse_iterator<TypeParam>::value);
-    EXPECT_TRUE(test::has_node_type<TypeParam>::value);
-    EXPECT_TRUE(test::has_insert_return_type<TypeParam>::value);
+    EXPECT_TRUE(TestFixture::has_iterator);
+    EXPECT_TRUE(TestFixture::has_const_iterator);
+    EXPECT_TRUE(TestFixture::has_reverse_iterator);
+    EXPECT_TRUE(TestFixture::has_const_reverse_iterator);
+    EXPECT_TRUE(TestFixture::has_node_type);
+    EXPECT_TRUE(TestFixture::has_insert_return_type);
 }
 
-// TODO inserts
 // TODO emplaces
 // TODO erase, count, find, extract, merge
 // TODO swap
+// TODO leaks
