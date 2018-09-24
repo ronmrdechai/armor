@@ -172,11 +172,11 @@ public:
         return 1;
     }
 
-    void swap(adaptor_base& other) noexcept(noexcept(std::declval<Trie>().swap(std::declval<Trie>())))
+    void swap(adaptor_base& other) noexcept(noexcept(std::declval<Trie>().swap(std::declval<Trie&>())))
     { trie_.swap(other.trie_); }
 
     friend void swap(adaptor_base& lhs, adaptor_base& rhs) noexcept(
-        noexcept(std::declval<adaptor_base>().swap(std::declval<adaptor_base>()))
+        noexcept(std::declval<adaptor_base>().swap(std::declval<adaptor_base&>()))
     ) { lhs.swap(rhs); }
 
     node_type extract(const_iterator pos) { return node_type(trie_.extract(pos), get_allocator()); }
