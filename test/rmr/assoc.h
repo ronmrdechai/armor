@@ -21,27 +21,23 @@ using assoc_common_types = testing::Types<trie_map, trie_set>;
 namespace test {
 
 template <typename T> typename T::value_type key_to_value(typename T::key_type) = delete;
-template <> typename trie_map::value_type key_to_value<trie_map>(typename trie_map::key_type k) {
-    return { k, typename trie_map::mapped_type{} };
-}
-template <> typename trie_set::value_type key_to_value<trie_set>(typename trie_set::key_type k) {
-    return k;
-}
+template <> typename trie_map::value_type key_to_value<trie_map>(typename trie_map::key_type k)
+{ return { k, typename trie_map::mapped_type{} }; }
+template <> typename trie_set::value_type key_to_value<trie_set>(typename trie_set::key_type k)
+{ return k; }
 
 template <typename T> typename T::key_type value_to_key(typename T::value_type) = delete;
-template <> typename trie_map::key_type value_to_key<trie_map>(typename trie_map::value_type v) {
-    return v.first;
-}
-template <> typename trie_set::key_type value_to_key<trie_set>(typename trie_set::value_type v) {
-    return v;
-}
+template <> typename trie_map::key_type value_to_key<trie_map>(typename trie_map::value_type v)
+{ return v.first; }
+template <> typename trie_set::key_type value_to_key<trie_set>(typename trie_set::value_type v)
+{ return v; }
 
 template <typename T, typename... Keys>
 T make_container(Keys... keys) { return T( { key_to_value<T>(keys)... } ); }
 
-template <typename T> T less_trie = make_container<T>("aaa", "bbb", "ccc");
+template <typename T> T less_trie    = make_container<T>("aaa", "bbb", "ccc");
 template <typename T> T greater_trie = make_container<T>("bbb", "ccc", "ddd");
-template <typename T> T roman_trie = make_container<T>(
+template <typename T> T roman_trie   = make_container<T>(
     "romane", "romanus", "romulus", "rubens", "ruber", "rubicon", "rubicundus"
 );
 
