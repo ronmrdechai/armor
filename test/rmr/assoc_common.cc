@@ -9,7 +9,20 @@
 
 #include "assoc.h"
 
-template <typename> struct assoc_common : testing::Test {};
+template <typename T> struct assoc_common : testing::Test {
+    T less_trie    = test::less_trie<T>;
+    T greater_trie = test::greater_trie<T>;
+    T roman_trie   = test::roman_trie<T>;
+
+    static typename T::value_type
+    key_to_value(const typename T::key_type& k) { return test::key_to_value<T>(k); }
+    static typename T::key_type
+    value_to_key(const typename T::value_type& v) { return test::value_to_key<T>(v); }
+    template <typename... Keys>
+    static T make_container(Keys&&... keys) { return test::make_container<T>(std::forward<Keys>(keys)...); }
+
+    static void assert_empty(const T& t) { test::assert_empty<T>(t); }
+};
 TYPED_TEST_CASE(assoc_common, assoc_common_types);
 
 TYPED_TEST(assoc_common, default_empty_returns_true) {
@@ -28,24 +41,24 @@ TYPED_TEST(assoc_common, default_distance_is_0) {
 }
 
 TYPED_TEST(assoc_common, roman_trie_size_is_7) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     EXPECT_EQ(7u, t.size());
 }
 
 TYPED_TEST(assoc_common, roman_trie_distance_is_7) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     EXPECT_EQ(7u, std::distance(t.begin(), t.end()));
 }
 
 TYPED_TEST(assoc_common, copy_constructor) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam s(t);
 
     EXPECT_EQ(t, s);
 }
 
 TYPED_TEST(assoc_common, change_original_after_copy_construction) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam s(t);
 
     t.erase("romulus");
@@ -53,7 +66,7 @@ TYPED_TEST(assoc_common, change_original_after_copy_construction) {
 }
 
 TYPED_TEST(assoc_common, change_copy_after_copy_construction) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam s(t);
 
     s.erase("romulus");
@@ -61,18 +74,18 @@ TYPED_TEST(assoc_common, change_copy_after_copy_construction) {
 }
 
 TYPED_TEST(assoc_common, move_constructor) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam s(std::move(t));
 
-    EXPECT_EQ(test::roman_trie<TypeParam>, s);
+    EXPECT_EQ(TestFixture::roman_trie, s);
     EXPECT_TRUE(t.empty());
 }
 
 TYPED_TEST(assoc_common, iterator_constructor) {
     std::vector<typename TypeParam::value_type> v {
-        test::key_to_value<TypeParam>("bar"),
-        test::key_to_value<TypeParam>("baz"),
-        test::key_to_value<TypeParam>("foo")
+        TestFixture::key_to_value("bar"),
+        TestFixture::key_to_value("baz"),
+        TestFixture::key_to_value("foo")
     };
 
     TypeParam t(v.begin(), v.end());
@@ -81,21 +94,21 @@ TYPED_TEST(assoc_common, iterator_constructor) {
 
 TYPED_TEST(assoc_common, initializer_list_constructor) {
     std::vector<typename TypeParam::value_type> v {
-        test::key_to_value<TypeParam>("bar"),
-        test::key_to_value<TypeParam>("baz"),
-        test::key_to_value<TypeParam>("foo")
+        TestFixture::key_to_value("bar"),
+        TestFixture::key_to_value("baz"),
+        TestFixture::key_to_value("foo")
     };
 
     TypeParam t{
-        test::key_to_value<TypeParam>("bar"),
-        test::key_to_value<TypeParam>("baz"),
-        test::key_to_value<TypeParam>("foo")
+        TestFixture::key_to_value("bar"),
+        TestFixture::key_to_value("baz"),
+        TestFixture::key_to_value("foo")
     };
     EXPECT_TRUE(std::equal(t.begin(), t.end(), v.begin()));
 }
 
 TYPED_TEST(assoc_common, copy_assignment) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam s;
     s = t;
 
@@ -103,7 +116,7 @@ TYPED_TEST(assoc_common, copy_assignment) {
 }
 
 TYPED_TEST(assoc_common, change_original_after_copy_assignment) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam s;
     s = t;
 
@@ -112,7 +125,7 @@ TYPED_TEST(assoc_common, change_original_after_copy_assignment) {
 }
 
 TYPED_TEST(assoc_common, change_copy_after_copy_assignment) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam s;
     s = t;
 
@@ -121,55 +134,55 @@ TYPED_TEST(assoc_common, change_copy_after_copy_assignment) {
 }
 
 TYPED_TEST(assoc_common, old_data_gone_after_copy_assignment) {
-    TypeParam t = test::roman_trie<TypeParam>;
-    TypeParam s{ test::key_to_value<TypeParam>("foo") };
+    TypeParam t = TestFixture::roman_trie;
+    TypeParam s{ TestFixture::key_to_value("foo") };
     s = t;
 
     EXPECT_EQ(s.end(), s.find("foo"));
 }
 
 TYPED_TEST(assoc_common, move_assignment) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam s;
     s = std::move(t);
 
-    EXPECT_EQ(test::roman_trie<TypeParam>, s);
+    EXPECT_EQ(TestFixture::roman_trie, s);
     EXPECT_TRUE(t.empty());
 }
 
 TYPED_TEST(assoc_common, old_data_gone_after_move_assignment) {
-    TypeParam t = test::roman_trie<TypeParam>;
-    TypeParam s{ test::key_to_value<TypeParam>("foo") };
+    TypeParam t = TestFixture::roman_trie;
+    TypeParam s{ TestFixture::key_to_value("foo") };
     s = std::move(t);
 
     EXPECT_EQ(s.end(), s.find("foo"));
 }
 
 TYPED_TEST(assoc_common, empty_after_clear) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     t.clear();
-    test::assert_empty(t);
+    TestFixture::assert_empty(t);
 }
 
 TYPED_TEST(assoc_common, empty_after_move_construct) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam(std::move(t));
 
-    test::assert_empty(t);
+    TestFixture::assert_empty(t);
 }
 
 TYPED_TEST(assoc_common, empty_after_move_assign) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     TypeParam{} = std::move(t);
 
-    test::assert_empty(t);
+    TestFixture::assert_empty(t);
 }
 
 TYPED_TEST(assoc_common, iteration_is_sorted) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
 
     std::vector<typename TypeParam::key_type> unsorted;
-    std::transform(t.begin(), t.end(), std::back_inserter(unsorted), test::value_to_key<TypeParam>);
+    std::transform(t.begin(), t.end(), std::back_inserter(unsorted), TestFixture::value_to_key);
 
     std::vector<typename TypeParam::key_type> sorted = unsorted;
     std::sort(sorted.begin(), sorted.end());
@@ -178,10 +191,10 @@ TYPED_TEST(assoc_common, iteration_is_sorted) {
 }
 
 TYPED_TEST(assoc_common, reverse_iteration_is_reverse_sorted) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
 
     std::vector<typename TypeParam::key_type> unsorted;
-    std::transform(t.rbegin(), t.rend(), std::back_inserter(unsorted), test::value_to_key<TypeParam>);
+    std::transform(t.rbegin(), t.rend(), std::back_inserter(unsorted), TestFixture::value_to_key);
 
     std::vector<typename TypeParam::key_type> sorted = unsorted;
     std::sort(sorted.begin(), sorted.end());
@@ -191,18 +204,18 @@ TYPED_TEST(assoc_common, reverse_iteration_is_reverse_sorted) {
 }
 
 TYPED_TEST(assoc_common, reverse_iteration_covers_whole_container) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
     EXPECT_EQ(std::distance(t.begin(), t.end()), std::distance(t.rbegin(), t.rend()));
 }
 
 TYPED_TEST(assoc_common, reverse_iteration_is_reversed) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
 
     std::vector<typename TypeParam::key_type> not_reversed;
-    std::transform(t.begin(), t.end(), std::back_inserter(not_reversed), test::value_to_key<TypeParam>);
+    std::transform(t.begin(), t.end(), std::back_inserter(not_reversed), TestFixture::value_to_key);
 
     std::vector<typename TypeParam::key_type> reversed;
-    std::transform(t.rbegin(), t.rend(), std::back_inserter(reversed), test::value_to_key<TypeParam>);
+    std::transform(t.rbegin(), t.rend(), std::back_inserter(reversed), TestFixture::value_to_key);
 
     std::reverse(not_reversed.begin(), not_reversed.end());
 
@@ -216,45 +229,45 @@ TYPED_TEST(assoc_common, max_size_is_uint64_max) {
 
 TYPED_TEST(assoc_common, insert_size_change) {
     TypeParam t;
-    t.insert( test::key_to_value<TypeParam>("foo") );
+    t.insert( TestFixture::key_to_value("foo") );
     EXPECT_EQ(1u, t.size());
-    t.insert( test::key_to_value<TypeParam>("bar") );
+    t.insert( TestFixture::key_to_value("bar") );
     EXPECT_EQ(2u, t.size());
 }
 
 TYPED_TEST(assoc_common, insert_existing_size_no_change) {
     TypeParam t;
-    t.insert( test::key_to_value<TypeParam>("foo") );
+    t.insert( TestFixture::key_to_value("foo") );
     EXPECT_EQ(1u, t.size());
-    t.insert( test::key_to_value<TypeParam>("foo") );
+    t.insert( TestFixture::key_to_value("foo") );
     EXPECT_EQ(1u, t.size());
 }
 
 TYPED_TEST(assoc_common, insert_return_value) {
     TypeParam t;
-    auto [it, inserted] = t.insert( test::key_to_value<TypeParam>("foo") );
+    auto [it, inserted] = t.insert( TestFixture::key_to_value("foo") );
 
     EXPECT_TRUE(inserted);
     ASSERT_NE(t.end(), it);
-    EXPECT_EQ("foo", test::value_to_key<TypeParam>(*it));
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
 }
 
 TYPED_TEST(assoc_common, insert_existing_return_value) {
     TypeParam t;
 
-    t.insert( test::key_to_value<TypeParam>("foo") );
+    t.insert( TestFixture::key_to_value("foo") );
 
-    auto [it, inserted] = t.insert( test::key_to_value<TypeParam>("foo") );
+    auto [it, inserted] = t.insert( TestFixture::key_to_value("foo") );
 
     EXPECT_FALSE(inserted);
     ASSERT_NE(t.end(), it);
-    EXPECT_EQ("foo", test::value_to_key<TypeParam>(*it));
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
 }
 
 TYPED_TEST(assoc_common, insert_lvalue_reference) {
     TypeParam t;
 
-    typename TypeParam::value_type v = test::key_to_value<TypeParam>("foo");
+    typename TypeParam::value_type v = TestFixture::key_to_value("foo");
     t.insert(v);
     EXPECT_EQ(1u, t.size());
 }
@@ -263,9 +276,9 @@ TYPED_TEST(assoc_common, insert_range_size_increase) {
     TypeParam t;
 
     std::vector<typename TypeParam::value_type> v{
-        test::key_to_value<TypeParam>("foo"),
-        test::key_to_value<TypeParam>("bar"),
-        test::key_to_value<TypeParam>("baz")
+        TestFixture::key_to_value("foo"),
+        TestFixture::key_to_value("bar"),
+        TestFixture::key_to_value("baz")
     };
     t.insert(v.begin(), v.end());
 
@@ -276,9 +289,9 @@ TYPED_TEST(assoc_common, insert_initializer_list_size_increase) {
     TypeParam t;
 
     t.insert({
-        test::key_to_value<TypeParam>("foo"),
-        test::key_to_value<TypeParam>("bar"),
-        test::key_to_value<TypeParam>("baz")
+        TestFixture::key_to_value("foo"),
+        TestFixture::key_to_value("bar"),
+        TestFixture::key_to_value("baz")
     });
 
     EXPECT_EQ(3u, t.size());
@@ -286,17 +299,17 @@ TYPED_TEST(assoc_common, insert_initializer_list_size_increase) {
 
 TYPED_TEST(assoc_common, prefixed_with) {
     std::vector<std::string> v{ "rubens", "ruber", "rubicon", "rubicundus" };
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
 
     auto [first, last] = t.prefixed_with("rub");
 
     EXPECT_EQ(4u, std::distance(first, last));
     std::size_t i = 0;
-    for (auto it = first; it != last; ++it) EXPECT_EQ(v[i++], test::value_to_key<TypeParam>(*it));
+    for (auto it = first; it != last; ++it) EXPECT_EQ(v[i++], TestFixture::value_to_key(*it));
 }
 
 TYPED_TEST(assoc_common, prefixed_with_includes_prefix) {
-    TypeParam t = test::make_container<TypeParam>("foo", "bar", "aa", "aaa", "aab", "aac", "aad", "ab");
+    TypeParam t = TestFixture::make_container("foo", "bar", "aa", "aaa", "aab", "aac", "aad", "ab");
 
     auto [first, last] = t.prefixed_with("aa");
 
@@ -304,30 +317,30 @@ TYPED_TEST(assoc_common, prefixed_with_includes_prefix) {
 }
 
 TYPED_TEST(assoc_common, prefixed_with_empty_range) {
-    TypeParam t = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
 
     auto [first, last] = t.prefixed_with("rob");
     EXPECT_EQ(first, last);
 }
 
 TYPED_TEST(assoc_common, longest_match) {
-    TypeParam t = test::make_container<TypeParam>("foo", "foobar", "baz");
+    TypeParam t = TestFixture::make_container("foo", "foobar", "baz");
     auto it = t.longest_match("fooba");
 
     ASSERT_NE(t.end(), it);
-    EXPECT_EQ("foo", test::value_to_key<TypeParam>(*it));
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
 }
 
 TYPED_TEST(assoc_common, longest_match_has_key) {
-    TypeParam t = test::make_container<TypeParam>("foo", "foobar", "baz");
+    TypeParam t = TestFixture::make_container("foo", "foobar", "baz");
     auto it = t.longest_match("foobar");
 
     ASSERT_NE(t.end(), it);
-    EXPECT_EQ("foobar", test::value_to_key<TypeParam>(*it));
+    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
 }
 
 TYPED_TEST(assoc_common, longest_match_no_key) {
-    TypeParam t = test::make_container<TypeParam>("foo", "foobar", "baz");
+    TypeParam t = TestFixture::make_container("foo", "foobar", "baz");
     auto it = t.longest_match("qux");
 
     EXPECT_EQ(t.end(), it);
@@ -341,30 +354,30 @@ TYPED_TEST(assoc_common, longest_match_empty) {
 }
 
 TYPED_TEST(assoc_common, equals) {
-    TypeParam t = test::roman_trie<TypeParam>;
-    TypeParam s = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
+    TypeParam s = TestFixture::roman_trie;
 
     EXPECT_EQ(t, s);
 }
 
 TYPED_TEST(assoc_common, not_equals) {
-    TypeParam t = test::roman_trie<TypeParam>;
-    TypeParam s = test::roman_trie<TypeParam>;
+    TypeParam t = TestFixture::roman_trie;
+    TypeParam s = TestFixture::roman_trie;
     s.erase("romane");
 
     EXPECT_NE(t, s);
 }
 
 TYPED_TEST(assoc_common, greater) {
-    TypeParam l = test::less_trie<TypeParam>;
-    TypeParam g = test::greater_trie<TypeParam>;
+    TypeParam l = TestFixture::less_trie;
+    TypeParam g = TestFixture::greater_trie;
 
     EXPECT_GT(g, l);
 }
 
 TYPED_TEST(assoc_common, greater_equals) {
-    TypeParam l = test::less_trie<TypeParam>;
-    TypeParam g = test::greater_trie<TypeParam>;
+    TypeParam l = TestFixture::less_trie;
+    TypeParam g = TestFixture::greater_trie;
 
     EXPECT_GE(g, g);
     EXPECT_GE(g, l);
@@ -372,15 +385,15 @@ TYPED_TEST(assoc_common, greater_equals) {
 }
 
 TYPED_TEST(assoc_common, less) {
-    TypeParam l = test::less_trie<TypeParam>;
-    TypeParam g = test::greater_trie<TypeParam>;
+    TypeParam l = TestFixture::less_trie;
+    TypeParam g = TestFixture::greater_trie;
 
     EXPECT_LT(l, g);
 }
 
 TYPED_TEST(assoc_common, less_equals) {
-    TypeParam l = test::less_trie<TypeParam>;
-    TypeParam g = test::greater_trie<TypeParam>;
+    TypeParam l = TestFixture::less_trie;
+    TypeParam g = TestFixture::greater_trie;
 
     EXPECT_LE(l, l);
     EXPECT_LE(l, g);
