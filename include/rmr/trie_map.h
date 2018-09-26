@@ -25,7 +25,7 @@ class trie_map : public detail::map_adaptor<
 > {
     static_assert(
         std::is_invocable_r_v<std::size_t, KeyMapper, std::size_t>,
-        "KeyMapper is not invocable on std::size_t or does not return std::size_t"
+        "KeyMapper is not invocable with std::size_t or does not return std::size_t"
     );
     using base_type = detail::map_adaptor<
         T, detail::trie<typename Allocator::value_type, R, KeyMapper, Key, Allocator>
@@ -33,7 +33,7 @@ class trie_map : public detail::map_adaptor<
 public:
     using base_type::base_type;
 
-    typename base_type::key_mapper key_map() const { return this->trie_.key_map(); }
+    KeyMapper key_map() const { return this->trie_.key_map(); }
     static constexpr std::size_t radix() { return R; }
 };
 
