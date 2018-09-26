@@ -10,26 +10,7 @@
 #include "assoc.h"
 
 template <typename T>
-struct assoc_common : testing::Test {
-    bool has_iterator               = test::has_iterator<T>::value;
-    bool has_const_iterator         = test::has_const_iterator<T>::value;
-    bool has_reverse_iterator       = test::has_reverse_iterator<T>::value;
-    bool has_const_reverse_iterator = test::has_const_reverse_iterator<T>::value;
-    bool has_node_type              = test::has_node_type<T>::value;
-    bool has_insert_return_type     = test::has_insert_return_type<T>::value;
-
-    T less_trie    = test::less_trie<T>;
-    T greater_trie = test::greater_trie<T>;
-    T roman_trie   = test::roman_trie<T>;
-
-    static typename T::value_type
-    key_to_value(const typename T::key_type& k) { return test::key_to_value<T>(k); }
-    static typename T::key_type
-    value_to_key(const typename T::value_type& v) { return test::value_to_key<T>(v); }
-    template <typename... Keys>
-    static T make_container(Keys&&... keys) { return test::make_container<T>(std::forward<Keys>(keys)...); }
-    static void assert_empty(const T& t) { test::assert_empty<T>(t); }
-};
+struct assoc_common : test::assoc_test<T>, testing::Test {};
 TYPED_TEST_CASE(assoc_common, assoc_common_types);
 
 TYPED_TEST(assoc_common, default_empty_returns_true) {
@@ -857,6 +838,10 @@ TYPED_TEST(assoc_common, less_equals) {
     EXPECT_LE(l, g);
     EXPECT_LE(g, g);
 }
+
+TYPED_TEST(assoc_common, node_type_extracted_is_not_empty) {} // TODO
+TYPED_TEST(assoc_common, node_type_swap) {} // TODO
+TYPED_TEST(assoc_common, node_type_allocator_equals_container_allocator) {} // TODO
 
 TYPED_TEST(assoc_common, typedefs) {
     using value_type = typename TypeParam::value_type;

@@ -66,4 +66,27 @@ DEFINE_HAS(mapped_type);
 
 #undef DEFINE_HAS
 
+template <typename T>
+struct assoc_test {
+    bool has_iterator               = test::has_iterator<T>::value;
+    bool has_const_iterator         = test::has_const_iterator<T>::value;
+    bool has_reverse_iterator       = test::has_reverse_iterator<T>::value;
+    bool has_const_reverse_iterator = test::has_const_reverse_iterator<T>::value;
+    bool has_node_type              = test::has_node_type<T>::value;
+    bool has_insert_return_type     = test::has_insert_return_type<T>::value;
+    bool has_mapped_type            = test::has_mapped_type<T>::value;
+
+    T less_trie    = test::less_trie<T>;
+    T greater_trie = test::greater_trie<T>;
+    T roman_trie   = test::roman_trie<T>;
+
+    static typename T::value_type
+    key_to_value(const typename T::key_type& k) { return test::key_to_value<T>(k); }
+    static typename T::key_type
+    value_to_key(const typename T::value_type& v) { return test::value_to_key<T>(v); }
+    template <typename... Keys>
+    static T make_container(Keys&&... keys) { return test::make_container<T>(std::forward<Keys>(keys)...); }
+    static void assert_empty(const T& t) { test::assert_empty<T>(t); }
+};
+
 } // namespace test
