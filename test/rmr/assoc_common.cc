@@ -619,8 +619,8 @@ TYPED_TEST(assoc_common, erase_range) {
     t.erase(first, last);
 
     EXPECT_NE(t.end(), t.find("foo"));
-    EXPECT_NE(t.end(), t.find("baz"));
 
+    EXPECT_EQ(t.end(), t.find("baz"));
     EXPECT_EQ(t.end(), t.find("bar"));
     EXPECT_EQ(t.end(), t.find("bax"));
     EXPECT_EQ(t.end(), t.find("bay"));
@@ -643,6 +643,13 @@ TYPED_TEST(assoc_common, erase_empty_range) {
     EXPECT_NE(t.end(), t.find("foo"));
     EXPECT_NE(t.end(), t.find("bar"));
     EXPECT_NE(t.end(), t.find("baz"));
+}
+
+TYPED_TEST(assoc_common, erase_whole_continer) {
+    TypeParam t = TestFixture::make_container("foo", "bar", "baz");
+
+    t.erase(t.begin(), t.end());
+    TestFixture::assert_empty(t);
 }
 
 TYPED_TEST(assoc_common, default_count_is_zero) {

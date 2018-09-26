@@ -394,7 +394,8 @@ public:
         if (first == end()) return { end(), end() };
         auto last = skip(first);
 
-        if (first.node->value == nullptr) ++first;
+        if (                first.node->value == nullptr) ++first;
+        if (last != end() && last.node->value == nullptr) ++last;
         return {first, last};
     }
 
