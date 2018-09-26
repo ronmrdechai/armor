@@ -54,7 +54,7 @@ protected:
             else alloc_.swap(other.alloc_);
         }
         using std::swap;
-        swap(ptr_, other.ptr_); 
+        swap(ptr_, other.ptr_);
     }
 
     typename alloc_traits::pointer ptr_;

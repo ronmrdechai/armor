@@ -141,7 +141,7 @@ public:
         }
         return ret;
     }
-    iterator insert(const_iterator hint, node_type&& nh) { 
+    iterator insert(const_iterator hint, node_type&& nh) {
         if (nh.empty()) return end();
         iterator it = find(nh.key());
         if (it == end()) {
@@ -197,7 +197,7 @@ public:
     const_iterator longest_match(const key_type& k) const
     { return trie_.longest_match(k); }
 
-    key_mapper key_map() const { return trie_.key_map(); } 
+    key_mapper key_map() const { return trie_.key_map(); }
 
 protected:
     Trie trie_;

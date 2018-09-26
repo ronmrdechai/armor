@@ -276,7 +276,7 @@ public:
     {}
 
     trie(const trie& other) : trie(
-        other.key_map(), 
+        other.key_map(),
         alloc_traits::select_on_container_copy_construction(other.get_allocator())
     ) {
         copy_nodes(&other.impl_.root, &impl_.root, nullptr);
@@ -306,7 +306,7 @@ public:
         impl_.size = other.impl_.size;
         static_cast<key_mapper&>(impl_) = other.key_map();
         if (alloc_traits::propagate_on_container_copy_assignment::value) {
-            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();     
+            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();
         }
         copy_nodes(&other.impl_.root, &impl_.root, nullptr);
         return *this;
@@ -318,7 +318,7 @@ public:
         clear();
         static_cast<key_mapper&>(impl_) = other.key_map();
         if (alloc_traits::propagate_on_container_move_assignment::value)
-            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();     
+            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();
 
         auto other_alloc = other.get_allocator();
         if (!alloc_traits::propagate_on_container_move_assignment::value &&
@@ -336,7 +336,7 @@ public:
     ) {
         if (alloc_traits::propagate_on_container_swap::value) {
             node_allocator_type& this_alloc = impl_;
-            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();     
+            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();
             other.get_node_allocator() = this_alloc;
         }
         key_mapper this_key_map = key_map();
@@ -379,7 +379,7 @@ public:
 
     pointer extract(const_iterator pos) { return extract_value(remove_const(pos).node); }
 
-    iterator longest_match(const key_type& key) 
+    iterator longest_match(const key_type& key)
     { return remove_const(const_cast<const trie&>(*this).longest_match(key)); }
     const_iterator longest_match(const key_type& key) const
     { return longest_match(&impl_.root, key.begin(), key.end()); }
@@ -448,7 +448,7 @@ private:
         if (src->value != nullptr) {
             dst->value = make_value(std::move(*src->value));
             destroy_and_deallocate(alloc, src->value);
-            src->value = nullptr; 
+            src->value = nullptr;
         }
         for (size_type i = 0; i < R; ++i) {
             if (src->children[i] != nullptr)
@@ -526,7 +526,7 @@ private:
     }
 
     const node_type* find_key_unsafe(
-        const node_type* root, 
+        const node_type* root,
         typename key_type::const_iterator cur,
         typename key_type::const_iterator last
     ) const {
