@@ -858,6 +858,16 @@ TYPED_TEST(assoc_common, node_handle_allocator_equals_container_allocator) {
     EXPECT_EQ(nh.get_allocator(), t.get_allocator());
 }
 
+TYPED_TEST(assoc_common, node_handle_swap) {
+    TypeParam t = TestFixture::roman_trie;
+    auto&& nh1 = t.extract("romulus");
+    auto&& nh2 = t.extract("romane");
+
+    swap(nh1, nh2);
+    EXPECT_EQ("romane",  TestFixture::nh_to_key(std::move(nh1)));
+    EXPECT_EQ("romulus", TestFixture::nh_to_key(std::move(nh2)));
+}
+
 TYPED_TEST(assoc_common, typedefs) {
     using value_type = typename TypeParam::value_type;
 

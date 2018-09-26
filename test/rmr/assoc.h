@@ -32,6 +32,12 @@ template <> typename trie_map::key_type value_to_key<trie_map>(typename trie_map
 template <> typename trie_set::key_type value_to_key<trie_set>(typename trie_set::value_type v)
 { return v; }
 
+template <typename T> typename T::key_type nh_to_key(typename T::node_type&&) = delete;
+template <> typename trie_map::key_type nh_to_key<trie_map>(typename trie_map::node_type&& nh)
+{ return nh.key(); }
+template <> typename trie_set::key_type nh_to_key<trie_set>(typename trie_set::node_type&& nh)
+{ return nh.value(); }
+
 template <typename T, typename... Keys>
 T make_container(Keys... keys) { return T( { key_to_value<T>(keys)... } ); }
 
@@ -84,6 +90,8 @@ struct assoc_test {
     key_to_value(const typename T::key_type& k) { return test::key_to_value<T>(k); }
     static typename T::key_type
     value_to_key(const typename T::value_type& v) { return test::value_to_key<T>(v); }
+    static typename T::key_type
+    nh_to_key(typename T::node_type&& nh) { return test::nh_to_key<T>(std::move(nh)); }
     template <typename... Keys>
     static T make_container(Keys&&... keys) { return test::make_container<T>(std::forward<Keys>(keys)...); }
     static void assert_empty(const T& t) { test::assert_empty<T>(t); }
