@@ -19,7 +19,8 @@ struct tst_node : trie_node<T, 3> {
 
 template <typename T, typename Compare, typename Key, typename Allocator>
 class ternary_search_tree {
-    using alloc_traits        = std::allocator_traits<Allocator>;
+    static constexpr std::size_t R = 3;
+    using alloc_traits = std::allocator_traits<Allocator>;
 public:
     using key_type               = Key;
     using char_type              = typename key_type::value_type;
@@ -37,12 +38,99 @@ private:
     using node_allocator_type = typename alloc_traits::template rebind_alloc<node_type>;
     using node_alloc_traits   = typename alloc_traits::template rebind_traits<node_type>;
 public:
-    using iterator               = trie_iterator<3, node_type*>;
-    using const_iterator         = trie_iterator<3, const node_type*>;
+    using iterator               = trie_iterator<R, node_type*>;
+    using const_iterator         = trie_iterator<R, const node_type*>;
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    // interface...
+    ternary_search_tree() = default;
+    explicit ternary_search_tree(allocator_type alloc) : impl_(node_allocator_type(std::move(alloc))) {}
+    explicit ternary_search_tree(key_compare kc, allocator_type alloc) :
+        impl_(std::move(kc), node_allocator_type(std::move(alloc)))
+    {}
+    ~ternary_search_tree() { clear(); }
+
+    iterator root() noexcept { return remove_const(croot()); }
+    const_iterator root() const noexcept { return croot(); }
+    const_iterator croot() const noexcept { return &impl_.root; }
+
+    iterator begin() noexcept { return remove_const(cbegin()); }
+    const_iterator begin() const noexcept { return cbegin(); }
+    const_iterator cbegin() const noexcept { return ++const_iterator(&impl_.base); }
+
+    iterator end() noexcept { return remove_const(cend()); }
+    const_iterator end() const noexcept { return cend(); }
+    const_iterator cend() const noexcept { return &impl_.base; }
+
+    reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+    const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
+    const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
+
+    reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+    const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
+    const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
+
+    size_type size() const noexcept { return impl_.size; }
+
+    void clear() noexcept {
+        auto value_alloc = get_allocator();
+        auto& node_alloc = get_node_allocator();
+        clear_node(&impl_.root, node_alloc, value_alloc);
+        impl_.size = 0;
+    }
+
+    allocator_type get_allocator() const { return get_node_allocator(); }
+    key_compare    key_comp()      const { return impl_; }
+
+private:
+    node_type* insert_node(const node_type* hint, const key_type& key, pointer v);
+
+    const auto& get_node_allocator() const { return impl_; }
+          auto& get_node_allocator()       { return impl_; }
+
+    struct tst_header {
+        node_type base;
+        node_type root;
+        size_type size;
+
+        tst_header() { reset(); }
+        tst_header& operator=(tst_header&& other) {
+            for (size_type i = 0; i < R; ++i) {
+                root.children[i] = other.root.children[i];
+                if (root.children[i] != nullptr) root.children[i]->parent = &root;
+            }
+            size = other.size;
+            other.reset();
+            return *this;
+        }
+
+        void reset() {
+            std::fill(std::begin(base.children), std::end(base.children), nullptr);
+            base.children[0] = &root;
+            base.parent_index = R;
+            base.value = nullptr;
+
+            std::fill(std::begin(root.children), std::end(root.children), nullptr);
+            root.parent = &base;
+            root.parent_index = 0;
+            root.value = nullptr;
+
+            size = 0;
+        }
+    };
+
+    struct tst_impl : tst_header, key_compare, node_allocator_type {
+        tst_impl() = default;
+        tst_impl(node_allocator_type alloc) :
+            tst_header(), key_compare(), node_allocator_type(std::move(alloc))
+        {}
+        tst_impl(key_compare kc, node_allocator_type alloc) :
+            tst_header(), key_compare(std::move(kc)), node_allocator_type(std::move(alloc))
+        {}
+        tst_impl& operator=(tst_impl&&) = default;
+    };
+
+    tst_impl impl_;
 };
 
 } // namespace rmr::detail

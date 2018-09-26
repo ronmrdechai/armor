@@ -349,8 +349,6 @@ private:
     }
 
     struct trie_header {
-        using node_type = trie_node<T, R>;
-
         node_type base;
         node_type root;
         size_type size;
