@@ -839,9 +839,24 @@ TYPED_TEST(assoc_common, less_equals) {
     EXPECT_LE(g, g);
 }
 
-TYPED_TEST(assoc_common, node_type_extracted_is_not_empty) {} // TODO
-TYPED_TEST(assoc_common, node_type_swap) {} // TODO
-TYPED_TEST(assoc_common, node_type_allocator_equals_container_allocator) {} // TODO
+TYPED_TEST(assoc_common, node_handle_extracted_is_not_empty_or_false) {
+    TypeParam t = TestFixture::roman_trie;
+    auto&& nh = t.extract("romulus");
+    EXPECT_FALSE(nh.empty());
+    EXPECT_TRUE(bool(nh));
+}
+
+TYPED_TEST(assoc_common, node_handle_default_is_empty_and_false) {
+    typename TypeParam::node_type nh;
+    EXPECT_TRUE(nh.empty());
+    EXPECT_FALSE(bool(nh));
+}
+
+TYPED_TEST(assoc_common, node_handle_allocator_equals_container_allocator) {
+    TypeParam t = TestFixture::roman_trie;
+    auto&& nh = t.extract("romulus");
+    EXPECT_EQ(nh.get_allocator(), t.get_allocator());
+}
 
 TYPED_TEST(assoc_common, typedefs) {
     using value_type = typename TypeParam::value_type;
@@ -863,4 +878,8 @@ TYPED_TEST(assoc_common, typedefs) {
     EXPECT_TRUE(TestFixture::has_const_reverse_iterator);
     EXPECT_TRUE(TestFixture::has_node_type);
     EXPECT_TRUE(TestFixture::has_insert_return_type);
+}
+
+TYPED_TEST(assoc_common, DISABLED_does_not_leak) {
+    FAIL() << "Not implemented";
 }
