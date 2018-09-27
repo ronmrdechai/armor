@@ -342,6 +342,15 @@ TYPED_TEST(assoc_common, insert_sufix) {
     EXPECT_EQ("foo", TestFixture::value_to_key(*t.find("foo")));
 }
 
+TYPED_TEST(assoc_common, insert_empty_string) {
+    TypeParam t;
+    auto [it, inserted] = t.insert( TestFixture::key_to_value("") );
+
+    EXPECT_TRUE(inserted);
+    EXPECT_EQ("", TestFixture::value_to_key(*it));
+    EXPECT_NE(t.end(), t.find(""));
+}
+
 TYPED_TEST(assoc_common, insert_hint_size_change) {
     TypeParam t = TestFixture::make_container("foo");
     auto hint = t.find("foo");
