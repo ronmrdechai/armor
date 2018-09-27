@@ -8,9 +8,12 @@
 #pragma once
 
 #include <rmr/detail/util.h>
-#include <rmr/detail/trie_node.h>
+#include <rmr/detail/trie_node_base.h>
 
 namespace rmr::detail {
+
+template <typename T, std::size_t R>
+struct trie_node : trie_node_base<trie_node<T, R>, T, R> {};
 
 template <typename T, std::size_t R, typename KeyMapper, typename Key, typename Allocator>
 class trie {
@@ -123,7 +126,7 @@ public:
     { return emplace(remove_const(pos), key, std::forward<Args>(args)...); }
     template <typename... Args>
     iterator emplace(iterator pos, const key_type& key, Args&&... args)
-    { return insert_node(pos.node, key, make_value(std::forward<Args>(args)...)); }
+    { return insert_node(pos.node, key, make_value(get_allocator(), std::forward<Args>(args)...)); }
 
     iterator reinsert(const_iterator pos, const key_type& key, const_pointer p)
     { return reinsert(remove_const(pos), key, const_cast<pointer>(p)); }
@@ -201,7 +204,7 @@ private:
     node_type* copy_nodes(const node_type* src, node_type* dst, node_type* parent) {
         if (dst == nullptr) dst = make_node(parent, src->parent_index);
 
-        if (src->value != nullptr) dst->value = make_value(*src->value);
+        if (src->value != nullptr) dst->value = make_value(get_allocator(), *src->value);
         for (size_type i = 0; i < R; ++i) {
             if (src->children[i] != nullptr)
                 dst->children[i] = copy_nodes(src->children[i], dst->children[i], dst);
@@ -213,7 +216,7 @@ private:
         if (dst == nullptr) dst = make_node(parent, src->parent_index);
 
         if (src->value != nullptr) {
-            dst->value = make_value(std::move(*src->value));
+            dst->value = make_value(get_allocator(), std::move(*src->value));
             destroy_and_deallocate(alloc, src->value);
             src->value = nullptr;
         }
@@ -260,14 +263,6 @@ private:
 
     const auto& get_node_allocator() const { return impl_; }
           auto& get_node_allocator()       { return impl_; }
-
-    template <typename... Args>
-    pointer make_value(Args&&... args) {
-        auto alloc = get_allocator();
-        pointer v = alloc_traits::allocate(alloc, 1);
-        alloc_traits::construct(alloc, v, std::forward<Args>(args)...);
-        return v;
-    }
 
     node_type* make_node(node_type* parent, size_type parent_index) {
         auto& node_alloc = get_node_allocator();

@@ -8,14 +8,12 @@
 #pragma once
 
 #include <rmr/detail/util.h>
-#include <rmr/detail/trie_node.h>
+#include <rmr/detail/trie_node_base.h>
 
 namespace rmr::detail {
 
 template <typename T, typename Char>
-struct tst_node : trie_node<T, 3> {
-    Char c;
-};
+struct tst_node : trie_node_base<tst_node<T, Char>, T, 3> { Char c; };
 
 template <typename T, typename Compare, typename Key, typename Allocator>
 class ternary_search_tree {
@@ -50,6 +48,13 @@ public:
     {}
     ~ternary_search_tree() { clear(); }
 
+    template <typename... Args>
+    iterator emplace(const_iterator pos, const key_type& key, Args&&... args)
+    { return emplace(remove_const(pos), key, std::forward<Args>(args)...); }
+    template <typename... Args>
+    iterator emplace(iterator pos, const key_type& key, Args&&... args)
+    { return insert_node(pos.node, key, make_value(get_allocator(), std::forward<Args>(args)...)); }
+
     iterator root() noexcept { return remove_const(croot()); }
     const_iterator root() const noexcept { return croot(); }
     const_iterator croot() const noexcept { return &impl_.root; }
@@ -83,7 +88,10 @@ public:
     key_compare    key_comp()      const { return impl_; }
 
 private:
-    node_type* insert_node(const node_type* hint, const key_type& key, pointer v);
+    node_type* insert_node(const node_type* hint, const key_type& key, pointer v) {
+        (void)hint, (void)key, (void)v;
+        return nullptr;
+    }
 
     const auto& get_node_allocator() const { return impl_; }
           auto& get_node_allocator()       { return impl_; }

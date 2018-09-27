@@ -14,38 +14,38 @@
 
 namespace rmr::detail {
 
-template <typename T, std::size_t R>
-struct trie_node {
+template <typename Derived, typename T, std::size_t R>
+struct trie_node_base {
     using value_type = T;
 
-    trie_node*  children[R];
+    Derived*    children[R];
     std::size_t parent_index;
-    trie_node*  parent;
+    Derived*    parent;
 	T*          value;
 };
 
-template <typename T, std::size_t R>
-std::size_t children_count(const trie_node<T, R>* n) {
+template <typename Node>
+std::size_t children_count(const Node* n) {
 	std::size_t count = 0;	
 	for (auto& child : n->children) count += child != nullptr;
 	return count;
 }
 
-template <typename T, std::size_t R>
-void unlink(trie_node<T, R>* n) {
+template <typename Node>
+void unlink(Node* n) {
 	n->parent->children[n->parent_index] = nullptr;
 }
 
-template <typename T, std::size_t R, typename ValueAllocator>
-void delete_node_value(trie_node<T, R>* n, ValueAllocator& va) {
+template <typename Node, typename ValueAllocator>
+void delete_node_value(Node* n, ValueAllocator& va) {
 	if (n != nullptr && n->value != nullptr) {
         destroy_and_deallocate(va, n->value);
 		n->value = nullptr;
 	}
 }
 
-template <typename T, std::size_t R, typename NodeAllocator, typename ValueAllocator>
-void clear_node(trie_node<T, R>* n, NodeAllocator& na, ValueAllocator& va) {
+template <typename Node, typename NodeAllocator, typename ValueAllocator>
+void clear_node(Node* n, NodeAllocator& na, ValueAllocator& va) {
 	delete_node_value(n, va);
 
 	for (auto& child : n->children) {
