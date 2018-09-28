@@ -66,8 +66,7 @@ private:
 
     void destroy() noexcept {
         if (empty()) return;
-        allocator_type alloc(alloc_);
-        detail::destroy_and_deallocate(alloc, ptr_);
+        detail::destroy_and_deallocate(alloc_, ptr_);
     }
 };
 

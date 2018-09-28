@@ -142,7 +142,7 @@ public:
     iterator erase(iterator pos) {
         iterator next = std::next(pos);
         erase_node(pos.node);
-        impl_.size -= 1;
+        impl_.size--;
         return next;
     }
 
@@ -251,7 +251,7 @@ private:
         if (root == nullptr) root = make_node(parent, parent_index);
         if (index == key.size()) {
             if (root->value == nullptr) { root->value = v; ++impl_.size; }
-            else { auto alloc = get_allocator(); destroy_and_deallocate(alloc, v); }
+            else                        destroy_and_deallocate(get_allocator(), v);
             ret = root;
         } else {
             size_type parent_index = key_map()(key[index]);
@@ -318,6 +318,7 @@ private:
     pointer extract_value(node_type* node) {
         pointer v(std::move(node->value));
         node->value = nullptr;
+        erase_node(node);
         impl_.size--;
         return v;
     }
