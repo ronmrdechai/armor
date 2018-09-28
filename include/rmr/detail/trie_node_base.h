@@ -65,6 +65,8 @@ void write_dot(TrieIterator it, OStream& os) {
 
 template <std::size_t R, typename Node>
 struct trie_iterator {
+    Node node;
+
     using value_type        = typename std::remove_pointer_t<Node>::value_type;
     using difference_type   = std::ptrdiff_t;
     using reference         = value_type&;
@@ -73,8 +75,6 @@ struct trie_iterator {
 
     using non_const_node_type = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<Node>>>;
     static constexpr bool is_const_iterator = std::is_const_v<std::remove_pointer_t<Node>>;
-
-    Node node;
 
     trie_iterator(Node n = nullptr) : node(n) {}
     trie_iterator(const trie_iterator&) = default;
@@ -115,13 +115,13 @@ struct trie_iterator {
     reference operator*() const { return *(node->value); }
     pointer  operator->() const { return   node->value ; }
 
-    template <typename _NodeT>
-    bool operator==(const trie_iterator<R, _NodeT>& other) const {
+    template <typename _Node>
+    bool operator==(const trie_iterator<R, _Node>& other) const {
         return (node == other.node);
     }
 
-    template <typename _NodeT>
-    bool operator!=(const trie_iterator<R, _NodeT>& other) const {
+    template <typename _Node>
+    bool operator!=(const trie_iterator<R, _Node>& other) const {
         return !(*this == other);
     }
 
