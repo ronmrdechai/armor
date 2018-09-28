@@ -10,6 +10,8 @@
 #include <rmr/detail/util.h>
 #include <rmr/detail/trie_node_base.h>
 
+#include <rmr/detail/trie.h>
+
 namespace rmr::detail {
 
 template <typename T, typename Char>
@@ -62,12 +64,14 @@ public:
     using pointer         = typename alloc_traits::pointer;
     using const_pointer   = typename alloc_traits::const_pointer;
 private:
-    using node_type           = ternary_search_tree_node<value_type, char_type>;
-    using node_allocator_type = typename alloc_traits::template rebind_alloc<node_type>;
-    using node_alloc_traits   = typename alloc_traits::template rebind_traits<node_type>;
+    using node_type             = ternary_search_tree_node<value_type, char_type>;
+    using node_allocator_type   = typename alloc_traits::template rebind_alloc<node_type>;
+    using node_alloc_traits     = typename alloc_traits::template rebind_traits<node_type>;
+    using iterator_traits       = trie_iterator_traits<R,       node_type*>;
+    using const_iterator_traits = trie_iterator_traits<R, const node_type*>;
 public:
-    using iterator               = trie_iterator<R, node_type*>;
-    using const_iterator         = trie_iterator<R, const node_type*>;
+    using iterator               = trie_iterator<iterator_traits>;
+    using const_iterator         = trie_iterator<const_iterator_traits>;
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -109,7 +113,7 @@ public:
     prefixed_with(const key_type& key) const {
         const_iterator first = find_key_unsafe(&impl_.root, key, 0);
         if (first == end()) return { end(), end() };
-        auto last = skip(first);
+        const_iterator last( const_iterator_traits::skip(first.node) );
 
         if (                first.node->value == nullptr) ++first;
         if (last != end() && last.node->value == nullptr) ++last;

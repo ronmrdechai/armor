@@ -63,33 +63,36 @@ void write_dot(TrieIterator it, OStream& os) {
     os << "}\n";
 }
 
-template <std::size_t R, typename Node>
+template <typename Traits>
 struct trie_iterator {
-    Node node;
+    using node_type = typename Traits::node_type;
 
-    using value_type        = typename std::remove_pointer_t<Node>::value_type;
+    using value_type        = typename std::remove_pointer_t<node_type>::value_type;
     using difference_type   = std::ptrdiff_t;
     using reference         = value_type&;
     using pointer           = value_type*;
     using iterator_category = std::bidirectional_iterator_tag;
 
-    using non_const_node_type = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<Node>>>;
-    static constexpr bool is_const_iterator = std::is_const_v<std::remove_pointer_t<Node>>;
+    static constexpr bool is_const_iterator = std::is_const_v<std::remove_pointer_t<node_type>>;
+    using non_const_node_type = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<node_type>>>;
+    using non_const_traits_type = typename Traits::template rebind<non_const_node_type>;
 
-    trie_iterator(Node n = nullptr) : node(n) {}
+    node_type node;
+
+    trie_iterator(node_type n = nullptr) : node(n) {}
     trie_iterator(const trie_iterator&) = default;
 
     template <typename = std::enable_if_t<is_const_iterator>>
-    trie_iterator(const trie_iterator<R, non_const_node_type>& other) :
-        node(const_cast<Node>(other.node))
+    trie_iterator(const trie_iterator<non_const_traits_type>& other) :
+        node(const_cast<node_type>(other.node))
     {}
 
     trie_iterator& operator=(const trie_iterator&) = default;
 
     trie_iterator& operator++() {
         do {
-            *this = next(*this);
-        } while(node->value == nullptr && node->parent_index != R);
+            node = Traits::next(node);
+        } while(node->value == nullptr && node->parent_index != Traits::radix);
         return *this;
     }
 
@@ -101,8 +104,8 @@ struct trie_iterator {
 
     trie_iterator& operator--() {
         do {
-            *this = prev(*this);
-        } while(node->value == nullptr && node->parent_index != R);
+            node = Traits::prev(node);
+        } while(node->value == nullptr && node->parent_index != Traits::radix);
         return *this;
     }
 
@@ -115,13 +118,13 @@ struct trie_iterator {
     reference operator*() const { return *(node->value); }
     pointer  operator->() const { return   node->value ; }
 
-    template <typename _Node>
-    bool operator==(const trie_iterator<R, _Node>& other) const {
+    template <typename _Traits>
+    bool operator==(const trie_iterator<_Traits>& other) const {
         return (node == other.node);
     }
 
-    template <typename _Node>
-    bool operator!=(const trie_iterator<R, _Node>& other) const {
+    template <typename _Traits>
+    bool operator!=(const trie_iterator<_Traits>& other) const {
         return !(*this == other);
     }
 
@@ -130,127 +133,11 @@ struct trie_iterator {
     }
 };
 
-template <std::size_t R, typename Node>
-std::pair<trie_iterator<R, Node>, bool>
-step_down_forward(trie_iterator<R, Node> it) {
-    for (std::size_t pos = 0; pos < R; ++pos) {
-        if (it.node->children[pos] != nullptr) {
-            it.node = it.node->children[pos];
-            return {it, true};
-        }
-    }
-    return {it, false};
-}
-
-template <std::size_t R, typename Node>
-std::pair<trie_iterator<R, Node>, bool>
-step_down_backward(trie_iterator<R, Node> it) {
-    for (std::size_t pos_ = R; pos_ > 0; --pos_) {
-        std::size_t pos = pos_ - 1;
-
-        if (it.node->children[pos] != nullptr) {
-            it.node = it.node->children[pos];
-            return {it, true};
-        }
-    }
-    return {it, false};
-}
-
-template <std::size_t R, typename Node>
-std::pair<trie_iterator<R, Node>, bool>
-step_right(trie_iterator<R, Node> it) {
-    if (it.node->parent_index == R) return {it, false};
-
-    for (std::size_t pos = it.node->parent_index + 1; pos < R; ++pos) {
-        Node parent = it.node->parent;
-        if (parent->children[pos] != nullptr) {
-            it.node = parent->children[pos];
-            return {it, true};
-        }
-    }
-    return {it, false};
-}
-
-template <std::size_t R, typename Node>
-std::pair<trie_iterator<R, Node>, bool>
-step_left(trie_iterator<R, Node> it) {
-    if (it.node->parent_index == 0) return {it, false};
-
-    for (std::size_t pos_ = it.node->parent_index; pos_ > 0; --pos_) {
-        std::size_t pos = pos_ - 1;
-
-        Node parent = it.node->parent;
-        if (parent->children[pos] != nullptr) {
-            it.node = parent->children[pos];
-
-            bool stepped;
-            do std::tie(it, stepped) = step_down_backward(it); while (stepped);
-
-            return {it, true};
-        }
-    }
-    return {it, false};
-}
-
-template <std::size_t R, typename Node>
-std::pair<trie_iterator<R, Node>, bool>
-step_up_forward(trie_iterator<R, Node> it) {
-    it.node = it.node->parent;
-    return step_right(it);
-}
-
-template <std::size_t R, typename Node>
-std::pair<trie_iterator<R, Node>, bool>
-step_up_backward(trie_iterator<R, Node> it) {
-    it.node = it.node->parent;
-    if (it.node->value != nullptr) return {it, true};
-    else                           return step_left(it);
-}
-
-template <std::size_t R, typename Node>
-trie_iterator<R, Node> skip(trie_iterator<R, Node> it) {
-    bool stepped;
-
-    std::tie(it, stepped) = step_right(it);
-    if (stepped) return it;
-
-    while (it.node->parent_index != R) {
-        std::tie(it, stepped) = step_up_forward(it);
-        if (stepped) return it;
-    }
-    return it;
-}
-
-template <std::size_t R, typename Node>
-trie_iterator<R, Node> next(trie_iterator<R, Node> it) {
-    bool stepped;
-
-    std::tie(it, stepped) = step_down_forward(it);
-    if (stepped) return it;
-    return skip(it);
-}
-
-template <std::size_t R, typename Node>
-trie_iterator<R, Node> prev(trie_iterator<R, Node> it) {
-    bool stepped;
-
-    std::tie(it, stepped) = step_down_backward(it);
-    if (stepped) return it;
-
-    std::tie(it, stepped) = step_left(it);
-    if (stepped) return it;
-
-    while (it.node->parent_index != R) {
-        std::tie(it, stepped) = step_up_backward(it);
-        if (stepped) return it;
-    }
-    return it;
-}
-
-template <std::size_t R, typename Node>
-auto remove_const(trie_iterator<R, Node> it) {
-    using non_const_node = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<Node>>>;
-    return trie_iterator<R, non_const_node>(const_cast<non_const_node>(it.node));
+template <typename Traits>
+auto remove_const(trie_iterator<Traits> it) {
+    using non_const_node_type = typename trie_iterator<Traits>::non_const_node_type; 
+    using non_const_traits_type = typename trie_iterator<Traits>::non_const_traits_type; 
+    return trie_iterator<non_const_traits_type>(const_cast<non_const_node_type>(it.node));
 }
 
 } // namespace rmr::detail

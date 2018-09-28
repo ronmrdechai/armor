@@ -36,12 +36,124 @@ void write_dot_impl(trie_node<T, R>* node, OStream& os) {
     }
 }
 
+template <std::size_t R, typename Node>
+struct trie_iterator_traits {
+    using node_type = Node;
+    static constexpr std::size_t radix = R;
+    template <typename _Node> using rebind = trie_iterator_traits<R, _Node>;
+
+    static std::pair<node_type, bool> step_down_forward(node_type n) {
+        for (std::size_t pos = 0; pos < R; ++pos) {
+            if (n->children[pos] != nullptr) {
+                n = n->children[pos];
+                return {n, true};
+            }
+        }
+        return {n, false};
+    }
+
+    static std::pair<node_type, bool> step_down_backward(node_type n) {
+        for (std::size_t pos_ = R; pos_ > 0; --pos_) {
+            std::size_t pos = pos_ - 1;
+
+            if (n->children[pos] != nullptr) {
+                n = n->children[pos];
+                return {n, true};
+            }
+        }
+        return {n, false};
+    }
+
+    static std::pair<node_type, bool> step_right(node_type n) {
+        if (n->parent_index == R) return {n, false};
+
+        for (std::size_t pos = n->parent_index + 1; pos < R; ++pos) {
+            Node parent = n->parent;
+            if (parent->children[pos] != nullptr) {
+                n = parent->children[pos];
+                return {n, true};
+            }
+        }
+        return {n, false};
+    }
+
+    static std::pair<node_type, bool> step_left(node_type n) {
+        if (n->parent_index == 0) return {n, false};
+
+        for (std::size_t pos_ = n->parent_index; pos_ > 0; --pos_) {
+            std::size_t pos = pos_ - 1;
+
+            node_type parent = n->parent;
+            if (parent->children[pos] != nullptr) {
+                n = parent->children[pos];
+
+                bool stepped;
+                do std::tie(n, stepped) = step_down_backward(n); while (stepped);
+
+                return {n, true};
+            }
+        }
+        return {n, false};
+    }
+
+    static std::pair<node_type, bool> step_up_forward(node_type n) {
+        n = n->parent;
+        return step_right(n);
+    }
+
+    static std::pair<node_type, bool> step_up_backward(node_type n) {
+        n = n->parent;
+        if (n->value != nullptr) return {n, true};
+        else                     return step_left(n);
+    }
+
+    static node_type skip(node_type n) {
+        bool stepped;
+
+        std::tie(n, stepped) = step_right(n);
+        if (stepped) return n;
+
+        while (n->parent_index != R) {
+            std::tie(n, stepped) = step_up_forward(n);
+            if (stepped) return n;
+        }
+        return n;
+    }
+
+    static node_type next(node_type n) {
+        bool stepped;
+
+        std::tie(n, stepped) = step_down_forward(n);
+        if (stepped) return n;
+        return skip(n);
+    }
+
+    static node_type prev(node_type n) {
+        bool stepped;
+
+        std::tie(n, stepped) = step_down_backward(n);
+        if (stepped) return n;
+
+        std::tie(n, stepped) = step_left(n);
+        if (stepped) return n;
+
+        while (n->parent_index != R) {
+            std::tie(n, stepped) = step_up_backward(n);
+            if (stepped) return n;
+        }
+        return n;
+    }
+};
+
 template <typename T, std::size_t R, typename KeyMapper, typename Key, typename Allocator>
 class trie {
     using alloc_traits        = std::allocator_traits<Allocator>;
     using node_type           = trie_node<T, R>;
     using node_allocator_type = typename alloc_traits::template rebind_alloc<node_type>;
     using node_alloc_traits   = typename alloc_traits::template rebind_traits<node_type>;
+
+    using iterator_traits       = trie_iterator_traits<R, node_type*>;
+    using const_iterator_traits = trie_iterator_traits<R, const node_type*>;
 public:
     using key_type               = Key;
     using char_type              = typename key_type::value_type;
@@ -54,8 +166,8 @@ public:
     using const_reference        = const value_type&;
     using pointer                = typename alloc_traits::pointer;
     using const_pointer          = typename alloc_traits::const_pointer;
-    using iterator               = trie_iterator<R, node_type*>;
-    using const_iterator         = trie_iterator<R, const node_type*>;
+    using iterator               = trie_iterator<iterator_traits>;
+    using const_iterator         = trie_iterator<const_iterator_traits>;
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -182,7 +294,7 @@ public:
     prefixed_with(const key_type& key) const {
         const_iterator first = find_key_unsafe(&impl_.root, key.begin(), key.end());
         if (first == end()) return { end(), end() };
-        auto last = skip(first);
+        const_iterator last(const_iterator_traits::skip(first.node));
 
         if (                first.node->value == nullptr) ++first;
         if (last != end() && last.node->value == nullptr) ++last;
