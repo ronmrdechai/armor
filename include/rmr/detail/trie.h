@@ -15,6 +15,27 @@ namespace rmr::detail {
 template <typename T, std::size_t R>
 struct trie_node : trie_node_base<trie_node<T, R>, T, R> {};
 
+template <typename T, std::size_t R, typename OStream>
+void write_dot_nodes(trie_node<T, R>* node, OStream& os) {
+    os << "  node [shape = " << (node->value == nullptr ? "circle" : "doublecircle") << "];";
+    os << "  \"" << node << "\" [label = \"\"];\n";
+
+    for (auto child : node->children) if (child != nullptr) write_dot_nodes(child, os);
+}
+
+template <typename T, std::size_t R, typename OStream>
+void write_dot_impl(trie_node<T, R>* node, OStream& os) {
+    write_dot_nodes(node, os);
+
+    for (std::size_t i = 0; i < R; ++i) {
+        auto child = node->children[i];
+        if (child != nullptr) {
+            os << "  \"" << node << "\" -> \"" << child << "\" [label = " << char(i) << "];\n";
+            write_dot_impl(child, os);
+        }
+    }
+}
+
 template <typename T, std::size_t R, typename KeyMapper, typename Key, typename Allocator>
 class trie {
     using alloc_traits        = std::allocator_traits<Allocator>;
