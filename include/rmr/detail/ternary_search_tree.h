@@ -48,14 +48,14 @@ void write_dot_impl(ternary_search_tree_node<T, Char>* node, OStream& os) {
 }
 
 template <typename Node>
-struct ternary_search_tree_iterator_traits {
-    using node_type = Node;
-    static constexpr std::size_t radix = 3;
-    template <typename _Node> using rebind = ternary_search_tree_iterator_traits<_Node>;
+struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> {
+    template <typename _Node>
+    using rebind    = ternary_search_tree_iterator_traits<_Node>;
+    using base_type = trie_iterator_traits_base<3, Node>;
 
-    static node_type skip(node_type) { return nullptr; }
-    static node_type next(node_type) { return nullptr; }
-    static node_type prev(node_type) { return nullptr; }
+    static Node skip(Node) { return nullptr; }
+    static Node next(Node) { return nullptr; }
+    static Node prev(Node) { return nullptr; }
 };
 
 template <typename T, typename Compare, typename Key, typename Allocator>

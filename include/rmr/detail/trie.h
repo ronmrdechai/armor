@@ -37,108 +37,43 @@ void write_dot_impl(trie_node<T, R>* node, OStream& os) {
 }
 
 template <std::size_t R, typename Node>
-struct trie_iterator_traits {
-    using node_type = Node;
-    static constexpr std::size_t radix = R;
-    template <typename _Node> using rebind = trie_iterator_traits<R, _Node>;
+struct trie_iterator_traits : trie_iterator_traits_base<R, Node> {
+    template <typename _Node>
+    using rebind    = trie_iterator_traits<R, _Node>;
+    using base_type = trie_iterator_traits_base<R, Node>;
 
-    static std::pair<node_type, bool> step_down_forward(node_type n) {
-        for (std::size_t pos = 0; pos < R; ++pos) {
-            if (n->children[pos] != nullptr) {
-                n = n->children[pos];
-                return {n, true};
-            }
-        }
-        return {n, false};
-    }
-
-    static std::pair<node_type, bool> step_down_backward(node_type n) {
-        for (std::size_t pos_ = R; pos_ > 0; --pos_) {
-            std::size_t pos = pos_ - 1;
-
-            if (n->children[pos] != nullptr) {
-                n = n->children[pos];
-                return {n, true};
-            }
-        }
-        return {n, false};
-    }
-
-    static std::pair<node_type, bool> step_right(node_type n) {
-        if (n->parent_index == R) return {n, false};
-
-        for (std::size_t pos = n->parent_index + 1; pos < R; ++pos) {
-            Node parent = n->parent;
-            if (parent->children[pos] != nullptr) {
-                n = parent->children[pos];
-                return {n, true};
-            }
-        }
-        return {n, false};
-    }
-
-    static std::pair<node_type, bool> step_left(node_type n) {
-        if (n->parent_index == 0) return {n, false};
-
-        for (std::size_t pos_ = n->parent_index; pos_ > 0; --pos_) {
-            std::size_t pos = pos_ - 1;
-
-            node_type parent = n->parent;
-            if (parent->children[pos] != nullptr) {
-                n = parent->children[pos];
-
-                bool stepped;
-                do std::tie(n, stepped) = step_down_backward(n); while (stepped);
-
-                return {n, true};
-            }
-        }
-        return {n, false};
-    }
-
-    static std::pair<node_type, bool> step_up_forward(node_type n) {
-        n = n->parent;
-        return step_right(n);
-    }
-
-    static std::pair<node_type, bool> step_up_backward(node_type n) {
-        n = n->parent;
-        if (n->value != nullptr) return {n, true};
-        else                     return step_left(n);
-    }
-
-    static node_type skip(node_type n) {
+    static Node skip(Node n) {
         bool stepped;
 
-        std::tie(n, stepped) = step_right(n);
+        std::tie(n, stepped) = base_type::step_right(n);
         if (stepped) return n;
 
         while (n->parent_index != R) {
-            std::tie(n, stepped) = step_up_forward(n);
+            std::tie(n, stepped) = base_type::step_up_forward(n);
             if (stepped) return n;
         }
         return n;
     }
 
-    static node_type next(node_type n) {
+    static Node next(Node n) {
         bool stepped;
 
-        std::tie(n, stepped) = step_down_forward(n);
+        std::tie(n, stepped) = base_type::step_down_forward(n);
         if (stepped) return n;
         return skip(n);
     }
 
-    static node_type prev(node_type n) {
+    static Node prev(Node n) {
         bool stepped;
 
-        std::tie(n, stepped) = step_down_backward(n);
+        std::tie(n, stepped) = base_type::step_down_backward(n);
         if (stepped) return n;
 
-        std::tie(n, stepped) = step_left(n);
+        std::tie(n, stepped) = base_type::step_left(n);
         if (stepped) return n;
 
         while (n->parent_index != R) {
-            std::tie(n, stepped) = step_up_backward(n);
+            std::tie(n, stepped) = base_type::step_up_backward(n);
             if (stepped) return n;
         }
         return n;
