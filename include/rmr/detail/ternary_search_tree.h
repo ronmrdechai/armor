@@ -53,8 +53,26 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
     using rebind    = ternary_search_tree_iterator_traits<_Node>;
     using base_type = trie_iterator_traits_base<3, Node>;
 
+    static std::pair<Node, bool> step_left(Node n) {
+        if (n->children[0] != nullptr) return {n->children[0], true};
+        return {n, false};
+    }
+
     static Node skip(Node) { return nullptr; }
-    static Node next(Node) { return nullptr; }
+
+    static Node next(Node n) {
+        bool stepped;
+        std::tie(n, stepped) = step_left(n);
+
+        if (stepped) {
+            do {
+                std::tie(n, stepped) = step_left(n);
+            } while(stepped);
+            return n;
+        }
+
+        return nullptr;
+    }
     static Node prev(Node) { return nullptr; }
 };
 
