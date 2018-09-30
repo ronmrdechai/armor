@@ -63,10 +63,19 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
 
     using trie_iterator_traits_base<3, Node>::radix;
 
-    static std::pair<Node, bool> step_middle(Node n) {
+    static std::pair<Node, bool> step_middle_forward(Node n) {
         if (n->middle() != nullptr) {
             n = n->middle();
             while (n->left() != nullptr) n = n->left();
+            return {n, true};
+        }
+        return {n, false};
+    }
+
+    static std::pair<Node, bool> step_middle_backward(Node n) {
+        if (n->middle() != nullptr) {
+            n = n->middle();
+            while (n->right() != nullptr) n = n->right();
             return {n, true};
         }
         return {n, false};
@@ -76,6 +85,15 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
         if (n->right() != nullptr) {
             n = n->right();
             while (n->left() != nullptr) n = n->left();
+            return {n, true};
+        }
+        return {n, false};
+    }
+
+    static std::pair<Node, bool> step_left(Node n) {
+        if (n->left() != nullptr) {
+            n = n->left();
+            while (n->right() != nullptr) n = n->right();
             return {n, true};
         }
         return {n, false};
@@ -94,7 +112,7 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
     static Node next(Node n) {
         bool stepped;
 
-        std::tie(n, stepped) = step_middle(n);
+        std::tie(n, stepped) = step_middle_forward(n);
         if (stepped) return n;
         std::tie(n, stepped) = step_right(n);
         if (stepped) return n;
@@ -102,7 +120,22 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
         return skip(n);
     }
 
-    static Node prev(Node) { return nullptr; }
+    static Node prev(Node n) { // TODO fix
+        bool stepped;
+
+        std::tie(n, stepped) = step_left(n);
+        if (stepped) return n;
+        std::tie(n, stepped) = step_middle_backward(n);
+        if (stepped) return n;
+
+        Node parent = n->parent;
+        while (n != parent->right() && n->parent_index != radix) {
+            n = parent;
+            parent = n->parent;
+        }
+        if (n->middle() != parent || n->left() != parent) n = parent;
+        return n;
+    }
 };
 
 template <typename T, typename Compare, typename Key, typename Allocator>
@@ -166,6 +199,11 @@ public:
     }
 
     pointer extract(const_iterator pos) { return extract_value(remove_const(pos).node); }
+
+    iterator longest_match(const key_type& key)
+    { return remove_const(const_cast<const ternary_search_tree&>(*this).longest_match(key)); }
+    const_iterator longest_match(const key_type& key) const
+    { return longest_match(&impl_.root, key); }
 
     std::pair<const_iterator, const_iterator>
     prefixed_with(const key_type& key) const {
@@ -317,6 +355,26 @@ private:
         erase_node(node);
         impl_.size--;
         return v;
+    }
+
+    const node_type* longest_match(const node_type* root, const key_type& key) const {
+        auto pos = longest_match_candidate(root, root->parent, key, 0);
+        while (pos->value == nullptr && pos->parent_index != R) pos = pos->parent;
+        return pos;
+    }
+    const node_type* longest_match_candidate(
+        const node_type* node, const node_type* prev, const key_type& key, size_type i
+    ) const {
+        if (node == nullptr) return prev;
+
+        char_type c = key[i];
+        key_compare cmp = key_comp();
+        prev = node;
+
+        if      (cmp(c, node->c)   ) return longest_match_candidate(node->left(),   prev, key, i    );
+        else if (cmp(node->c, c)   ) return longest_match_candidate(node->right(),  prev, key, i    );
+        else if (i < key.size() - 1) return longest_match_candidate(node->middle(), prev, key, i + 1);
+        else                         return node;
     }
 
     struct ternary_search_tree_header {
