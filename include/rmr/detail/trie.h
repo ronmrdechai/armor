@@ -103,7 +103,7 @@ struct trie_iterator_traits : trie_iterator_traits_base<R, Node> {
     static std::pair<Node, bool> step_up_backward(Node n) {
         n = n->parent;
         if (n->value != nullptr) return {n, true};
-        else                     return step_left(n);
+        return step_left(n);
     }
 
     static Node skip(Node n) {

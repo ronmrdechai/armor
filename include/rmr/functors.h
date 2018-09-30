@@ -14,6 +14,11 @@ struct identity { T operator()(T v) const { return v; } };
 template <typename T, T S>
 struct count_from { T operator()(T v) const { return v - S; } };
 
+template <typename T>
+struct empty_string { bool operator()(const T&) const { return true; } };
+template <>
+struct empty_string<std::string> { bool operator()(const std::string& s) const { return s.size() == 0; } };
+
 namespace detail {
 
 template <typename T, T N, T V, T... Vs>

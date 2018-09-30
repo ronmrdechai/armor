@@ -57,10 +57,10 @@ void clear_node(Node* n, NodeAllocator& na, ValueAllocator& va) {
 }
 
 template <typename TrieIterator, typename OStream>
-void write_dot(TrieIterator it, OStream& os) {
+void write_dot(TrieIterator it, OStream&& os) {
     os << "digraph trie {\n";
     write_dot_impl(it.node, os);
-    os << "}\n";
+    os << "}\n" << std::flush;
 }
 
 template <typename Traits>
@@ -89,9 +89,8 @@ struct trie_iterator {
     trie_iterator& operator=(const trie_iterator&) = default;
 
     trie_iterator& operator++() {
-        do {
-            node = Traits::next(node);
-        } while(node->value == nullptr && node->parent_index != Traits::radix);
+        do node = Traits::next(node);
+        while(node->value == nullptr && node->parent_index != Traits::radix);
         return *this;
     }
 
@@ -102,9 +101,8 @@ struct trie_iterator {
     }
 
     trie_iterator& operator--() {
-        do {
-            node = Traits::prev(node);
-        } while(node->value == nullptr && node->parent_index != Traits::radix);
+        do node = Traits::prev(node);
+        while(node->value == nullptr && node->parent_index != Traits::radix);
         return *this;
     }
 

@@ -10,69 +10,98 @@
 #include <rmr/detail/util.h>
 #include <rmr/detail/trie_node_base.h>
 
-#include <rmr/detail/trie.h>
+#include <rmr/functors.h>
 
 namespace rmr::detail {
 
 template <typename T, typename Char>
-struct ternary_search_tree_node : trie_node_base<ternary_search_tree_node<T, Char>, T, 3> { Char c = 0; };
+struct ternary_search_tree_node : trie_node_base<ternary_search_tree_node<T, Char>, T, 3> {
+    Char c = 0;
+
+    auto& left()         { return this->children[0]; }
+    auto  left()   const { return this->children[0]; }
+    auto& middle()       { return this->children[1]; }
+    auto  middle() const { return this->children[1]; }
+    auto& right()        { return this->children[2]; }
+    auto  right()  const { return this->children[2]; }
+};
 
 template <typename T, typename Char, typename OStream>
 void write_dot_nodes(ternary_search_tree_node<T, Char>* node, OStream& os) {
     os << "  node [shape = " << (node->value == nullptr ? "circle" : "doublecircle") << "];";
     os << "  \"" << node << "\" [label = " << node->c << "];\n";
 
-    if (node->children[0] != nullptr) write_dot_nodes(node->children[0], os);
-    if (node->children[1] != nullptr) write_dot_nodes(node->children[1], os);
-    if (node->children[2] != nullptr) write_dot_nodes(node->children[2], os);
+    if (node->left()   != nullptr) write_dot_nodes(node->left(),   os);
+    if (node->middle() != nullptr) write_dot_nodes(node->middle(), os);
+    if (node->right()  != nullptr) write_dot_nodes(node->right(),  os);
 }
 
 template <typename T, typename Char, typename OStream>
 void write_dot_impl(ternary_search_tree_node<T, Char>* node, OStream& os) {
     write_dot_nodes(node, os);
 
-    if (node->children[0] != nullptr) {
-        os << "  \"" << node << "\" -> \"" << node->children[0] << "\" [label = l];\n";
-        write_dot_impl(node->children[0], os);
+    if (node->left() != nullptr) {
+        os << "  \"" << node << "\" -> \"" << node->left() << "\" [label = l];\n";
+        write_dot_impl(node->left(), os);
     }
 
-    if (node->children[1] != nullptr) {
-        os << "  \"" << node << "\" -> \"" << node->children[1] << "\" [label = m, style = dashed];\n";
-        write_dot_impl(node->children[1], os);
+    if (node->middle() != nullptr) {
+        os << "  \"" << node << "\" -> \"" << node->middle() << "\" [label = m, style = dashed];\n";
+        write_dot_impl(node->middle(), os);
     }
 
-    if (node->children[2] != nullptr) {
-        os << "  \"" << node << "\" -> \"" << node->children[2] << "\" [label = r];\n";
-        write_dot_impl(node->children[2], os);
+    if (node->right() != nullptr) {
+        os << "  \"" << node << "\" -> \"" << node->right() << "\" [label = r];\n";
+        write_dot_impl(node->right(), os);
     }
 }
 
 template <typename Node>
 struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> {
     template <typename _Node>
-    using rebind    = ternary_search_tree_iterator_traits<_Node>;
-    using base_type = trie_iterator_traits_base<3, Node>;
+    using rebind = ternary_search_tree_iterator_traits<_Node>;
 
-    static std::pair<Node, bool> step_left(Node n) {
-        if (n->children[0] != nullptr) return {n->children[0], true};
+    using trie_iterator_traits_base<3, Node>::radix;
+
+    static std::pair<Node, bool> step_middle(Node n) {
+        if (n->middle() != nullptr) {
+            n = n->middle();
+            while (n->left() != nullptr) n = n->left();
+            return {n, true};
+        }
         return {n, false};
     }
 
-    static Node skip(Node) { return nullptr; }
+    static std::pair<Node, bool> step_right(Node n) {
+        if (n->right() != nullptr) {
+            n = n->right();
+            while (n->left() != nullptr) n = n->left();
+            return {n, true};
+        }
+        return {n, false};
+    }
+
+    static Node skip(Node n) {
+        Node parent = n->parent;
+        while (n != parent->left() && n->parent_index != radix) {
+            n = parent;
+            parent = n->parent;
+        }
+        if (n->middle() != parent || n->right() != parent) n = parent;
+        return n;
+    }
 
     static Node next(Node n) {
         bool stepped;
-        std::tie(n, stepped) = step_left(n);
 
-        if (stepped) {
-            do {
-                std::tie(n, stepped) = step_left(n);
-            } while(stepped);
-            return n;
-        }
+        std::tie(n, stepped) = step_middle(n);
+        if (stepped) return n;
+        std::tie(n, stepped) = step_right(n);
+        if (stepped) return n;
 
-        return nullptr;
+        return skip(n);
     }
+
     static Node prev(Node) { return nullptr; }
 };
 
@@ -155,7 +184,12 @@ public:
 
     iterator begin() noexcept { return remove_const(cbegin()); }
     const_iterator begin() const noexcept { return cbegin(); }
-    const_iterator cbegin() const noexcept { return ++const_iterator(&impl_.base); }
+    const_iterator cbegin() const noexcept {
+        const node_type* n = &impl_.root;
+        while (n->left() != nullptr) n = n->left();
+        if (n->value == nullptr) return ++const_iterator(n);
+        return n;
+    }
 
     iterator end() noexcept { return remove_const(cend()); }
     const_iterator end() const noexcept { return cend(); }
@@ -213,11 +247,11 @@ private:
         if (root == nullptr) root = make_node(parent, parent_index, c);
 
         if (cmp(c, root->c))
-            root->children[0] = insert_node(root->children[0], root, 0, key, i, v, ret);
+            root->left()   = insert_node(root->left(),   root, 0, key, i,     v, ret);
         else if (cmp(root->c, c))
-            root->children[2] = insert_node(root->children[2], root, 2, key, i, v, ret);
+            root->right()  = insert_node(root->right(),  root, 2, key, i,     v, ret);
         else if (i < key.size() - 1)
-            root->children[1] = insert_node(root->children[1], root, 1, key, i + 1, v, ret);
+            root->middle() = insert_node(root->middle(), root, 1, key, i + 1, v, ret);
         else {
             if (root->value == nullptr) { root->value = v; ++impl_.size; }
             else destroy_and_deallocate(get_allocator(), v);
@@ -255,9 +289,9 @@ private:
         char_type c = key[i];
         key_compare cmp = key_comp();
 
-        if      (cmp(c, root->c)   ) return find_key_unsafe(root->children[0], key, i    );
-        else if (cmp(root->c, c)   ) return find_key_unsafe(root->children[2], key, i    );
-        else if (i < key.size() - 1) return find_key_unsafe(root->children[1], key, i + 1);
+        if      (cmp(c, root->c)   ) return find_key_unsafe(root->left(),   key, i    );
+        else if (cmp(root->c, c)   ) return find_key_unsafe(root->right(),  key, i    );
+        else if (i < key.size() - 1) return find_key_unsafe(root->middle(), key, i + 1);
         else                         return root;
     }
 
@@ -285,13 +319,13 @@ private:
         return v;
     }
 
-    struct tst_header {
+    struct ternary_search_tree_header {
         node_type base;
         node_type root;
         size_type size;
 
-        tst_header() { reset(); }
-        tst_header& operator=(tst_header&& other) {
+        ternary_search_tree_header() { reset(); }
+        ternary_search_tree_header& operator=(ternary_search_tree_header&& other) {
             for (size_type i = 0; i < R; ++i) {
                 root.children[i] = other.root.children[i];
                 if (root.children[i] != nullptr) root.children[i]->parent = &root;
@@ -303,7 +337,7 @@ private:
 
         void reset() {
             std::fill(std::begin(base.children), std::end(base.children), nullptr);
-            base.children[0] = &root;
+            base.left() = &root;
             base.parent_index = R;
             base.value = nullptr;
 
@@ -316,18 +350,18 @@ private:
         }
     };
 
-    struct tst_impl : tst_header, key_compare, node_allocator_type {
-        tst_impl() = default;
-        tst_impl(node_allocator_type alloc) :
-            tst_header(), key_compare(), node_allocator_type(std::move(alloc))
+    struct ternary_search_tree_impl : ternary_search_tree_header, key_compare, node_allocator_type {
+        ternary_search_tree_impl() = default;
+        ternary_search_tree_impl(node_allocator_type alloc) :
+            ternary_search_tree_header(), key_compare(), node_allocator_type(std::move(alloc))
         {}
-        tst_impl(key_compare kc, node_allocator_type alloc) :
-            tst_header(), key_compare(std::move(kc)), node_allocator_type(std::move(alloc))
+        ternary_search_tree_impl(key_compare kc, node_allocator_type alloc) :
+            ternary_search_tree_header(), key_compare(std::move(kc)), node_allocator_type(std::move(alloc))
         {}
-        tst_impl& operator=(tst_impl&&) = default;
+        ternary_search_tree_impl& operator=(ternary_search_tree_impl&&) = default;
     };
 
-    tst_impl impl_;
+    ternary_search_tree_impl impl_;
 };
 
 } // namespace rmr::detail
