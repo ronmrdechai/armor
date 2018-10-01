@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <fstream>
+
 #include <rmr/meta.h>
 #include <rmr/trie_map.h>
 #include <rmr/trie_set.h>
@@ -110,6 +112,12 @@ struct assoc_test {
     template <typename... Keys>
     static T make_container(Keys&&... keys) { return test::make_container<T>(std::forward<Keys>(keys)...); }
     static void assert_empty(const T& t) { test::assert_empty<T>(t); }
+
+    static void write_dot(const T& container) {
+        std::string path = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+        path += ".dot";
+        rmr::detail::write_dot(container.__croot(), std::ofstream(path));
+    }
 };
 
 } // namespace test

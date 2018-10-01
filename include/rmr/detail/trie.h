@@ -16,7 +16,7 @@ template <typename T, std::size_t R>
 struct trie_node : trie_node_base<trie_node<T, R>, T, R> {};
 
 template <typename T, std::size_t R, typename OStream>
-void write_dot_nodes(trie_node<T, R>* node, OStream& os) {
+void write_dot_nodes(const trie_node<T, R>* node, OStream& os) {
     os << "  node [shape = " << (node->value == nullptr ? "circle" : "doublecircle") << "];";
     os << "  \"" << node << "\" [label = \"\"];\n";
 
@@ -24,7 +24,7 @@ void write_dot_nodes(trie_node<T, R>* node, OStream& os) {
 }
 
 template <typename T, std::size_t R, typename OStream>
-void write_dot_impl(trie_node<T, R>* node, OStream& os) {
+void write_dot_impl(const trie_node<T, R>* node, OStream& os) {
     write_dot_nodes(node, os);
 
     for (std::size_t i = 0; i < R; ++i) {

@@ -27,7 +27,7 @@ struct ternary_search_tree_node : trie_node_base<ternary_search_tree_node<T, Cha
 };
 
 template <typename T, typename Char, typename OStream>
-void write_dot_nodes(ternary_search_tree_node<T, Char>* node, OStream& os) {
+void write_dot_nodes(const ternary_search_tree_node<T, Char>* node, OStream& os) {
     os << "  node [shape = " << (node->value == nullptr ? "circle" : "doublecircle") << "];";
     os << "  \"" << node << "\" [label = " << node->c << "];\n";
 
@@ -37,7 +37,7 @@ void write_dot_nodes(ternary_search_tree_node<T, Char>* node, OStream& os) {
 }
 
 template <typename T, typename Char, typename OStream>
-void write_dot_impl(ternary_search_tree_node<T, Char>* node, OStream& os) {
+void write_dot_impl(const ternary_search_tree_node<T, Char>* node, OStream& os) {
     write_dot_nodes(node, os);
 
     if (node->left() != nullptr) {
