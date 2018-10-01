@@ -35,9 +35,6 @@ TYPED_TEST(assoc_common, roman_trie_size_is_7) {
 
 TYPED_TEST(assoc_common, roman_trie_distance_is_7) {
     TypeParam t = TestFixture::roman_trie;
-    TestFixture::write_dot(t);
-    for (auto& e : t)
-        std::cout << TestFixture::value_to_key(e) << std::endl;
     EXPECT_EQ(7u, std::distance(t.begin(), t.end()));
 }
 
@@ -906,6 +903,7 @@ TYPED_TEST(assoc_common, typedefs) {
     EXPECT_TRUE(TestFixture::has_const_reverse_iterator);
     EXPECT_TRUE(TestFixture::has_node_type);
     EXPECT_TRUE(TestFixture::has_insert_return_type);
+    EXPECT_TRUE(TestFixture::has_key_compare || TestFixture::has_key_mapper);
 }
 
 TYPED_TEST(assoc_common, DISABLED_does_not_leak) {

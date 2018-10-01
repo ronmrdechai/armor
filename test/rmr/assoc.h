@@ -38,6 +38,8 @@ DEFINE_HAS(const_reverse_iterator);
 DEFINE_HAS(node_type);
 DEFINE_HAS(insert_return_type);
 DEFINE_HAS(mapped_type);
+DEFINE_HAS(key_compare);
+DEFINE_HAS(key_mapper);
 
 template <typename T> typename T::value_type key_to_value(typename T::key_type) = delete;
 
@@ -98,6 +100,8 @@ struct assoc_test {
     bool has_node_type              = rmr::is_detected_v<test::has_node_type, T>;
     bool has_insert_return_type     = rmr::is_detected_v<test::has_insert_return_type, T>;
     bool has_mapped_type            = rmr::is_detected_v<test::has_mapped_type, T>;
+    bool has_key_compare            = rmr::is_detected_v<test::has_key_compare, T>;
+    bool has_key_mapper             = rmr::is_detected_v<test::has_key_mapper, T>;
 
     T less_trie    = test::less_trie<T>;
     T greater_trie = test::greater_trie<T>;
