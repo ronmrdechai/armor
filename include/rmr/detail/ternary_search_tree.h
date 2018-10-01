@@ -171,7 +171,94 @@ public:
     explicit ternary_search_tree(key_compare kc, allocator_type alloc) :
         impl_(std::move(kc), node_allocator_type(std::move(alloc)))
     {}
+
+    ternary_search_tree(const ternary_search_tree& other) : ternary_search_tree(
+        other.key_comp(),
+        alloc_traits::select_on_container_copy_construction(other.get_allocator())
+    ) {
+        copy_nodes(&other.impl_.root, &impl_.root, nullptr);
+        impl_.size = other.impl_.size;
+    }
+    ternary_search_tree(const ternary_search_tree& other, allocator_type alloc) :
+        ternary_search_tree(other.key_comp(), std::move(alloc))
+    {
+        copy_nodes(&other.impl_.root, &impl_.root, nullptr);
+        impl_.size = other.impl_.size;
+    }
+
+    ternary_search_tree(ternary_search_tree&& other) :
+        ternary_search_tree(std::move(other.key_comp()), std::move(other.get_allocator()))
+    {
+        static_cast<ternary_search_tree_header&>(impl_) =
+            std::move(static_cast<ternary_search_tree_header&>(other.impl_));
+    }
+    ternary_search_tree(ternary_search_tree&& other, allocator_type alloc) :
+        ternary_search_tree(std::move(other.key_comp()), std::move(alloc))
+    {
+        if (alloc != other.get_allocator()) {
+            auto other_alloc = other.get_allocator();
+            move_nodes(other_alloc, &other.impl_.root, &impl_.root, nullptr);
+            other.clear();
+        } else {
+            static_cast<ternary_search_tree_header&>(impl_) =
+                std::move(static_cast<ternary_search_tree_header&>(other.impl_));
+        }
+    }
     ~ternary_search_tree() { clear(); }
+
+    ternary_search_tree& operator=(const ternary_search_tree& other) {
+        clear();
+        impl_.size = other.impl_.size;
+        static_cast<key_compare&>(impl_) = other.key_comp();
+        if (alloc_traits::propagate_on_container_copy_assignment::value) {
+            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();
+        }
+        copy_nodes(&other.impl_.root, &impl_.root, nullptr);
+        return *this;
+    }
+
+    ternary_search_tree& operator=(ternary_search_tree&& other) noexcept(
+        alloc_traits::is_always_equal::value && std::is_nothrow_move_assignable<key_compare>::value
+    ) {
+        clear();
+        static_cast<key_compare&>(impl_) = other.key_comp();
+        if (alloc_traits::propagate_on_container_move_assignment::value)
+            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();
+
+        auto other_alloc = other.get_allocator();
+        if (!alloc_traits::propagate_on_container_move_assignment::value &&
+                get_allocator() != other.get_allocator()) {
+            move_nodes(other_alloc, &other.impl_.root, &impl_.root, nullptr);
+            impl_.size = other.impl_.size;
+        } else {
+            static_cast<ternary_search_tree_header&>(impl_) =
+                std::move(static_cast<ternary_search_tree_header&>(other.impl_));
+        }
+
+        other.clear();
+        return *this;
+    }
+
+    void swap(ternary_search_tree& other) noexcept(
+        alloc_traits::is_always_equal::value && std::is_nothrow_swappable<key_compare>::value
+    ) {
+        if (alloc_traits::propagate_on_container_swap::value) {
+            node_allocator_type& this_alloc = impl_;
+            static_cast<node_allocator_type&>(impl_) = other.get_node_allocator();
+            other.get_node_allocator() = this_alloc;
+        }
+        key_compare this_key_comp = key_comp();
+        static_cast<key_compare&>(impl_) = other.key_comp();
+        static_cast<key_compare&>(other.impl_) = this_key_comp;
+        for (size_type i = 0; i < R; ++i) {
+            std::swap(impl_.root.children[i], other.impl_.root.children[i]);
+            if (impl_.root.children[i] != nullptr)
+                impl_.root.children[i]->parent = &impl_.root;
+            if (other.impl_.root.children[i] != nullptr)
+                other.impl_.root.children[i]->parent = &other.impl_.root;
+        }
+        std::swap(impl_.size, other.impl_.size);
+    }
 
     template <typename... Args>
     iterator emplace(const_iterator pos, const key_type& key, Args&&... args)
@@ -205,6 +292,10 @@ public:
     const_iterator longest_match(const key_type& key) const
     { return longest_match(&impl_.root, key); }
 
+    std::pair<iterator, iterator> prefixed_with(const key_type& key) {
+        auto p = const_cast<const ternary_search_tree&>(*this).prefixed_with(key);
+        return { remove_const(p.first), remove_const(p.second) };
+    }
     std::pair<const_iterator, const_iterator>
     prefixed_with(const key_type& key) const {
         const_iterator first = find_key_unsafe(&impl_.root, key, 0);
@@ -254,6 +345,32 @@ public:
     key_compare    key_comp()      const { return impl_; }
 
 private:
+    node_type* copy_nodes(const node_type* src, node_type* dst, node_type* parent) {
+        if (dst == nullptr) dst = make_node(parent, src->parent_index, src->c);
+
+        if (src->value != nullptr) dst->value = make_value(get_allocator(), *src->value);
+        for (size_type i = 0; i < R; ++i) {
+            if (src->children[i] != nullptr)
+                dst->children[i] = copy_nodes(src->children[i], dst->children[i], dst);
+        }
+        return dst;
+    }
+
+    node_type* move_nodes(allocator_type& alloc, node_type* src, node_type* dst, node_type* parent) {
+        if (dst == nullptr) dst = make_node(parent, src->parent_index, src->c);
+
+        if (src->value != nullptr) {
+            dst->value = make_value(get_allocator(), std::move(*src->value));
+            destroy_and_deallocate(alloc, src->value);
+            src->value = nullptr;
+        }
+        for (size_type i = 0; i < R; ++i) {
+            if (src->children[i] != nullptr)
+                dst->children[i] = move_nodes(alloc, src->children[i], dst->children[i], dst);
+        }
+        return dst;
+    }
+
     node_type* insert_node(const node_type* hint, const key_type& key, pointer v) {
         size_type rank = 0;
         const node_type* cur = hint;

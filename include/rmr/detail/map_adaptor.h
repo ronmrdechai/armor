@@ -21,7 +21,6 @@ public:
     using value_type             = typename base_type::value_type;
     using size_type              = typename base_type::size_type;
     using difference_type        = typename base_type::difference_type;
-    using key_mapper             = typename base_type::key_mapper;
     using allocator_type         = typename base_type::allocator_type;
     using reference              = typename base_type::reference;
     using const_reference        = typename base_type::const_reference;

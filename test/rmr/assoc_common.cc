@@ -891,7 +891,6 @@ TYPED_TEST(assoc_common, typedefs) {
     EXPECT_TRUE((std::is_same_v<value_type, typename TypeParam::value_type>));
     EXPECT_TRUE((std::is_same_v<std::size_t, typename TypeParam::size_type>));
     EXPECT_TRUE((std::is_same_v<std::ptrdiff_t, typename TypeParam::difference_type>));
-    EXPECT_TRUE((std::is_same_v<rmr::identity<std::size_t>, typename TypeParam::key_mapper>));
     EXPECT_TRUE((std::is_same_v<std::allocator<value_type>, typename TypeParam::allocator_type>));
     EXPECT_TRUE((std::is_same_v<value_type&, typename TypeParam::reference>));
     EXPECT_TRUE((std::is_same_v<const value_type&, typename TypeParam::const_reference>));

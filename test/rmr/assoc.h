@@ -10,33 +10,64 @@
 #include <rmr/meta.h>
 #include <rmr/trie_map.h>
 #include <rmr/trie_set.h>
+#include <rmr/tst_map.h>
+#include <rmr/tst_set.h>
 
 // using structs and not typedefs for CTest pretty types.
 struct trie_map : rmr::trie_map<int, 127> { using rmr::trie_map<int, 127>::trie_map; };
 struct trie_set : rmr::trie_set<127>      { using rmr::trie_set<127>::trie_set;      };
 
-using assoc_map_types    = testing::Types<trie_map>;
-using assoc_set_types    = testing::Types<trie_set>;
-using assoc_common_types = testing::Types<trie_map, trie_set>;
+struct tst_map : rmr::tst_map<int> { using rmr::tst_map<int>::tst_map; };
+struct tst_set : rmr::tst_set<>    { using rmr::tst_set<>::tst_set;      };
+
+using assoc_map_types    = testing::Types<trie_map, tst_map>;
+using assoc_set_types    = testing::Types<trie_set, tst_set>;
+using assoc_common_types = testing::Types<trie_map, trie_set, tst_map, tst_set>;
 
 namespace test {
 
+#define DEFINE_HAS(member)\
+    template <typename T> using has_##member = typename T::member
+
+DEFINE_HAS(iterator);
+DEFINE_HAS(const_iterator);
+DEFINE_HAS(reverse_iterator);
+DEFINE_HAS(const_reverse_iterator);
+DEFINE_HAS(node_type);
+DEFINE_HAS(insert_return_type);
+DEFINE_HAS(mapped_type);
+
 template <typename T> typename T::value_type key_to_value(typename T::key_type) = delete;
+
 template <> typename trie_map::value_type key_to_value<trie_map>(typename trie_map::key_type k)
 { return { k, typename trie_map::mapped_type{} }; }
 template <> typename trie_set::value_type key_to_value<trie_set>(typename trie_set::key_type k)
 { return k; }
+template <> typename tst_map::value_type key_to_value<tst_map>(typename tst_map::key_type k)
+{ return { k, typename tst_map::mapped_type{} }; }
+template <> typename tst_set::value_type key_to_value<tst_set>(typename tst_set::key_type k)
+{ return k; }
 
 template <typename T> typename T::key_type value_to_key(typename T::value_type) = delete;
+
 template <> typename trie_map::key_type value_to_key<trie_map>(typename trie_map::value_type v)
 { return v.first; }
 template <> typename trie_set::key_type value_to_key<trie_set>(typename trie_set::value_type v)
 { return v; }
+template <> typename tst_map::key_type value_to_key<tst_map>(typename tst_map::value_type v)
+{ return v.first; }
+template <> typename tst_set::key_type value_to_key<tst_set>(typename tst_set::value_type v)
+{ return v; }
 
 template <typename T> typename T::key_type nh_to_key(typename T::node_type&&) = delete;
+
 template <> typename trie_map::key_type nh_to_key<trie_map>(typename trie_map::node_type&& nh)
 { return nh.key(); }
 template <> typename trie_set::key_type nh_to_key<trie_set>(typename trie_set::node_type&& nh)
+{ return nh.value(); }
+template <> typename tst_map::key_type nh_to_key<tst_map>(typename tst_map::node_type&& nh)
+{ return nh.key(); }
+template <> typename tst_set::key_type nh_to_key<tst_set>(typename tst_set::node_type&& nh)
 { return nh.value(); }
 
 template <typename T, typename... Keys>
@@ -53,17 +84,6 @@ template <typename T> void assert_empty(const T& t) {
     EXPECT_EQ(0u, t.size());
     EXPECT_EQ(0u, std::distance(t.begin(), t.end()));
 }
-
-#define DEFINE_HAS(member)\
-    template <typename T> using has_##member = typename T::member
-
-DEFINE_HAS(iterator);
-DEFINE_HAS(const_iterator);
-DEFINE_HAS(reverse_iterator);
-DEFINE_HAS(const_reverse_iterator);
-DEFINE_HAS(node_type);
-DEFINE_HAS(insert_return_type);
-DEFINE_HAS(mapped_type);
 
 #undef DEFINE_HAS
 

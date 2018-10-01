@@ -23,9 +23,9 @@ class tst_set : public detail::set_adaptor<
     detail::ternary_search_tree<typename Allocator::value_type, Compare, Key, Allocator>
 > {
     static_assert(
-        std::is_invocable_r_v<bool, Compare, typename Key::value_type>,
+        std::is_invocable_r_v<bool, Compare, typename Key::value_type, typename Key::value_type>,
         "Compare is not invocable with Key::value_type or does not return bool"
-    )
+    );
     using base_type = detail::set_adaptor<
         detail::ternary_search_tree<typename Allocator::value_type, Compare, Key, Allocator>
     >;

@@ -13,20 +13,34 @@
 #include <tuple>
 #include <utility>
 
+#include <rmr/meta.h>
 #include <rmr/node_handle.h>
 
 namespace rmr::detail {
 
+template <typename T>
+using has_key_mapper = typename T::key_mapper;
+template <typename Trie>
+std::enable_if_t<is_detected_v<has_key_mapper, Trie>, typename Trie::key_mapper> key_func();
+
+template <typename T>
+using has_key_compare = typename T::key_compare;
+template <typename Trie>
+std::enable_if_t<is_detected_v<has_key_compare, Trie>, typename Trie::key_compare> key_func();
+
+template <typename Trie>
+using key_func_t = decltype(key_func<Trie>());
+
 template <typename Derived, typename Trie>
 class adaptor_base {
     using derived_type = Derived;
+    using key_functor  = key_func_t<Trie>;
 public:
     using key_type               = typename Trie::key_type;
     using char_type              = typename Trie::char_type;
     using value_type             = typename Trie::value_type;
     using size_type              = typename Trie::size_type;
     using difference_type        = typename Trie::difference_type;
-    using key_mapper             = typename Trie::key_mapper;
     using allocator_type         = typename Trie::allocator_type;
     using reference              = typename Trie::reference;
     using const_reference        = typename Trie::const_reference;
@@ -42,14 +56,14 @@ public:
 
     adaptor_base() = default;
 
-    explicit adaptor_base(key_mapper km, allocator_type alloc = allocator_type()) :
-        trie_(std::move(km), std::move(alloc)) {}
+    explicit adaptor_base(key_functor kf, allocator_type alloc = allocator_type()) :
+        trie_(std::move(kf), std::move(alloc)) {}
     explicit adaptor_base(allocator_type alloc) : trie_(std::move(alloc)) {}
 
     template <typename InputIterator>
     adaptor_base(InputIterator first, InputIterator last,
-         key_mapper km = key_mapper(), allocator_type alloc = allocator_type()
-    ) : adaptor_base(std::move(km), std::move(alloc)) { insert(first, last); }
+         key_functor kf = key_functor(), allocator_type alloc = allocator_type()
+    ) : adaptor_base(std::move(kf), std::move(alloc)) { insert(first, last); }
     template <typename InputIterator>
     adaptor_base(InputIterator first, InputIterator last, allocator_type alloc) :
         adaptor_base(std::move(alloc)) { insert(first, last); }
@@ -61,16 +75,16 @@ public:
     adaptor_base(adaptor_base&& other, allocator_type alloc) : trie_(std::move(other), std::move(alloc)) {}
 
     adaptor_base(std::initializer_list<value_type> ilist,
-        key_mapper km = key_mapper(),
+        key_functor kf = key_functor(),
         allocator_type alloc = allocator_type()
-    ) : adaptor_base(ilist.begin(), ilist.end(), std::move(km), std::move(alloc)) {}
+    ) : adaptor_base(ilist.begin(), ilist.end(), std::move(kf), std::move(alloc)) {}
     adaptor_base(std::initializer_list<value_type> ilist, allocator_type alloc) :
         adaptor_base(ilist.begin(), ilist.end(), std::move(alloc)) {}
 
     adaptor_base& operator=(const adaptor_base&) = default;
     adaptor_base& operator=(adaptor_base&&) noexcept(
         std::allocator_traits<allocator_type>::is_always_equal::value
-        && std::is_nothrow_move_assignable<key_mapper>::value
+        && std::is_nothrow_move_assignable<key_functor>::value
     ) = default;
 
     adaptor_base& operator=(std::initializer_list<value_type> ilist)
