@@ -347,6 +347,7 @@ public:
 private:
     node_type* copy_nodes(const node_type* src, node_type* dst, node_type* parent) {
         if (dst == nullptr) dst = make_node(parent, src->parent_index, src->c);
+        dst->c = src->c;
 
         if (src->value != nullptr) dst->value = make_value(get_allocator(), *src->value);
         for (size_type i = 0; i < R; ++i) {
@@ -358,6 +359,7 @@ private:
 
     node_type* move_nodes(allocator_type& alloc, node_type* src, node_type* dst, node_type* parent) {
         if (dst == nullptr) dst = make_node(parent, src->parent_index, src->c);
+        dst->c = src->c;
 
         if (src->value != nullptr) {
             dst->value = make_value(get_allocator(), std::move(*src->value));
