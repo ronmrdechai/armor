@@ -32,6 +32,7 @@ class trie_map : public detail::map_adaptor<
     >;
 public:
     using base_type::base_type;
+    using key_mapper = KeyMapper;
 
     KeyMapper key_map() const { return this->trie_.key_map(); }
     static constexpr std::size_t radix() { return R; }

@@ -32,6 +32,7 @@ class tst_map : public detail::map_adaptor<
     >;
 public:
     using base_type::base_type;
+    using key_compare = Compare;
 
     Compare key_comp() const { return this->trie_.key_comp(); }
 };
