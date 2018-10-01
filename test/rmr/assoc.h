@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <rmr/meta.h>
 #include <rmr/trie_map.h>
 #include <rmr/trie_set.h>
 
@@ -53,14 +54,8 @@ template <typename T> void assert_empty(const T& t) {
     EXPECT_EQ(0u, std::distance(t.begin(), t.end()));
 }
 
-namespace detail {
-template <typename... Ts> struct make_void { typedef void type;};
-template <typename... Ts> using void_t = typename make_void<Ts...>::type;
-} // namespace detail
-
 #define DEFINE_HAS(member)\
-    template <typename, typename = detail::void_t<>> struct has_##member : std::false_type {};\
-    template <typename T> struct has_##member<T, detail::void_t<typename T::member>> : std::true_type {}
+    template <typename T> using has_##member = typename T::member
 
 DEFINE_HAS(iterator);
 DEFINE_HAS(const_iterator);
@@ -74,13 +69,13 @@ DEFINE_HAS(mapped_type);
 
 template <typename T>
 struct assoc_test {
-    bool has_iterator               = test::has_iterator<T>::value;
-    bool has_const_iterator         = test::has_const_iterator<T>::value;
-    bool has_reverse_iterator       = test::has_reverse_iterator<T>::value;
-    bool has_const_reverse_iterator = test::has_const_reverse_iterator<T>::value;
-    bool has_node_type              = test::has_node_type<T>::value;
-    bool has_insert_return_type     = test::has_insert_return_type<T>::value;
-    bool has_mapped_type            = test::has_mapped_type<T>::value;
+    bool has_iterator               = rmr::is_detected_v<test::has_iterator, T>;
+    bool has_const_iterator         = rmr::is_detected_v<test::has_const_iterator, T>;
+    bool has_reverse_iterator       = rmr::is_detected_v<test::has_reverse_iterator, T>;
+    bool has_const_reverse_iterator = rmr::is_detected_v<test::has_const_reverse_iterator, T>;
+    bool has_node_type              = rmr::is_detected_v<test::has_node_type, T>;
+    bool has_insert_return_type     = rmr::is_detected_v<test::has_insert_return_type, T>;
+    bool has_mapped_type            = rmr::is_detected_v<test::has_mapped_type, T>;
 
     T less_trie    = test::less_trie<T>;
     T greater_trie = test::greater_trie<T>;
