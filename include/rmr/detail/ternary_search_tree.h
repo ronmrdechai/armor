@@ -26,6 +26,13 @@ struct ternary_search_tree_node : trie_node_base<ternary_search_tree_node<T, Cha
     auto  right()  const { return this->children[2]; }
 };
 
+template <typename T, typename Char>
+void unlink(ternary_search_tree_node<T, Char>* n) {
+    if (n->parent->left()   == n) n->parent->left()   = nullptr;
+    if (n->parent->middle() == n) n->parent->middle() = nullptr;
+    if (n->parent->right()  == n) n->parent->right()  = nullptr;
+}
+
 template <typename T, typename Char, typename OStream>
 void write_dot_nodes(const ternary_search_tree_node<T, Char>* node, OStream& os) {
     os << "  node [shape = " << (node->value == nullptr ? "circle" : "doublecircle") << "];";
@@ -63,79 +70,37 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
 
     using trie_iterator_traits_base<3, Node>::radix;
 
-    static std::pair<Node, bool> step_middle_forward(Node n) {
-        if (n->middle() != nullptr) {
-            n = n->middle();
-            while (n->left() != nullptr) n = n->left();
-            return {n, true};
-        }
-        return {n, false};
+    static bool is_left_child(Node n)   { return n == n->parent->left(); }
+    static bool is_middle_child(Node n) { return n == n->parent->middle(); }
+    static bool is_right_child(Node n)  { return n == n->parent->right(); }
+
+    static Node tree_min(Node n) {
+        while (n->left() != nullptr) n = n->left();
+        return n;
     }
 
-    static std::pair<Node, bool> step_middle_backward(Node n) {
-        if (n->middle() != nullptr) {
-            n = n->middle();
-            while (n->right() != nullptr) n = n->right();
-            return {n, true};
-        }
-        return {n, false};
-    }
-
-    static std::pair<Node, bool> step_right(Node n) {
-        if (n->right() != nullptr) {
-            n = n->right();
-            while (n->left() != nullptr) n = n->left();
-            return {n, true};
-        }
-        return {n, false};
-    }
-
-    static std::pair<Node, bool> step_left(Node n) {
-        if (n->left() != nullptr) {
-            n = n->left();
-            while (n->right() != nullptr) n = n->right();
-            return {n, true};
-        }
-        return {n, false};
+    static Node tree_max(Node n) {
+        while (n->right() != nullptr) n = n->right();
+        return n;
     }
 
     static Node skip(Node n) {
-        Node parent = n->parent;
-        while (n != parent->left() && n->parent_index != radix) {
-            n = parent;
-            parent = n->parent;
+        while (children_count(n->parent) == 1 && n->parent != nullptr) n = n->parent;
+        if (is_left_child(n)) {
+            if (n->parent != nullptr) return n->parent;
+            return n;
         }
-        if (n->middle() != parent || n->right() != parent) n = parent;
-        return n;
+        if (is_middle_child(n) && n->parent->right() != nullptr) return n->parent->right();
+        return skip(n); // is right child
     }
 
     static Node next(Node n) {
-        bool stepped;
-
-        std::tie(n, stepped) = step_middle_forward(n);
-        if (stepped) return n;
-        std::tie(n, stepped) = step_right(n);
-        if (stepped) return n;
-
+        if (n->middle() != nullptr) return tree_min(n->middle());
+        if (n->right()  != nullptr) return tree_min(n->right());
         return skip(n);
     }
 
-    static Node prev(Node n) { // TODO fix
-        bool stepped;
-
-        std::tie(n, stepped) = step_left(n);
-        if (stepped) return n;
-        std::tie(n, stepped) = step_middle_backward(n);
-        if (stepped) return n;
-
-        Node parent = n->parent;
-        while (n != parent->right() && n->parent_index != radix) {
-            n = parent;
-            parent = n->parent;
-        }
-        if (n->middle() != parent || n->left() != parent) n = parent;
-        return n;
-    }
+    static Node prev(Node n) { if (n->parent != nullptr) return n->parent; return n; }
 };
 
 template <typename T, typename Compare, typename Key, typename Allocator>
@@ -314,10 +279,9 @@ public:
     iterator begin() noexcept { return remove_const(cbegin()); }
     const_iterator begin() const noexcept { return cbegin(); }
     const_iterator cbegin() const noexcept {
-        const node_type* n = &impl_.root;
-        while (n->left() != nullptr) n = n->left();
-        if (n->value == nullptr) return ++const_iterator(n);
-        return n;
+        const node_type* n = const_iterator_traits::tree_min(&impl_.root);
+        if (n->value != nullptr) return n;
+        return ++const_iterator(n);
     }
 
     iterator end() noexcept { return remove_const(cend()); }
@@ -346,7 +310,7 @@ public:
 
 private:
     node_type* copy_nodes(const node_type* src, node_type* dst, node_type* parent) {
-        if (dst == nullptr) dst = make_node(parent, src->parent_index, src->c);
+        if (dst == nullptr) dst = make_node(parent, src->c);
         dst->c = src->c;
 
         if (src->value != nullptr) dst->value = make_value(get_allocator(), *src->value);
@@ -358,7 +322,7 @@ private:
     }
 
     node_type* move_nodes(allocator_type& alloc, node_type* src, node_type* dst, node_type* parent) {
-        if (dst == nullptr) dst = make_node(parent, src->parent_index, src->c);
+        if (dst == nullptr) dst = make_node(parent, src->c);
         dst->c = src->c;
 
         if (src->value != nullptr) {
@@ -377,7 +341,7 @@ private:
         size_type rank = 0;
         const node_type* cur = hint;
 
-        while (cur != &impl_.root) { if (cur->parent_index == 1) rank++; cur = cur->parent; }
+        while (cur != &impl_.root) { if (cur == cur->parent->middle()) rank++; cur = cur->parent; }
 
         return insert_node(hint, rank, key, v);
     }
@@ -387,13 +351,12 @@ private:
         if (rank == 0 && impl_.size == 0) hint->c = key[0]; // fix root node character
 
         node_type* ret;
-        insert_node(hint, hint->parent, hint->parent_index, key, rank, v, ret);
+        insert_node(hint, hint->parent, key, rank, v, ret);
         return ret;
     }
     node_type* insert_node(
         node_type* root,
         node_type* parent,
-        size_type parent_index,
         const key_type& key,
         size_type i,
         pointer v,
@@ -401,14 +364,14 @@ private:
     ) {
         char_type c = key[i];
         key_compare cmp = key_comp();
-        if (root == nullptr) root = make_node(parent, parent_index, c);
+        if (root == nullptr) root = make_node(parent, c);
 
         if (cmp(c, root->c))
-            root->left()   = insert_node(root->left(),   root, 0, key, i,     v, ret);
+            root->left()   = insert_node(root->left(),   root, key, i,     v, ret);
         else if (cmp(root->c, c))
-            root->right()  = insert_node(root->right(),  root, 2, key, i,     v, ret);
+            root->right()  = insert_node(root->right(),  root, key, i,     v, ret);
         else if (i < key.size() - 1)
-            root->middle() = insert_node(root->middle(), root, 1, key, i + 1, v, ret);
+            root->middle() = insert_node(root->middle(), root, key, i + 1, v, ret);
         else {
             if (root->value == nullptr) { root->value = v; ++impl_.size; }
             else destroy_and_deallocate(get_allocator(), v);
@@ -420,14 +383,13 @@ private:
     const auto& get_node_allocator() const { return impl_; }
           auto& get_node_allocator()       { return impl_; }
 
-    node_type* make_node(node_type* parent, size_type parent_index, char_type c) {
+    node_type* make_node(node_type* parent, char_type c) {
         auto& node_alloc = get_node_allocator();
         node_type* n = node_alloc_traits::allocate(node_alloc, 1);
         node_alloc_traits::construct(node_alloc, n);
 
         std::fill(std::begin(n->children), std::end(n->children), nullptr);
         n->parent = parent;
-        n->parent_index = parent_index;
         n->value = nullptr;
         n->c = c;
 
@@ -478,7 +440,7 @@ private:
 
     const node_type* longest_match(const node_type* root, const key_type& key) const {
         auto pos = longest_match_candidate(root, root->parent, key, 0);
-        while (pos->value == nullptr && pos->parent_index != R) pos = pos->parent;
+        while (pos->value == nullptr && pos->parent != nullptr) pos = pos->parent;
         return pos;
     }
     const node_type* longest_match_candidate(
@@ -515,12 +477,11 @@ private:
         void reset() {
             std::fill(std::begin(base.children), std::end(base.children), nullptr);
             base.left() = &root;
-            base.parent_index = R;
+            base.parent = nullptr;
             base.value = nullptr;
 
             std::fill(std::begin(root.children), std::end(root.children), nullptr);
             root.parent = &base;
-            root.parent_index = 0;
             root.value = nullptr;
 
             size = 0;

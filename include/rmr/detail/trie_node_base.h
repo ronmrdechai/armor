@@ -18,10 +18,9 @@ template <typename Derived, typename T, std::size_t R>
 struct trie_node_base {
     using value_type = T;
 
-    Derived*    children[R];
-    std::size_t parent_index;
-    Derived*    parent;
-	T*          value;
+    Derived* children[R];
+    Derived* parent;
+	T*       value;
 };
 
 template <typename Node>
@@ -29,11 +28,6 @@ std::size_t children_count(const Node* n) {
 	std::size_t count = 0;	
 	for (auto& child : n->children) count += child != nullptr;
 	return count;
-}
-
-template <typename Node>
-void unlink(Node* n) {
-	n->parent->children[n->parent_index] = nullptr;
 }
 
 template <typename Node, typename ValueAllocator>
@@ -90,7 +84,7 @@ struct trie_iterator {
 
     trie_iterator& operator++() {
         do node = Traits::next(node);
-        while(node->value == nullptr && node->parent_index != Traits::radix);
+        while(node->value == nullptr && node->parent != nullptr);
         return *this;
     }
 
@@ -102,7 +96,7 @@ struct trie_iterator {
 
     trie_iterator& operator--() {
         do node = Traits::prev(node);
-        while(node->value == nullptr && node->parent_index != Traits::radix);
+        while(node->value == nullptr && node->parent != nullptr);
         return *this;
     }
 

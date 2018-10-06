@@ -13,7 +13,10 @@
 namespace rmr::detail {
 
 template <typename T, std::size_t R>
-struct trie_node : trie_node_base<trie_node<T, R>, T, R> {};
+struct trie_node : trie_node_base<trie_node<T, R>, T, R> { std::size_t parent_index; };
+
+template <typename T, std::size_t R>
+void unlink(trie_node<T, R>* n) { n->parent->children[n->parent_index] = nullptr; }
 
 template <typename T, std::size_t R, typename OStream>
 void write_dot_nodes(const trie_node<T, R>* node, OStream& os) {
@@ -64,7 +67,7 @@ struct trie_iterator_traits : trie_iterator_traits_base<R, Node> {
     }
 
     static std::pair<Node, bool> step_right(Node n) {
-        if (n->parent_index == R) return {n, false};
+        if (n->parent == nullptr) return {n, false};
 
         for (std::size_t pos = n->parent_index + 1; pos < R; ++pos) {
             Node parent = n->parent;
@@ -112,7 +115,7 @@ struct trie_iterator_traits : trie_iterator_traits_base<R, Node> {
         std::tie(n, stepped) = step_right(n);
         if (stepped) return n;
 
-        while (n->parent_index != R) {
+        while (n->parent != nullptr) {
             std::tie(n, stepped) = step_up_forward(n);
             if (stepped) return n;
         }
@@ -136,7 +139,7 @@ struct trie_iterator_traits : trie_iterator_traits_base<R, Node> {
         std::tie(n, stepped) = step_left(n);
         if (stepped) return n;
 
-        while (n->parent_index != R) {
+        while (n->parent != nullptr) {
             std::tie(n, stepped) = step_up_backward(n);
             if (stepped) return n;
         }
@@ -461,7 +464,7 @@ private:
         typename key_type::const_iterator last
     ) const {
         auto pos = longest_match_candidate(root, root->parent, cur, last);
-        while (pos->value == nullptr && pos->parent_index != R) pos = pos->parent;
+        while (pos->value == nullptr && pos->parent != nullptr) pos = pos->parent;
         return pos;
     }
     const node_type* longest_match_candidate(
@@ -495,6 +498,7 @@ private:
         void reset() {
             std::fill(std::begin(base.children), std::end(base.children), nullptr);
             base.children[0] = &root;
+            base.parent = nullptr;
             base.parent_index = R;
             base.value = nullptr;
 
