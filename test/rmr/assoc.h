@@ -91,6 +91,38 @@ template <typename T> void assert_empty(const T& t) {
 
 #undef DEFINE_HAS
 
+template <typename T, std::size_t N = 0>
+struct counting_allocator : std::allocator<T> {
+    using std::allocator<T>::allocator;
+
+    T* allocate(std::size_t n, const void* hint)
+    { bytes_allocated += sizeof(T) * n; return std::allocator<T>::allocate(n, hint); }
+    T* allocate(std::size_t n)
+    { bytes_allocated += sizeof(T) * n; return std::allocator<T>::allocate(n); }
+    void deallocate(T* p, std::size_t n)
+    { bytes_allocated -= sizeof(T) * n; std::allocator<T>::deallocate(p, n); }
+
+    static std::size_t bytes_allocated;
+};
+template <typename T, std::size_t N>
+std::size_t counting_allocator<T, N>::bytes_allocated = 0;
+
+template <typename, typename> struct replace_alloc;
+
+template <typename Alloc>
+struct replace_alloc<Alloc, trie_map>
+{ using type = rmr::trie_map<int, 127, rmr::identity<std::size_t>, std::string, Alloc>; };
+template <typename Alloc>
+struct replace_alloc<Alloc, trie_set>
+{ using type = rmr::trie_set<127, rmr::identity<std::size_t>, std::string, Alloc>; };
+
+template <typename Alloc>
+struct replace_alloc<Alloc, tst_map>
+{ using type = rmr::tst_map<int, std::less<char>, std::string, Alloc>; };
+template <typename Alloc>
+struct replace_alloc<Alloc, tst_set>
+{ using type = rmr::tst_set<std::less<char>, std::string, Alloc>; };
+
 template <typename T>
 struct assoc_test {
     bool has_iterator               = rmr::is_detected_v<test::has_iterator, T>;
@@ -99,9 +131,12 @@ struct assoc_test {
     bool has_const_reverse_iterator = rmr::is_detected_v<test::has_const_reverse_iterator, T>;
     bool has_node_type              = rmr::is_detected_v<test::has_node_type, T>;
     bool has_insert_return_type     = rmr::is_detected_v<test::has_insert_return_type, T>;
-    bool has_mapped_type            = rmr::is_detected_v<test::has_mapped_type, T>;
     bool has_key_compare            = rmr::is_detected_v<test::has_key_compare, T>;
+    bool has_mapped_type            = rmr::is_detected_v<test::has_mapped_type, T>;
     bool has_key_mapper             = rmr::is_detected_v<test::has_key_mapper, T>;
+
+    template <typename Alloc>
+    using replace_alloc = typename test::replace_alloc<Alloc, T>::type;
 
     T less_trie    = test::less_trie<T>;
     T greater_trie = test::greater_trie<T>;

@@ -762,7 +762,7 @@ TYPED_TEST(assoc_common, prefixed_with_includes_prefix) {
     EXPECT_EQ(5u, std::distance(first, last));
 }
 
-TYPED_TEST(assoc_common, prefixed_whole_container) {
+TYPED_TEST(assoc_common, prefixed_with_whole_container) {
     TypeParam t = TestFixture::make_container("foo", "bar", "aa", "aaa", "aab", "aac", "aad", "ab");
 
     auto [first, last] = t.prefixed_with("");
@@ -906,6 +906,18 @@ TYPED_TEST(assoc_common, typedefs) {
     EXPECT_TRUE(TestFixture::has_key_compare || TestFixture::has_key_mapper);
 }
 
-TYPED_TEST(assoc_common, DISABLED_does_not_leak) {
-    FAIL() << "Not implemented";
+TYPED_TEST(assoc_common, does_not_leak) {
+    using allocator = test::counting_allocator<typename TypeParam::allocator_type::value_type>;
+    using container = typename TestFixture::template replace_alloc<allocator>;
+    {
+        container t{
+            TestFixture::key_to_value("foo"),
+            TestFixture::key_to_value("bar"),
+            TestFixture::key_to_value("baz"),
+            TestFixture::key_to_value("qux"),
+            TestFixture::key_to_value("quux")
+        };
+        EXPECT_NE(0u, allocator::bytes_allocated);
+    }
+    EXPECT_EQ(0u, allocator::bytes_allocated);
 }

@@ -84,21 +84,27 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
         return n;
     }
 
-    static Node skip(Node n) {
+    static Node skip_forward(Node n) {
         while (n->parent != nullptr && !is_left_child(n) && children_count(n->parent) == 1) n = n->parent;
 
         if (is_left_child(n)) return n->parent;
         if (is_middle_child(n) && n->parent->right() != nullptr) return n->parent->right();
-        return skip(n->parent); // is right child
+        return skip_forward(n->parent); // is right child
     }
+
+    static Node skip_backward(Node) { return nullptr; /* ??? */ }
 
     static Node next(Node n) {
         if (n->middle() != nullptr) return tree_min(n->middle());
         if (n->right()  != nullptr) return tree_min(n->right());
-        return skip(n);
+        return skip_forward(n);
     }
 
-    static Node prev(Node n) { if (n->parent != nullptr) return n->parent; return n; }
+    static Node prev(Node n) {
+        if (n->right()  != nullptr) return tree_max(n->right());
+        if (n->middle() != nullptr) return tree_max(n->middle());
+        return skip_backward(n);
+    }
 };
 
 template <typename T, typename Compare, typename Key, typename Allocator>
@@ -220,7 +226,8 @@ public:
             if (other.impl_.root.children[i] != nullptr)
                 other.impl_.root.children[i]->parent = &other.impl_.root;
         }
-        std::swap(impl_.size, other.impl_.size);
+        std::swap(impl_.size,   other.impl_.size);
+        std::swap(impl_.root.c, other.impl_.root.c);
     }
 
     template <typename... Args>
@@ -263,7 +270,7 @@ public:
     prefixed_with(const key_type& key) const {
         const_iterator first = find_key_unsafe(&impl_.root, key, 0);
         if (first == end()) return { end(), end() };
-        const_iterator last( const_iterator_traits::skip(first.node) );
+        const_iterator last( const_iterator_traits::skip_forward(first.node) );
 
         if (                first.node->value == nullptr) ++first;
         if (last != end() && last.node->value == nullptr) ++last;
