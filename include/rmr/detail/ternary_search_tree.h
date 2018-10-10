@@ -85,13 +85,11 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
     }
 
     static Node skip(Node n) {
-        while (children_count(n->parent) == 1 && n->parent != nullptr) n = n->parent;
-        if (is_left_child(n)) {
-            if (n->parent != nullptr) return n->parent;
-            return n;
-        }
+        while (n->parent != nullptr && !is_left_child(n) && children_count(n->parent) == 1) n = n->parent;
+
+        if (is_left_child(n)) return n->parent;
         if (is_middle_child(n) && n->parent->right() != nullptr) return n->parent->right();
-        return skip(n); // is right child
+        return skip(n->parent); // is right child
     }
 
     static Node next(Node n) {

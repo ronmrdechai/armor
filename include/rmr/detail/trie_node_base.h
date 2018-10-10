@@ -25,9 +25,9 @@ struct trie_node_base {
 
 template <typename Node>
 std::size_t children_count(const Node* n) {
-	std::size_t count = 0;	
-	for (auto& child : n->children) count += child != nullptr;
-	return count;
+	std::size_t c = 0;	
+	for (auto& child : n->children) if (child != nullptr) c++;
+	return c;
 }
 
 template <typename Node, typename ValueAllocator>

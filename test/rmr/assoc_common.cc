@@ -35,9 +35,6 @@ TYPED_TEST(assoc_common, roman_trie_size_is_7) {
 
 TYPED_TEST(assoc_common, roman_trie_distance_is_7) {
     TypeParam t = TestFixture::roman_trie;
-    TestFixture::write_dot(t);
-    for (auto& e : t)
-        std::cout << TestFixture::value_to_key(e) << std::endl;
     EXPECT_EQ(7u, std::distance(t.begin(), t.end()));
 }
 
