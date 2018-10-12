@@ -270,7 +270,9 @@ public:
     prefixed_with(const key_type& key) const {
         const_iterator first = find_key_unsafe(&impl_.root, key, 0);
         if (first == end()) return { end(), end() };
-        const_iterator last( const_iterator_traits::skip_forward(first.node) );
+        const_iterator last;
+        if (first.node->right() != nullptr) last = first.node->right();
+        else                                last = const_iterator_traits::skip_forward(first.node);
 
         if (                first.node->value == nullptr) ++first;
         if (last != end() && last.node->value == nullptr) ++last;

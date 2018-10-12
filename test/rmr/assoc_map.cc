@@ -94,22 +94,6 @@ TYPED_TEST(assoc_map, insert_or_assign_hint_existing_return_value) {
     EXPECT_NE(t.end(), t.find("foobar"));
 }
 
-TYPED_TEST(assoc_map, insert_or_assign_hint_wrong_hint) {
-    TypeParam t;
-    auto [hint, _] = t.insert( {"bar", 0} );
-
-    auto it = t.insert_or_assign(hint, "foobar", 1);
-
-    auto barbar_it = t.find("barbar");
-
-    EXPECT_EQ(it, barbar_it);
-    EXPECT_EQ("foobar", it->first);
-    EXPECT_EQ(1, it->second);
-
-    auto foobar_it = t.find("foobar");
-    EXPECT_EQ(t.end(), foobar_it);
-}
-
 TYPED_TEST(assoc_map, try_emplace_return_value) {
     TypeParam t;
     auto [it, inserted] = t.try_emplace("foo", 1);
@@ -142,22 +126,6 @@ TYPED_TEST(assoc_map, try_emplace_hint_existing_return_value) {
 
     EXPECT_EQ(42, it->second);
     EXPECT_NE(t.end(), t.find("foobar"));
-}
-
-TYPED_TEST(assoc_map, try_emplace_hint_wrong_hint) {
-    TypeParam t;
-    auto [hint, _] = t.insert( {"bar", 0} );
-
-    auto it = t.try_emplace(hint, "foobar", 1);
-
-    auto barbar_it = t.find("barbar");
-
-    EXPECT_EQ(it, barbar_it);
-    EXPECT_EQ("foobar", it->first);
-    EXPECT_EQ(1, it->second);
-
-    auto foobar_it = t.find("foobar");
-    EXPECT_EQ(t.end(), foobar_it);
 }
 
 TYPED_TEST(assoc_map, node_handle_key_access) {

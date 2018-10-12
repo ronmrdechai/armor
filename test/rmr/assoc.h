@@ -25,6 +25,8 @@ struct tst_set : rmr::tst_set<>    { using rmr::tst_set<>::tst_set;      };
 using assoc_map_types    = testing::Types<trie_map, tst_map>;
 using assoc_set_types    = testing::Types<trie_set, tst_set>;
 using assoc_common_types = testing::Types<trie_map, trie_set, tst_map, tst_set>;
+using trie_common_types  = testing::Types<trie_map, trie_set>;
+using tst_common_types   = testing::Types<tst_map, tst_set>;
 
 namespace test {
 

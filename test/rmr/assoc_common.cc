@@ -250,6 +250,14 @@ TYPED_TEST(assoc_common, insert_size_change) {
     EXPECT_EQ(2u, t.size());
 }
 
+TYPED_TEST(assoc_common, insert_and_find) {
+    TypeParam t;
+    t.insert(TestFixture::key_to_value("foo"));
+    auto it = t.find("foo");
+
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
+}
+
 TYPED_TEST(assoc_common, insert_existing_size_no_change) {
     TypeParam t;
     t.insert( TestFixture::key_to_value("foo") );
@@ -342,21 +350,21 @@ TYPED_TEST(assoc_common, insert_sufix) {
     EXPECT_EQ("foo", TestFixture::value_to_key(*t.find("foo")));
 }
 
-TYPED_TEST(assoc_common, insert_empty_string) {
-    TypeParam t;
-    auto [it, inserted] = t.insert( TestFixture::key_to_value("") );
-
-    EXPECT_TRUE(inserted);
-    EXPECT_EQ("", TestFixture::value_to_key(*it));
-    EXPECT_NE(t.end(), t.find(""));
-}
-
 TYPED_TEST(assoc_common, insert_hint_size_change) {
     TypeParam t = TestFixture::make_container("foo");
     auto hint = t.find("foo");
 
     t.insert(hint, TestFixture::key_to_value("foobar"));
     EXPECT_EQ(2u, t.size());
+}
+
+TYPED_TEST(assoc_common, insert_hint_and_find) {
+    TypeParam t = TestFixture::make_container("foo");
+    auto hint = t.find("foo");
+
+    t.insert(hint, TestFixture::key_to_value("foobar"));
+    auto it = t.find("foobar");
+    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
 }
 
 TYPED_TEST(assoc_common, insert_hint_exists_size_no_change) {
@@ -372,15 +380,6 @@ TYPED_TEST(assoc_common, insert_hint_return_value) {
     auto hint = t.find("foo");
 
     auto it = t.insert(hint, TestFixture::key_to_value("foobar"));
-    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
-}
-
-TYPED_TEST(assoc_common, insert_hint_wrong_hint) {
-    TypeParam t = TestFixture::make_container("bar");
-    auto hint = t.find("bar");
-
-    auto it = t.insert(hint, TestFixture::key_to_value("foobar"));
-    EXPECT_NE(t.end(), t.find("barbar"));
     EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
 }
 
@@ -475,6 +474,14 @@ TYPED_TEST(assoc_common, emplace_size_change) {
     EXPECT_EQ(2u, t.size());
 }
 
+TYPED_TEST(assoc_common, emplace_and_find) {
+    TypeParam t;
+    t.emplace(TestFixture::key_to_value("foo"));
+    auto it = t.find("foo");
+
+    EXPECT_EQ("foo", TestFixture::value_to_key(*it));
+}
+
 TYPED_TEST(assoc_common, emplace_existing_size_no_change) {
     TypeParam t;
     t.emplace( TestFixture::key_to_value("foo") );
@@ -512,6 +519,15 @@ TYPED_TEST(assoc_common, emplace_hint_size_change) {
     EXPECT_EQ(2u, t.size());
 }
 
+TYPED_TEST(assoc_common, emplace_hint_and_find) {
+    TypeParam t{ TestFixture::key_to_value("foo") };
+    auto hint = t.find("foo");
+
+    t.emplace_hint(hint, TestFixture::key_to_value("foobar"));
+    auto it = t.find("foobar");
+    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
+}
+
 TYPED_TEST(assoc_common, emplace_hint_existing_size_no_change) {
     TypeParam t{ TestFixture::key_to_value("foo"), TestFixture::key_to_value("foobar") };
     auto hint = t.find("foo");
@@ -525,15 +541,6 @@ TYPED_TEST(assoc_common, emplace_hint_return_value) {
     auto hint = t.find("bar");
 
     auto it = t.emplace_hint(hint, TestFixture::key_to_value("foobar"));
-    EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
-}
-
-TYPED_TEST(assoc_common, emplace_hint_wrong_hint) {
-    TypeParam t{ TestFixture::key_to_value("bar") };
-    auto hint = t.find("bar");
-
-    auto it = t.emplace_hint(hint, TestFixture::key_to_value("foobar"));
-    EXPECT_NE(t.end(), t.find("barbar"));
     EXPECT_EQ("foobar", TestFixture::value_to_key(*it));
 }
 
@@ -758,14 +765,13 @@ TYPED_TEST(assoc_common, prefixed_with_includes_prefix) {
     TypeParam t = TestFixture::make_container("foo", "bar", "aa", "aaa", "aab", "aac", "aad", "ab");
 
     auto [first, last] = t.prefixed_with("aa");
-
     EXPECT_EQ(5u, std::distance(first, last));
 }
 
 TYPED_TEST(assoc_common, prefixed_with_whole_container) {
-    TypeParam t = TestFixture::make_container("foo", "bar", "aa", "aaa", "aab", "aac", "aad", "ab");
+    TypeParam t = TestFixture::make_container("aa", "aaa", "aab", "aac", "aad", "ab");
 
-    auto [first, last] = t.prefixed_with("");
+    auto [first, last] = t.prefixed_with("a");
 
     EXPECT_EQ(t.begin(), first);
     EXPECT_EQ(t.end(), last);
