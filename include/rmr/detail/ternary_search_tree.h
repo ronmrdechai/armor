@@ -10,8 +10,6 @@
 #include <rmr/detail/util.h>
 #include <rmr/detail/trie_node_base.h>
 
-#include <rmr/functors.h>
-
 namespace rmr::detail {
 
 template <typename T, typename Char>
