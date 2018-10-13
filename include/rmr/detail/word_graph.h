@@ -23,7 +23,7 @@ public:
     using reference = T&;
     using const_reference = const T&;
 
-    reference operator[](size_type n)             { return data_[n]; }
+    reference operator[](size_type n) { return data_[n]; }
     const_reference operator[](size_type n) const { return data_[n]; }
 
     iterator begin() { return &data_[0]; }
@@ -39,7 +39,7 @@ public:
     template <typename Allocator, typename... Args>
     void emplace_at(Allocator& alloc, size_type index, Args&&... args) {
         if (size_ == capacity_) reallocate_shifted(alloc, index, capacity_ * 2);
-        else                    std::move(&data_[index], end(), &data_[index + 1]);
+        else if (index < size_) std::move(&data_[index], end(), &data_[index + 1]);
 
         std::allocator_traits<Allocator>::destroy(alloc, &data_[index]);
         std::allocator_traits<Allocator>::construct(alloc, &data_[index], std::forward<Args>(args)...);
@@ -47,7 +47,12 @@ public:
     }
 
     template <typename Allocator>
-    void remove_at(Allocator& alloc, size_type index);
+    void remove_at(Allocator& alloc, size_type index) {
+        std::allocator_traits<Allocator>::destroy(alloc, &data_[index]);
+        if (index < size_) std::move_backward(&data_[index + 1], end(), &data_[index]);
+        size_--;
+        if (size_ <= capacity_ / 4) reallocate(alloc, capacity_ / 2);
+    }
 
     template <typename Allocator, typename... Args>
     void emplace_back(Allocator& alloc, Args&&... args) {
