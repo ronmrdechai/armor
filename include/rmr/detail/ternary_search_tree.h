@@ -68,8 +68,6 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
     template <typename _Node>
     using rebind = ternary_search_tree_iterator_traits<_Node>;
 
-    using trie_iterator_traits_base<3, Node>::radix;
-
     static bool is_left_child(Node n)   { return n == n->parent->left(); }
     static bool is_middle_child(Node n) { return n == n->parent->middle(); }
     static bool is_right_child(Node n)  { return n == n->parent->right(); }
@@ -92,7 +90,13 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
         return skip_forward(n->parent); // is right child
     }
 
-    static Node skip_backward(Node) { return nullptr; /* ??? */ }
+    static Node skip_backward(Node n) {
+        while (n->parent != nullptr && !is_right_child(n) && children_count(n->parent) == 1) n = n->parent;
+
+        if (is_right_child(n)) return n->parent;
+        if (is_middle_child(n) && n->parent->left() != nullptr) return n->parent->left();
+        return skip_backward(n->parent); // is left child
+    }
 
     static Node next(Node n) {
         if (n->middle() != nullptr) return tree_min(n->middle());
@@ -101,7 +105,7 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
     }
 
     static Node prev(Node n) {
-        if (n->right()  != nullptr) return tree_max(n->right());
+        if (n->left()   != nullptr) return tree_max(n->left());
         if (n->middle() != nullptr) return tree_max(n->middle());
         return skip_backward(n);
     }
