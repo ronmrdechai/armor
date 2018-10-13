@@ -67,6 +67,13 @@ public:
         if (size_ <= capacity_ / 4) reallocate(alloc, capacity_ / 2);
     }
 
+    template <typename Allocator>
+    void clear(Allocator& alloc) {
+        deallocate(alloc);
+        size_ = 0;
+        capacity_ = 0;
+    }
+
 private:
     template <typename Allocator>
     void reallocate(Allocator& alloc, size_type n) {
@@ -74,15 +81,20 @@ private:
 
         T* new_data = std::allocator_traits<Allocator>::allocate(alloc, n);
         std::move(begin(), end(), new_data);
-        for (auto it = begin(); it != end(); ++it)
-            std::allocator_traits<Allocator>::destroy(alloc, it);
-        std::allocator_traits<Allocator>::deallocate(alloc, data_, capacity_);
+        deallocate(alloc);
         data_ = new_data;
         capacity_ = n;
     }
 
     template <typename Allocator>
     void reallocate_shifted(Allocator& alloc, size_type index, size_type n);
+
+    template <typename Allocator>
+    void deallocate(Allocator& alloc) {
+        for (auto it = begin(); it != end(); ++it)
+            std::allocator_traits<Allocator>::destroy(alloc, it);
+        std::allocator_traits<Allocator>::deallocate(alloc, data_, capacity_);
+    }
 
     T*        data_     = nullptr;
     size_type size_     = 0;
