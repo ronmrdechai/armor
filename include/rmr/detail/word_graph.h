@@ -14,8 +14,6 @@
 
 namespace rmr::detail {
 
-template <typename T> class linked_list;
-
 template <typename T>
 class array_list {
 public:
@@ -36,21 +34,54 @@ public:
     const_iterator cend() const { return &data_[size_]; }
 
     size_type size() const { return size_; }
+    size_type capacity() const { return capacity_; }
 
     template <typename Allocator, typename... Args>
-    void emplace_at(size_type index, Allocator& alloc, Args&&... args);
+    void emplace_at(Allocator& alloc, size_type index, Args&&... args) {
+        if (size_ == capacity_) reallocate_shifted(alloc, index, capacity_ * 2);
+        else                    std::move(&data_[index], end(), &data_[index + 1]);
+
+        std::allocator_traits<Allocator>::destroy(alloc, &data_[index]);
+        std::allocator_traits<Allocator>::construct(alloc, &data_[index], std::forward<Args>(args)...);
+        size_++;
+    }
+
     template <typename Allocator>
-    void remove_at(size_type index, Allocator& alloc);
+    void remove_at(Allocator& alloc, size_type index);
 
     template <typename Allocator, typename... Args>
-    void emplace_back(Allocator& alloc, Args&&... args);
+    void emplace_back(Allocator& alloc, Args&&... args) {
+        if (size_ == capacity_) reallocate(alloc, capacity_ * 2);
+        std::allocator_traits<Allocator>::construct(alloc, &data_[size_], std::forward<Args>(args)...);
+        size_++;
+    }
     template <typename Allocator>
-    void remove_back(Allocator& alloc);
+    void remove_back(Allocator& alloc) {
+        std::allocator_traits<Allocator>::destroy(alloc, &data_[size_]);
+        size_--;
+        if (size_ <= capacity_ / 4) reallocate(alloc, capacity_ / 2);
+    }
 
 private:
-    T*        data_;
-    size_type size_;
-    size_type capacity_;
+    template <typename Allocator>
+    void reallocate(Allocator& alloc, size_type n) {
+        if (n == 0) n = 1;
+
+        T* new_data = std::allocator_traits<Allocator>::allocate(alloc, n);
+        std::move(begin(), end(), new_data);
+        for (auto it = begin(); it != end(); ++it)
+            std::allocator_traits<Allocator>::destroy(alloc, it);
+        std::allocator_traits<Allocator>::deallocate(alloc, data_, capacity_);
+        data_ = new_data;
+        capacity_ = n;
+    }
+
+    template <typename Allocator>
+    void reallocate_shifted(Allocator& alloc, size_type index, size_type n);
+
+    T*        data_     = nullptr;
+    size_type size_     = 0;
+    size_type capacity_ = 0;
 };
 
 template <typename Char>
