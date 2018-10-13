@@ -49,7 +49,7 @@ protected:
         if (alloc_traits::propagate_on_container_swap::value || empty() || other.empty()) {
             if (empty() && !other.empty())
             { alloc_ = std::move(other.alloc_); other.alloc_.~allocator_type(); }
-            else if (!empty && other.empty())
+            else if (!empty() && other.empty())
             { other.alloc_ = std::move(alloc_); alloc_.~allocator_type(); }
             else alloc_.swap(other.alloc_);
         }

@@ -14,6 +14,8 @@
 
 namespace rmr::detail {
 
+template <typename T> class linked_list;
+
 template <typename T>
 class array_list {
 public:
