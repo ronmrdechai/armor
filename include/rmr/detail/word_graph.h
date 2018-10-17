@@ -36,12 +36,12 @@ public:
     size_type size() const { return size_; }
     size_type capacity() const { return capacity_; }
 
+
     template <typename Allocator, typename... Args>
     void emplace_at(Allocator& alloc, size_type index, Args&&... args) {
         if (size_ == capacity_) reallocate_shifted(alloc, index, capacity_ * 2);
         else if (index < size_) std::move(&data_[index], end(), &data_[index + 1]);
 
-        std::allocator_traits<Allocator>::destroy(alloc, &data_[index]);
         std::allocator_traits<Allocator>::construct(alloc, &data_[index], std::forward<Args>(args)...);
         size_++;
     }
@@ -87,13 +87,23 @@ private:
     }
 
     template <typename Allocator>
-    void reallocate_shifted(Allocator& alloc, size_type index, size_type n);
+    void reallocate_shifted(Allocator& alloc, size_type index, size_type n) {
+        if (n == 0) n = 1;
+
+        T* new_data = std::allocator_traits<Allocator>::allocate(alloc, n);
+        std::move(begin(), &data_[index], new_data);
+        std::move(&data_[index], end(), new_data + index + 1);
+        deallocate(alloc);
+        data_ = new_data;
+        capacity_ = n;
+    }
 
     template <typename Allocator>
     void deallocate(Allocator& alloc) {
         for (auto it = begin(); it != end(); ++it)
             std::allocator_traits<Allocator>::destroy(alloc, it);
         std::allocator_traits<Allocator>::deallocate(alloc, data_, capacity_);
+        data_ = nullptr;
     }
 
     T*        data_     = nullptr;
