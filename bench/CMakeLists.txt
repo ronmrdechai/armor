@@ -6,7 +6,16 @@
 # (See accompanying file LICENSE.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
 find_package(GoogleBenchmark 1.4.1)
-include_directories(${BENCHMARK_INCLUDE_DIRS})
+find_package(WordsFile REQUIRED)
 
-add_executable(bench_trie_map ${CMAKE_CURRENT_SOURCE_DIR}/rmr/trie_map.cc)
-target_link_libraries(bench_trie_map Armor ${BENCHMARK_BOTH_LIBRARIES})
+file(GLOB test_sources CONFIGURE_DEPENDS "rmr/*.cc")
+
+foreach(source ${test_sources})
+    get_filename_component(source_name ${source} NAME_WE)
+    set(target "bench_${source_name}")
+
+    add_executable(${target} ${source})
+    target_link_libraries(${target} PRIVATE Armor ${BENCHMARK_BOTH_LIBRARIES})
+    target_include_directories(${target} PRIVATE ${BENCHMARK_INCLUDE_DIRS})
+    target_compile_definitions(${target} PRIVATE "WORDS_FILE=\"${WORDS_FILE_PATH}\"")
+endforeach()

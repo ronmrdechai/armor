@@ -9,6 +9,8 @@
 
 #include <fstream>
 
+#include <gtest/gtest.h>
+
 #include <rmr/meta.h>
 #include <rmr/trie_map.h>
 #include <rmr/trie_set.h>

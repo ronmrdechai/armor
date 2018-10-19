@@ -5,8 +5,6 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
-#include <gtest/gtest.h>
-
 #include "assoc.h"
 
 TEST(trie_map, insert_or_assign_hint_wrong_hint) {
