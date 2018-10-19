@@ -111,19 +111,34 @@ private:
     size_type capacity_ = 0;
 };
 
-template <typename Char>
-struct string_view {
-    const Char* data;
-    std::size_t size;
-};
+template <std::size_t R>
+struct word_graph_node : trie_node_base<word_graph_node<R>, void, R> { bool accepting; };
 
-template <typename T, std::size_t R>
-struct word_graph_node : trie_node_base<word_graph_node<T, R>, T, R> {};
+template <std::size_t R, typename OStream>
+void write_dot_nodes(const word_graph_node<R>* node, OStream& os) {
+    os << "  node [shape = " << (node->accepting ? "doublecircle" : "circle") << "];";
+    os << "  \"" << node << "\" [label = \"\"];\n";
 
-template <typename T, std::size_t R, typename KeyMapper, typename Key, typename Allocator, typename Storage>
+    for (auto child : node->children) if (child != nullptr) write_dot_nodes(child, os);
+}
+
+template <std::size_t R, typename OStream>
+void write_dot_impl(const word_graph_node<R>* node, OStream& os) {
+    write_dot_nodes(node, os);
+
+    for (std::size_t i = 0; i < R; ++i) {
+        auto child = node->children[i];
+        if (child != nullptr) {
+            os << "  \"" << node << "\" -> \"" << child << "\" [label = " << char(i) << "];\n";
+            write_dot_impl(child, os);
+        }
+    }
+}
+
+template <typename T, std::size_t R, typename KeyMapper, typename Key, typename Allocator>
 class word_graph {
     using alloc_traits        = std::allocator_traits<Allocator>;
-    using node_type           = word_graph_node<T, R>;
+    using node_type           = word_graph_node<R>;
     using node_allocator_type = typename alloc_traits::template rebind_alloc<node_type>;
     using node_alloc_traits   = typename alloc_traits::template rebind_traits<node_type>;
 public:
@@ -138,12 +153,120 @@ public:
     using const_reference        = const value_type&;
     using pointer                = typename alloc_traits::pointer;
     using const_pointer          = typename alloc_traits::const_pointer;
-    using iterator               = typename Storage::iterator;
-    using const_iterator         = typename Storage::const_iterator;
+private:
+    using storage_type           = array_list<value_type>;
+    using const_key_iterator     = typename key_type::const_iterator;
+public:
+    using iterator               = typename storage_type::iterator;
+    using const_iterator         = typename storage_type::const_iterator;
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-private:
+    word_graph() = default;
+    explicit word_graph(allocator_type alloc) : impl_(node_allocator_type(std::move(alloc))) {}
+    explicit word_graph(key_mapper km, allocator_type alloc) :
+        impl_(std::move(km), node_allocator_type(std::move(alloc)))
+    {}
+    ~word_graph() { clear(); }
+
+    node_type* root() noexcept { return &impl_.root; }
+    const node_type* root() const noexcept { return cbegin(); }
+    const node_type* croot() const noexcept { return &impl_.root; }
+
+    iterator begin() noexcept { return remove_const(cbegin()); }
+    const_iterator begin() const noexcept { return cbegin(); }
+    const_iterator cbegin() const noexcept { return data_.begin(); }
+
+    iterator end() noexcept { return remove_const(cend()); }
+    const_iterator end() const noexcept { return cend(); }
+    const_iterator cend() const noexcept { return data_.end(); }
+
+    reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+    const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
+    const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
+
+    reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+    const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
+    const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
+
+    size_type size() const noexcept { return impl_.size; }
+
+    void clear() noexcept {
+        auto value_alloc = get_allocator();
+        auto& node_alloc = get_node_allocator();
+        data_.clear(value_alloc);
+
+        clear_node(&impl_.root, node_alloc, value_alloc);
+        impl_.size = 0;
+    }
+
+    allocator_type get_allocator() const { return get_node_allocator(); }
+    key_mapper     key_map()       const { return impl_; }
+
+/* private: */
+    size_type insert_word_sorted();
+    size_type insert_word_minimal();
+
+    node_type* insert_word(node_type* root, const_key_iterator first, const_key_iterator last) {
+        if (root == nullptr) root = make_node();
+        if (first == last) root->accepting = true;
+        else {
+            size_type i = key_map()(*first);
+            auto& child = root->children[i];
+            child = insert_word(child, ++first, last);
+        }
+        return root;
+    }
+
+    const_key_iterator
+    common_prefix(node_type* root, const_key_iterator first, const_key_iterator last) const;
+
+    const auto& get_node_allocator() const { return impl_; }
+          auto& get_node_allocator()       { return impl_; }
+
+    node_type* make_node() {
+        auto& node_alloc = get_node_allocator();
+        node_type* n = node_alloc_traits::allocate(node_alloc, 1);
+        node_alloc_traits::construct(node_alloc, n);
+
+        std::fill(std::begin(n->children), std::end(n->children), nullptr);
+        n->value = nullptr;
+        n->accepting = false;
+
+        return n;
+    }
+
+    struct word_graph_header {
+        node_type root;
+        size_type size;
+
+        struct { const_key_iterator first, last; } last_string;
+
+        word_graph_header() { reset(); }
+        word_graph_header& operator=(word_graph_header&& other) {
+            (void)other; // TODO
+        }
+        void reset() {
+            std::fill(std::begin(root.children), std::end(root.children), nullptr);
+            root.value = nullptr;
+            root.accepting = false;
+            size = 0;
+        }
+    };
+
+    struct word_graph_impl : word_graph_header, key_mapper, node_allocator_type {
+        word_graph_impl() = default;
+        word_graph_impl(node_allocator_type alloc) :
+            word_graph_header(), key_mapper(), node_allocator_type(std::move(alloc))
+        {}
+        word_graph_impl(key_mapper km, node_allocator_type alloc) :
+            word_graph_header(), key_mapper(std::move(km)), node_allocator_type(std::move(alloc))
+        {}
+        word_graph_impl& operator=(word_graph_impl&&) = default;
+    };
+
+    word_graph_impl impl_;
+    storage_type    data_;
 };
 
 } // namespace rmr::detail
