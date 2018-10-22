@@ -17,8 +17,12 @@
 #include <rmr/trie_set.h>
 #include <rmr/tst_set.h>
 
-struct trie_set : rmr::trie_set<127> { using rmr::trie_set<127>::trie_set; };
-struct tst_set  : rmr::tst_set<>     { using rmr::tst_set<>::tst_set;      };
+struct alpha {
+    std::size_t operator()(std::size_t c) const { return ('a' <= c && c <= 'z') ? c - 'a' : c - 'A'; }
+};
+
+struct trie_set : rmr::trie_set<26, alpha> { using rmr::trie_set<26, alpha>::trie_set; };
+struct tst_set  : rmr::tst_set<>    { using rmr::tst_set<>::tst_set;      };
 
 namespace bench {
 
@@ -66,9 +70,10 @@ std::vector<std::string> random_words(std::size_t n) {
 
 template <typename T>
 void insertion(benchmark::State& state) {
+    auto words = bench::random_words(state.range(0));
+
     for (auto _ : state) {
         state.PauseTiming();
-        auto words = bench::random_words(state.range(0));
         T t;
         state.ResumeTiming();
 
@@ -76,5 +81,5 @@ void insertion(benchmark::State& state) {
     }
 }
 
-ARMOR_TEMPLATE_BENCHMARK(insertion, trie_set)->RangeMultiplier(2)->Range(10, 1000);
-ARMOR_TEMPLATE_BENCHMARK(insertion,  tst_set)->RangeMultiplier(2)->Range(10, 1000);
+ARMOR_TEMPLATE_BENCHMARK(insertion, trie_set)->RangeMultiplier(10)->Range(10, 100000);
+ARMOR_TEMPLATE_BENCHMARK(insertion,  tst_set)->RangeMultiplier(10)->Range(10, 100000);
