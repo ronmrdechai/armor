@@ -71,12 +71,13 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
     static bool is_right_child(Node n)  { return n == n->parent->right(); }
 
     static Node tree_min(Node n) {
-        while (n->left() != nullptr) n = n->left();
+        if (n->left() != nullptr) return tree_min(n->left());
         return n;
     }
 
     static Node tree_max(Node n) {
-        while (n->right() != nullptr) n = n->right();
+        if (n->right()  != nullptr) return tree_max(n->right());
+        if (n->middle() != nullptr) return tree_max(n->middle());
         return n;
     }
 
