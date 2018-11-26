@@ -925,3 +925,14 @@ TYPED_TEST(assoc_common, does_not_leak) {
     }
     EXPECT_EQ(0u, allocator::bytes_allocated);
 }
+
+TYPED_TEST(assoc_common, bug$value_when_reverse_climbing_tree) {
+    TypeParam t;
+
+    t.emplace(TestFixture::key_to_value("foo"));
+    t.emplace(TestFixture::key_to_value("foobar"));
+    t.emplace(TestFixture::key_to_value("foobarbaz"));
+
+    EXPECT_EQ(3u, t.size());
+    EXPECT_EQ(3u, std::distance(t.rbegin(), t.rend()));
+}

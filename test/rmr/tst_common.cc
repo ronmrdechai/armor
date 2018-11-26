@@ -36,40 +36,13 @@ TYPED_TEST(tst_common, key_comp) {
     EXPECT_TRUE((std::is_same_v<decltype(t.key_comp()), typename TypeParam::key_compare>));
 }
 
-TYPED_TEST(tst_common, tree_root_has_no_right_child) { // TODO: cleanup
+TYPED_TEST(tst_common, bug$tree_root_has_no_right_child) {
     TypeParam t;
 
+    t.emplace(TestFixture::key_to_value("zap"));
     t.emplace(TestFixture::key_to_value("foo"));
-    t.emplace(TestFixture::key_to_value("baz"));
     t.emplace(TestFixture::key_to_value("bar"));
 
-    t.erase(t.find("foo"));
-    t.erase(t.find("bar"));
-
-    t.emplace(TestFixture::key_to_value("foo"));
-    t.emplace(TestFixture::key_to_value("fooqux"));
-    t.emplace(TestFixture::key_to_value("foobaz"));
-    t.emplace(TestFixture::key_to_value("fooquux"));
-    t.emplace(TestFixture::key_to_value("foobar"));
-
-    EXPECT_EQ(6u, std::distance(t.rbegin(), t.rend()));
-}
-
-TYPED_TEST(tst_common, value_when_reverse_climbing_tree) { // TODO: cleanup
-    TypeParam t;
-
-    t.emplace(TestFixture::key_to_value("foo"));
-    t.emplace(TestFixture::key_to_value("baz"));
-    t.emplace(TestFixture::key_to_value("bar"));
-
-    t.erase(t.find("foo"));
-    t.erase(t.find("bar"));
-
-    t.emplace(TestFixture::key_to_value("foo"));
-    t.emplace(TestFixture::key_to_value("fooqux"));
-    t.emplace(TestFixture::key_to_value("foobaz"));
-    t.emplace(TestFixture::key_to_value("fooquux"));
-    t.emplace(TestFixture::key_to_value("foobar"));
-
-    EXPECT_EQ(6u, std::distance(t.rbegin(), t.rend()));
+    EXPECT_EQ(3u, t.size());
+    EXPECT_EQ(3u, std::distance(t.rbegin(), t.rend()));
 }
