@@ -27,7 +27,7 @@ through a trie t at line 936 like so:
   934
   935      for (auto it = t.begin(); it != t.end(); ++it)
   936          std::cout << *it << std::endl;
-  937 
+  937
 Configure LLDB to visualize the trie and mark the current node like this:
   (lldb) b assoc_common.cc:936
   Breakpoint 1: 8 locations.
@@ -55,7 +55,7 @@ class Digraph(object):
         self._data = {}
 
     def add_vertex(self, vertex):
-        if not vertex in self._data.keys():
+        if vertex not in self._data.keys():
             self._data[vertex] = []
 
     def add_edge(self, from_, to, value):
@@ -106,7 +106,7 @@ class Visualizer(object):
 
 class TrieVisualizerBase(Visualizer):
     def __init__(self, arg):
-        if isinstance(arg, str): 
+        if isinstance(arg, str):
             trie = lldb.frame.FindVariable(arg)
             self._build_from_variable(trie)
         elif isinstance(arg, lldb.SBValue):
@@ -132,7 +132,6 @@ class TrieVisualizerBase(Visualizer):
             if mark_addr == vertex_addr:
                 color = "red"
         dot.write("  node [shape = %s, color = %s];\n" % (shape, color))
-
 
     def mark(self, arg):
         if isinstance(arg, str):
