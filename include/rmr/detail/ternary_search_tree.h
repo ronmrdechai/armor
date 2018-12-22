@@ -93,7 +93,7 @@ struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> 
         while (n->parent != nullptr && !is_right_child(n) && children_count(n->parent) == 1) n = n->parent;
 
         if (is_right_child(n)) return n->parent;
-        if (is_middle_child(n) && n->parent->left() != nullptr) return n->parent->left();
+        if (is_middle_child(n) && n->parent->left() != nullptr) return tree_max(n->parent->left());
         return skip_backward(n->parent); // is left child
     }
 
