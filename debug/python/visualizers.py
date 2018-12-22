@@ -2,6 +2,8 @@
 A set of visualizers from Armor associative containers for use in LLDB's script mode.
 
 Example:
+  (lldb) b assoc_common.cc:936
+  Breakpoint 1: 8 locations.
   (lldb) r
   ...
   Process 17750 stopped
@@ -16,6 +18,27 @@ Example:
   >>> from visualizers import TrieVisualizer
   >>> tvis = TrieVisualizer('t')
   >>> tvis.quicklook()
+
+For more advanced visualization, you can use automatic breakpoint scripts and
+the mark functionality. Consider a file named `assoc_common.cc' which iterates
+through a trie t at line 936 like so:
+  932      t.emplace(TestFixture::key_to_value("foobar"));
+  933      t.emplace(TestFixture::key_to_value("foobarbaz"));
+  934
+  935      for (auto it = t.begin(); it != t.end(); ++it)
+  936          std::cout << *it << std::endl;
+  937 
+Configure LLDB to visualize the trie and mark the current node like this:
+  (lldb) b assoc_common.cc:936
+  Breakpoint 1: 8 locations.
+  (lldb) b command add -s python 1
+  def function (frame, bp_loc, internal_dict):
+      from visualizers import TrieVisualizer
+      t = TrieVisualizer(frame.FindVariable('t'))
+      t.mark(frame.FindVariable('it'))
+      t.quicklook()
+      return False
+  (lldb) r
 """
 
 import collections
