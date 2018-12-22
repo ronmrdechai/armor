@@ -43,5 +43,6 @@ TYPED_TEST(tst_common, bug$tree_root_has_no_right_child_reverse_iteration) {
     t.emplace(TestFixture::key_to_value("foo"));
     t.emplace(TestFixture::key_to_value("bar"));
 
-    EXPECT_EQ(t.size(), std::distance(t.rbegin(), t.rend()));
+    EXPECT_EQ(3u, t.size());
+    EXPECT_EQ(3u, std::distance(t.rbegin(), t.rend()));
 }
