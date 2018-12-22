@@ -117,6 +117,7 @@ class TrieVisualizerBase(Visualizer):
         else:
             raise NotImplementedError("Invalid type for arg (type=%s)" % type(arg))
         self._marks.append(it.GetChildMemberWithName("node"))
+        return self
 
 
 class TrieVisualizer(TrieVisualizerBase):
