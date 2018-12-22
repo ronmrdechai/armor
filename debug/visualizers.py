@@ -44,16 +44,16 @@ class Visualizer(object):
     def __init__(self, root):
         self._digraph = Digraph()
         self.radix = len(root.GetChildMemberWithName("children"))
-        self._build_dag(root)
+        self._build_digraph(root)
 
-    def _build_dag(self, root):
-        value_address = int(root.GetChildMemberWithName("value").GetValue(), 16)
-        vertex = Digraph.Vertex(name=str(root.GetAddress()), value=value_address != 0)
+    def _build_digraph(self, root):
+        value = root.GetChildMemberWithName("value")
+        vertex = Digraph.Vertex(name=root, value=value)
 
         children = root.GetChildMemberWithName("children")
         for i, child in enumerate(children):
             if int(child.GetValue(), 16) != 0:
-                self._digraph.add_edge(vertex, self._build_dag(child), i)
+                self._digraph.add_edge(vertex, self._build_digraph(child), i)
         return vertex
 
     def write_dot(self, dot, key_mapper_inverse=None):
@@ -100,21 +100,38 @@ class TrieVisualizer(TrieVisualizerBase):
     def _write_dot_nodes(self, dot, key_mapper_inverse):
         for vertex in self._digraph._data.keys():
             shape = "circle"
-            if vertex.value:
+            if int(vertex.value.GetValue(), 16) != 0:
                 shape = "doublecircle"
             dot.write("  node [shape = %s ];\n" % shape)
-            dot.write("  \"%s\" [label = \"\"];\n" % vertex.name)
+            vertex_name = str(vertex.name.GetAddress())
+            dot.write("  \"%s\" [label = \"\"];\n" % vertex_name)
 
     def _write_dot_edges(self, dot, key_mapper_inverse):
         for vertex, edges in self._digraph._data.items():
+            vertex_name = str(vertex.name.GetAddress())
             for edge in edges:
+                edge_to_name = str(edge.to.name.GetAddress())
                 dot.write("  \"%s\" -> \"%s\" [label = \"%s\" ]\n" %
-                    (vertex.name, edge.to.name, key_mapper_inverse(edge.value)))
+                    (vertex_name, edge_to_name, key_mapper_inverse(edge.value)))
 
 
 class TSTVisualizer(TrieVisualizerBase):
     def _write_dot_nodes(self, dot, key_mapper_inverse):
-        raise NotImplementedError()
+        for vertex in self._digraph._data.keys():
+            shape = "circle"
+            if int(vertex.value.GetValue(), 16) != 0:
+                shape = "doublecircle"
+            dot.write("  node [shape = %s ];\n" % shape)
+            vertex_name = str(vertex.name.GetAddress())
+            vertex_label = ord(vertex.name.GetChildMemberWithName("c").GetValue()[1])
+            dot.write("  \"%s\" [label = \"%s\"];\n" %
+                (vertex_name, key_mapper_inverse(vertex_label)))
 
-    def _write_dot_edges(self, dot, key_mapper_inverse):
-        raise NotImplementedError()
+    def _write_dot_edges(self, dot, _):
+        for vertex, edges in self._digraph._data.items():
+            vertex_name = str(vertex.name.GetAddress())
+            for edge in edges:
+                edge_to_name = str(edge.to.name.GetAddress())
+                edge_value = ("l", "m", "r")[edge.value]
+                dot.write("  \"%s\" -> \"%s\" [label = \"%s\" ]\n" %
+                    (vertex_name, edge_to_name, edge_value))
