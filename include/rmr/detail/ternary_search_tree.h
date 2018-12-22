@@ -31,36 +31,6 @@ void unlink(ternary_search_tree_node<T, Char>* n) {
     if (n->parent->right()  == n) n->parent->right()  = nullptr;
 }
 
-template <typename T, typename Char, typename OStream>
-void write_dot_nodes(const ternary_search_tree_node<T, Char>* node, OStream& os) {
-    os << "  node [shape = " << (node->value == nullptr ? "circle" : "doublecircle") << "];";
-    os << "  \"" << node << "\" [label = " << node->c << "];\n";
-
-    if (node->left()   != nullptr) write_dot_nodes(node->left(),   os);
-    if (node->middle() != nullptr) write_dot_nodes(node->middle(), os);
-    if (node->right()  != nullptr) write_dot_nodes(node->right(),  os);
-}
-
-template <typename T, typename Char, typename OStream>
-void write_dot_impl(const ternary_search_tree_node<T, Char>* node, OStream& os) {
-    write_dot_nodes(node, os);
-
-    if (node->left() != nullptr) {
-        os << "  \"" << node << "\" -> \"" << node->left() << "\" [label = l];\n";
-        write_dot_impl(node->left(), os);
-    }
-
-    if (node->middle() != nullptr) {
-        os << "  \"" << node << "\" -> \"" << node->middle() << "\" [label = m, style = dashed];\n";
-        write_dot_impl(node->middle(), os);
-    }
-
-    if (node->right() != nullptr) {
-        os << "  \"" << node << "\" -> \"" << node->right() << "\" [label = r];\n";
-        write_dot_impl(node->right(), os);
-    }
-}
-
 template <typename Node>
 struct ternary_search_tree_iterator_traits : trie_iterator_traits_base<3, Node> {
     template <typename _Node>

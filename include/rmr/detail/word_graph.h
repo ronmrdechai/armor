@@ -114,27 +114,6 @@ private:
 template <std::size_t R>
 struct word_graph_node : trie_node_base<word_graph_node<R>, void, R> { bool accepting; };
 
-template <std::size_t R, typename OStream>
-void write_dot_nodes(const word_graph_node<R>* node, OStream& os) {
-    os << "  node [shape = " << (node->accepting ? "doublecircle" : "circle") << "];";
-    os << "  \"" << node << "\" [label = \"\"];\n";
-
-    for (auto child : node->children) if (child != nullptr) write_dot_nodes(child, os);
-}
-
-template <std::size_t R, typename OStream>
-void write_dot_impl(const word_graph_node<R>* node, OStream& os) {
-    write_dot_nodes(node, os);
-
-    for (std::size_t i = 0; i < R; ++i) {
-        auto child = node->children[i];
-        if (child != nullptr) {
-            os << "  \"" << node << "\" -> \"" << child << "\" [label = " << char(i) << "];\n";
-            write_dot_impl(child, os);
-        }
-    }
-}
-
 template <typename T, std::size_t R, typename KeyMapper, typename Key, typename Allocator>
 class word_graph {
     using alloc_traits        = std::allocator_traits<Allocator>;

@@ -50,13 +50,6 @@ void clear_node(Node* n, NodeAllocator& na, ValueAllocator& va) {
 	}
 }
 
-template <typename TrieIterator, typename OStream>
-void write_dot(TrieIterator it, OStream&& os) {
-    os << "digraph trie {\n";
-    write_dot_impl(it.node, os);
-    os << "}\n" << std::flush;
-}
-
 template <typename Traits>
 struct trie_iterator {
     using node_type = typename Traits::node_type;

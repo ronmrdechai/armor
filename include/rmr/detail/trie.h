@@ -18,27 +18,6 @@ struct trie_node : trie_node_base<trie_node<T, R>, T, R> { std::size_t parent_in
 template <typename T, std::size_t R>
 void unlink(trie_node<T, R>* n) { n->parent->children[n->parent_index] = nullptr; }
 
-template <typename T, std::size_t R, typename OStream>
-void write_dot_nodes(const trie_node<T, R>* node, OStream& os) {
-    os << "  node [shape = " << (node->value == nullptr ? "circle" : "doublecircle") << "];";
-    os << "  \"" << node << "\" [label = \"\"];\n";
-
-    for (auto child : node->children) if (child != nullptr) write_dot_nodes(child, os);
-}
-
-template <typename T, std::size_t R, typename OStream>
-void write_dot_impl(const trie_node<T, R>* node, OStream& os) {
-    write_dot_nodes(node, os);
-
-    for (std::size_t i = 0; i < R; ++i) {
-        auto child = node->children[i];
-        if (child != nullptr) {
-            os << "  \"" << node << "\" -> \"" << child << "\" [label = " << char(i) << "];\n";
-            write_dot_impl(child, os);
-        }
-    }
-}
-
 template <std::size_t R, typename Node>
 struct trie_iterator_traits : trie_iterator_traits_base<R, Node> {
     template <typename _Node>

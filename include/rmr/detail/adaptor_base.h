@@ -211,10 +211,6 @@ public:
     const_iterator longest_match(const key_type& k) const
     { return trie_.longest_match(k); }
 
-#ifndef NDEBUG
-    const_iterator __croot() const noexcept { return trie_.root(); }
-#endif
-
 protected:
     Trie trie_;
 
