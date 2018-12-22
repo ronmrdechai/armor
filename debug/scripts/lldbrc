@@ -1,0 +1,2 @@
+command alias quicklook-trie script from visualizers import TrieVisualizer;O=type('O',(object,),{"__add__": lambda s,x: TrieVisualizer(x).quicklook()});O()+
+command alias quicklook-tst script from visualizers import TSTVisualizer;O=type('O',(object,),{"__add__": lambda s,x: TSTVisualizer(x).quicklook()});O()+
