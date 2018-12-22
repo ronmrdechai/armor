@@ -46,6 +46,7 @@ import lldb
 import tempfile
 import subprocess
 
+
 class Digraph(object):
     Edge = collections.namedtuple("Edge", ["value", "to"])
     Vertex = collections.namedtuple("Vertex", ["name", "value"])
@@ -101,6 +102,7 @@ class Visualizer(object):
             stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
         subprocess.Popen(["qlmanage", "-p", png.name],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+
 
 class TrieVisualizerBase(Visualizer):
     def __init__(self, arg):

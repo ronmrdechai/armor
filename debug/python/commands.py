@@ -1,11 +1,13 @@
 import lldb
 import visualizers
 
+
 def get_frame(debugger):
     target = debugger.GetSelectedTarget()
     process = target.GetProcess()
     thread = process.GetSelectedThread()
     return thread.GetSelectedFrame()
+
 
 class Commands(object):
     @classmethod
@@ -37,8 +39,10 @@ class TrieCommands(Commands):
 def quicklook_trie(debugger, command, result, internal_dict):
     TrieCommands.quicklook(debugger, command, result, internal_dict)
 
+
 def trace_iteration_trie(debugger, command, result, internal_dict):
     TrieCommands.trace_iteration(debugger, command, result, internal_dict)
+
 
 class TSTCommands(Commands):
     VISUALIZER = visualizers.TrieVisualizer
@@ -48,8 +52,10 @@ class TSTCommands(Commands):
 def quicklook_tst(debugger, command, result, internal_dict):
     TSTCommands.quicklook(debugger, command, result, internal_dict)
 
+
 def trace_iteration_tst(debugger, command, result, internal_dict):
     TSTCommands.trace_iteration(debugger, command, result, internal_dict)
+
 
 def __lldb_init_module(debugger, internal_dict):
     for typ in ("trie", "tst"):
