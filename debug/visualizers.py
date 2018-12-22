@@ -88,6 +88,7 @@ class TrieVisualizerBase(Visualizer):
             self._build_from_variable(arg)
         else:
             raise NotImplementedError("Invalid type for arg (type=%s)" % type(arg))
+        self._marks = []
 
     def _build_from_variable(self, trie):
         root = trie.GetChildMemberWithName('trie_') \
@@ -95,14 +96,34 @@ class TrieVisualizerBase(Visualizer):
             .GetChildMemberWithName('root')
         super(TrieVisualizerBase, self).__init__(root)
 
+    def _write_dot_shape_and_color(self, dot, vertex):
+        shape = "circle"
+        if int(vertex.value.GetValue(), 16) != 0:
+            shape = "doublecircle"
+        color = "black"
+        for mark in self._marks:
+            vertex_addr = str(vertex.name.Dereference().GetAddress())
+            mark_addr = str(mark.Dereference().GetAddress())
+            if mark_addr == vertex_addr:
+                color = "red"
+        dot.write("  node [shape = %s, color = %s];\n" % (shape, color))
+
+
+    def mark(self, arg):
+        if isinstance(arg, str):
+            it = lldb.frame.FindVariable(arg)
+        elif isinstance(arg, lldb.SBValue):
+            it = arg
+        else:
+            raise NotImplementedError("Invalid type for arg (type=%s)" % type(arg))
+        self._marks.append(it.GetChildMemberWithName("node"))
+
 
 class TrieVisualizer(TrieVisualizerBase):
     def _write_dot_nodes(self, dot, key_mapper_inverse):
         for vertex in self._digraph._data.keys():
-            shape = "circle"
-            if int(vertex.value.GetValue(), 16) != 0:
-                shape = "doublecircle"
-            dot.write("  node [shape = %s ];\n" % shape)
+            self._write_dot_shape_and_color(dot, vertex)
+
             vertex_name = str(vertex.name.GetAddress())
             dot.write("  \"%s\" [label = \"\"];\n" % vertex_name)
 
@@ -118,10 +139,8 @@ class TrieVisualizer(TrieVisualizerBase):
 class TSTVisualizer(TrieVisualizerBase):
     def _write_dot_nodes(self, dot, key_mapper_inverse):
         for vertex in self._digraph._data.keys():
-            shape = "circle"
-            if int(vertex.value.GetValue(), 16) != 0:
-                shape = "doublecircle"
-            dot.write("  node [shape = %s ];\n" % shape)
+            self._write_dot_shape_and_color(dot, vertex)
+
             vertex_name = str(vertex.name.GetAddress())
             vertex_label = ord(vertex.name.GetChildMemberWithName("c").GetValue()[1])
             dot.write("  \"%s\" [label = \"%s\"];\n" %
