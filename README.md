@@ -16,7 +16,7 @@ All of _Armor's_ associative containers are fully STL compatible and satisfy the
 #### Trie-based containers
 
 - [x] `trie_map` - An implementation of a Trie based map.
-- [ ] `tst_map` - An implementation of a Ternary Search Tree based map.
+- [x] `tst_map` - An implementation of a Ternary Search Tree based map.
 - [ ] `compressed_trie_map` - An implementation of a compressed Trie based map.
 - [ ] `patricia_trie_map` - An implementation of a PARTICIA Trie based map.
 - [ ] `hat_trie_map` - An implementation of a
