@@ -83,7 +83,7 @@ class Visualizer(object):
     def write_dot(self, dot, key_mapper_inverse=None):
         if key_mapper_inverse is None:
             key_mapper_inverse = chr
-        dot.write("digraph trie {")
+        dot.write("digraph _ {")
 
         dot.write("\n// nodes\n")
         self._write_dot_nodes(dot, key_mapper_inverse)
@@ -126,21 +126,23 @@ class TrieVisualizerBase(Visualizer):
         if int(vertex.value.GetValue(), 16) != 0:
             shape = "doublecircle"
         color = "black"
-        for mark in self._marks:
+        for mark, color_ in self._marks:
             vertex_addr = str(vertex.name.Dereference().GetAddress())
             mark_addr = str(mark.Dereference().GetAddress())
             if mark_addr == vertex_addr:
-                color = "red"
+                color = color_
         dot.write("  node [shape = %s, color = %s];\n" % (shape, color))
 
-    def mark(self, arg):
+    def mark(self, arg, color="red"):
         if isinstance(arg, str):
-            it = lldb.frame.FindVariable(arg)
+            arg = lldb.frame.FindVariable(arg)
         elif isinstance(arg, lldb.SBValue):
-            it = arg
+            pass
         else:
             raise NotImplementedError("Invalid type for arg (type=%s)" % type(arg))
-        self._marks.append(it.GetChildMemberWithName("node"))
+        if arg.GetName() != "node":  # Is an iterator
+            arg = arg.GetChildMemberWithName("node")
+        self._marks.append((arg, color))
         return self
 
 
