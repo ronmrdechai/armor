@@ -99,9 +99,9 @@ class Visualizer(object):
 
         png = tempfile.NamedTemporaryFile(suffix=".png")
         subprocess.Popen(["dot", "-Tpng", dot.name, "-o", png.name],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
         subprocess.Popen(["qlmanage", "-p", png.name],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
 
 class TrieVisualizerBase(Visualizer):
@@ -160,7 +160,7 @@ class TrieVisualizer(TrieVisualizerBase):
             for edge in edges:
                 edge_to_name = str(edge.to.name.GetAddress())
                 dot.write("  \"%s\" -> \"%s\" [label = \"%s\" ]\n" %
-                    (vertex_name, edge_to_name, key_mapper_inverse(edge.value)))
+                          (vertex_name, edge_to_name, key_mapper_inverse(edge.value)))
 
 
 class TSTVisualizer(TrieVisualizerBase):
@@ -171,7 +171,7 @@ class TSTVisualizer(TrieVisualizerBase):
             vertex_name = str(vertex.name.GetAddress())
             vertex_label = ord(vertex.name.GetChildMemberWithName("c").GetValue()[1])
             dot.write("  \"%s\" [label = \"%s\"];\n" %
-                (vertex_name, key_mapper_inverse(vertex_label)))
+                      (vertex_name, key_mapper_inverse(vertex_label)))
 
     def _write_dot_edges(self, dot, _):
         for vertex, edges in self._digraph._data.items():
@@ -180,4 +180,4 @@ class TSTVisualizer(TrieVisualizerBase):
                 edge_to_name = str(edge.to.name.GetAddress())
                 edge_value = ("l", "m", "r")[edge.value]
                 dot.write("  \"%s\" -> \"%s\" [label = \"%s\" ]\n" %
-                    (vertex_name, edge_to_name, edge_value))
+                          (vertex_name, edge_to_name, edge_value))
