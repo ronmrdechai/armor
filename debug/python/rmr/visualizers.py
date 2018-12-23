@@ -181,3 +181,22 @@ class TSTVisualizer(TrieVisualizerBase):
                 edge_value = ("l", "m", "r")[edge.value]
                 dot.write("  \"%s\" -> \"%s\" [label = \"%s\" ]\n" %
                           (vertex_name, edge_to_name, edge_value))
+
+
+def visualizer_for(arg):
+    """
+    Apply simple heuristics to attempt to select the correct visualizer for `arg'
+    """
+    if isinstance(arg, str):
+        arg = lldb.frame.FindVariable(arg)
+    elif isinstance(arg, lldb.SBValue):
+        pass
+    else:
+        raise NotImplementedError("Invalid type for arg (type=%s)" % type(arg))
+    typename = arg.GetChildMemberWithName("trie_").GetType().GetName()
+    if typename.startswith("trie"):
+        return TrieVisualizer(arg)
+    if typename.startswith("ternary_search_tree"):
+        return TSTVisualizer(arg)
+    else:
+        raise ValueError("Don't know how to parse type (name=%s)" % typename)
