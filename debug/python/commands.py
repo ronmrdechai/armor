@@ -14,8 +14,7 @@ commands to LLDB to allow it to debug Armor types.
 
 
 import lldb
-import rmr.utils
-import rmr.visualizers
+import rmr
 
 
 def get_frame(debugger):
@@ -37,8 +36,7 @@ def trace_iteration(debugger, command, result, internal_dict):
     bp_index, t, it = command.split(" ")[0:3]
     bp = debugger.GetSelectedTarget().GetBreakpointAtIndex(int(bp_index) - 1)
     bp.SetScriptCallbackBody("""
-import rmr.utils
-import rmr.visualizers
+import rmr
 t = rmr.visualizers.visualizer_for(rmr.utils.find_variable(frame, "%s"))
 t.mark(rmr.utils.find_variable(frame, "%s"))
 t.quicklook()
