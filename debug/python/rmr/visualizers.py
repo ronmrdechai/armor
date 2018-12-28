@@ -47,9 +47,19 @@ import tempfile
 import subprocess
 
 
+class Pointer(int):
+    def __repr__(self):
+        return "Pointer(0x%016x)" % self
+
+
 class Digraph(object):
-    Edge = collections.namedtuple("Edge", ["value", "to"])
-    Vertex = collections.namedtuple("Vertex", ["name", "value"])
+    class Edge(collections.namedtuple("Edge", ["to", "fields"])):
+        def __hash__(self):
+            return hash(self.to)
+
+    class Vertex(collections.namedtuple("Vertex", ["name", "fields"])):
+        def __hash__(self):
+            return hash(self.name)
 
     def __init__(self):
         self._data = {}
@@ -58,10 +68,30 @@ class Digraph(object):
         if vertex not in self._data.keys():
             self._data[vertex] = []
 
-    def add_edge(self, from_, to, value):
+    def add_edge(self, from_, to, fields):
         self.add_vertex(from_)
         self.add_vertex(to)
-        self._data[from_].append(Digraph.Edge(value=value, to=to))
+        self._data[from_].append(Digraph.Edge(to=to, fields=fields))
+
+
+def lldb_build_digraph(root):
+    class LLDBDigraphBuilder(object):
+        def __init__(self, root):
+            self.digraph = Digraph()
+            self._build_digraph(root)
+
+        def _build_digraph(self, root):
+            name = Pointer(str(root.GetAddress()), 16)
+            fields = { str(x.GetName()): str(x.GetValue())
+                    for x in list(root)[1:] if x.GetName() != "children" or x.GetValue() is not None }
+            vertex = Digraph.Vertex(name=name, fields=fields)
+
+            children = root.GetChildMemberWithName("children")
+            for i, child in enumerate(children):
+                if Pointer(str(child.GetValue()), 16) != 0:
+                    self.digraph.add_edge(vertex, self._build_digraph(child), i)
+            return vertex
+    return LLDBDigraphBuilder(root).digraph
 
 
 class Visualizer(object):
