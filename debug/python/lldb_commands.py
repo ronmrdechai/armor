@@ -26,10 +26,12 @@ def get_frame(debugger):
 
 def quicklook(debugger, command, result, internal_dict):
     frame = get_frame(debugger)
-    rmr.visualizers.visualizer_for(rmr.utils.find_variable(frame, command)).quicklook()
+    rmr.util.lldb_visualizer_for(
+        rmr.util.lldb_find_variable(frame, command)).quicklook()
+
 
 def trace_iteration(debugger, command, result, internal_dict):
-    args = command.split(" ")
+    args = command.strip().split(" ")
     if len(args) < 3:
         print "Usage: armor-trace-iteration <bpid> <variable> <iterator>"
         return
@@ -37,8 +39,9 @@ def trace_iteration(debugger, command, result, internal_dict):
     bp = debugger.GetSelectedTarget().GetBreakpointAtIndex(int(bp_index) - 1)
     bp.SetScriptCallbackBody("""
 import rmr
-t = rmr.visualizers.visualizer_for(rmr.utils.find_variable(frame, "%s"))
-t.mark(rmr.utils.find_variable(frame, "%s"))
+t = rmr.util.lldb_visualizer_for(rmr.util.lldb_find_variable(frame, "%s"))
+it = rmr.util.lldb_find_variable(frame, "%s")
+t.mark(rmr.util.lldb_iterator_to_pointer(it))
 t.quicklook()
 return False
     """ % (t, it))
@@ -46,6 +49,6 @@ return False
 
 def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
-        'command script add -f commands.quicklook armor-quicklook')
+        'command script add -f lldb_commands.quicklook armor-quicklook')
     debugger.HandleCommand(
-        'command script add -f commands.trace_iteration armor-trace-iteration')
+        'command script add -f lldb_commands.trace_iteration armor-trace-iteration')

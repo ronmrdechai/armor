@@ -1,114 +1,24 @@
 """
-A set of visualizers from Armor associative containers for use in LLDB's script mode.
-
-Example:
-  (lldb) b assoc_common.cc:936
-  Breakpoint 1: 8 locations.
-  (lldb) r
-  ...
-  Process 17750 stopped
-  * thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.2
-      frame #0: 0x00000001000c00c8 test_assoc_common`assoc_common_bug$value_when_reverse_climbing_tree_Test<trie_map>::TestBody(this=0x0000000101001000) at assoc_common.cc:936
-     933      t.emplace(TestFixture::key_to_value("foobar"));
-     934      t.emplace(TestFixture::key_to_value("foobarbaz"));
-     935
-  -> 936      EXPECT_EQ(3u, t.size());
-     937      EXPECT_EQ(3u, std::distance(t.rbegin(), t.rend()));
-  (lldb) script
-  >>> from visualizers import TrieVisualizer
-  >>> tvis = TrieVisualizer('t')
-  >>> tvis.quicklook()
-
-For more advanced visualization, you can use automatic breakpoint scripts and
-the mark functionality. Consider a file named `assoc_common.cc' which iterates
-through a trie t at line 936 like so:
-  932      t.emplace(TestFixture::key_to_value("foobar"));
-  933      t.emplace(TestFixture::key_to_value("foobarbaz"));
-  934
-  935      for (auto it = t.begin(); it != t.end(); ++it)
-  936          std::cout << *it << std::endl;
-  937
-Configure LLDB to visualize the trie and mark the current node like this:
-  (lldb) b assoc_common.cc:936
-  Breakpoint 1: 8 locations.
-  (lldb) b command add -s python 1
-  def function (frame, bp_loc, internal_dict):
-      from visualizers import TrieVisualizer
-      t = TrieVisualizer(frame.FindVariable('t'))
-      t.mark(frame.FindVariable('it'))
-      t.quicklook()
-      return False
-  (lldb) r
+A set of visualizers for Armor associative containers for use in LLDB's script
+mode.
 """
 
-import collections
-import lldb
 import tempfile
 import subprocess
 
 
-class Pointer(int):
-    def __repr__(self):
-        return "Pointer(0x%016x)" % self
-
-
-class Digraph(object):
-    class Edge(collections.namedtuple("Edge", ["to", "fields"])):
-        def __hash__(self):
-            return hash(self.to)
-
-    class Vertex(collections.namedtuple("Vertex", ["name", "fields"])):
-        def __hash__(self):
-            return hash(self.name)
-
-    def __init__(self):
-        self._data = {}
-
-    def add_vertex(self, vertex):
-        if vertex not in self._data.keys():
-            self._data[vertex] = []
-
-    def add_edge(self, from_, to, fields):
-        self.add_vertex(from_)
-        self.add_vertex(to)
-        self._data[from_].append(Digraph.Edge(to=to, fields=fields))
-
-
-def lldb_build_digraph(root):
-    class LLDBDigraphBuilder(object):
-        def __init__(self, root):
-            self.digraph = Digraph()
-            self._build_digraph(root)
-
-        def _build_digraph(self, root):
-            name = Pointer(str(root.GetAddress()), 16)
-            fields = { str(x.GetName()): str(x.GetValue())
-                    for x in list(root)[1:] if x.GetName() != "children" or x.GetValue() is not None }
-            vertex = Digraph.Vertex(name=name, fields=fields)
-
-            children = root.GetChildMemberWithName("children")
-            for i, child in enumerate(children):
-                if Pointer(str(child.GetValue()), 16) != 0:
-                    self.digraph.add_edge(vertex, self._build_digraph(child), i)
-            return vertex
-    return LLDBDigraphBuilder(root).digraph
-
-
 class Visualizer(object):
-    def __init__(self, root):
-        self._digraph = Digraph()
-        self.radix = len(root.GetChildMemberWithName("children"))
-        self._build_digraph(root)
+    """
+    An abstract class to visualize Armor containers using graphviz.
+    """
+    def __init__(self, digraph):
+        self._digraph = digraph
 
-    def _build_digraph(self, root):
-        value = root.GetChildMemberWithName("value")
-        vertex = Digraph.Vertex(name=root, value=value)
+    def _write_dot_nodes(self, key_mapper_inverse):
+        raise NotImplementedError()
 
-        children = root.GetChildMemberWithName("children")
-        for i, child in enumerate(children):
-            if int(child.GetValue(), 16) != 0:
-                self._digraph.add_edge(vertex, self._build_digraph(child), i)
-        return vertex
+    def _write_dot_edges(self, key_mapper_inverse):
+        raise NotImplementedError()
 
     def write_dot(self, dot, key_mapper_inverse=None):
         if key_mapper_inverse is None:
@@ -129,104 +39,66 @@ class Visualizer(object):
 
         png = tempfile.NamedTemporaryFile(suffix=".png")
         subprocess.Popen(["dot", "-Tpng", dot.name, "-o", png.name],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE).wait()
         subprocess.Popen(["qlmanage", "-p", png.name],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE).wait()
 
 
 class TrieVisualizerBase(Visualizer):
-    def __init__(self, arg):
-        if isinstance(arg, str):
-            trie = lldb.frame.FindVariable(arg)
-            self._build_from_variable(trie)
-        elif isinstance(arg, lldb.SBValue):
-            self._build_from_variable(arg)
-        else:
-            raise NotImplementedError("Invalid type for arg (type=%s)" % type(arg))
+    def __init__(self, *args):
+        super(TrieVisualizerBase, self).__init__(*args)
         self._marks = []
-
-    def _build_from_variable(self, trie):
-        root = trie.GetChildMemberWithName('trie_') \
-            .GetChildMemberWithName('impl_') \
-            .GetChildMemberWithName('root')
-        super(TrieVisualizerBase, self).__init__(root)
 
     def _write_dot_shape_and_color(self, dot, vertex):
         shape = "circle"
-        if int(vertex.value.GetValue(), 16) != 0:
+        if vertex.fields["value"]:
             shape = "doublecircle"
         color = "black"
         for mark, color_ in self._marks:
-            vertex_addr = str(vertex.name.Dereference().GetAddress())
-            mark_addr = str(mark.Dereference().GetAddress())
-            if mark_addr == vertex_addr:
+            print mark, vertex.name
+            if mark == vertex.name:
                 color = color_
         dot.write("  node [shape = %s, color = %s];\n" % (shape, color))
 
-    def mark(self, arg, color="red"):
-        if isinstance(arg, str):
-            arg = lldb.frame.FindVariable(arg)
-        elif isinstance(arg, lldb.SBValue):
-            pass
-        else:
-            raise NotImplementedError("Invalid type for arg (type=%s)" % type(arg))
-        if arg.GetName() != "node":  # Is an iterator
-            arg = arg.GetChildMemberWithName("node")
-        self._marks.append((arg, color))
+    def mark(self, pointer, color="red"):
+        self._marks.append((pointer, color))
         return self
 
 
 class TrieVisualizer(TrieVisualizerBase):
+    """
+    A visualizer for Armor trie containers.
+    """
     def _write_dot_nodes(self, dot, key_mapper_inverse):
-        for vertex in self._digraph._data.keys():
+        for vertex, _ in self._digraph:
             self._write_dot_shape_and_color(dot, vertex)
-
-            vertex_name = str(vertex.name.GetAddress())
-            dot.write("  \"%s\" [label = \"\"];\n" % vertex_name)
+            dot.write("  \"%s\" [label = \"\"];\n" % vertex.name)
 
     def _write_dot_edges(self, dot, key_mapper_inverse):
-        for vertex, edges in self._digraph._data.items():
-            vertex_name = str(vertex.name.GetAddress())
+        for vertex, edges in self._digraph:
             for edge in edges:
-                edge_to_name = str(edge.to.name.GetAddress())
                 dot.write("  \"%s\" -> \"%s\" [label = \"%s\" ]\n" %
-                          (vertex_name, edge_to_name, key_mapper_inverse(edge.value)))
+                          (vertex.name,
+                           edge.to.name,
+                           key_mapper_inverse(edge.fields["value"])))
 
 
 class TSTVisualizer(TrieVisualizerBase):
+    """
+    A visualizer for Armor ternary search tree containers.
+    """
     def _write_dot_nodes(self, dot, key_mapper_inverse):
-        for vertex in self._digraph._data.keys():
+        for vertex, _ in self._digraph:
             self._write_dot_shape_and_color(dot, vertex)
-
-            vertex_name = str(vertex.name.GetAddress())
-            vertex_label = ord(vertex.name.GetChildMemberWithName("c").GetValue()[1])
             dot.write("  \"%s\" [label = \"%s\"];\n" %
-                      (vertex_name, key_mapper_inverse(vertex_label)))
+                      (vertex.name,
+                       key_mapper_inverse(ord(vertex.fields["c"][1]))))
 
     def _write_dot_edges(self, dot, _):
-        for vertex, edges in self._digraph._data.items():
-            vertex_name = str(vertex.name.GetAddress())
+        for vertex, edges in self._digraph:
             for edge in edges:
-                edge_to_name = str(edge.to.name.GetAddress())
-                edge_value = ("l", "m", "r")[edge.value]
+                edge_value = ("l", "m", "r")[int(edge.fields["value"])]
                 dot.write("  \"%s\" -> \"%s\" [label = \"%s\" ]\n" %
-                          (vertex_name, edge_to_name, edge_value))
-
-
-def visualizer_for(arg):
-    """
-    Apply simple heuristics to attempt to select the correct visualizer for `arg'
-    """
-    if isinstance(arg, str):
-        arg = lldb.frame.FindVariable(arg)
-    elif isinstance(arg, lldb.SBValue):
-        pass
-    else:
-        raise NotImplementedError("Invalid type for arg (type=%s)" % type(arg))
-    typename = arg.GetChildMemberWithName("trie_").GetType().GetName()
-    if typename.startswith("trie"):
-        return TrieVisualizer(arg)
-    if typename.startswith("ternary_search_tree"):
-        return TSTVisualizer(arg)
-    else:
-        raise ValueError("Don't know how to parse type (name=%s)" % typename)
+                          (vertex.name, edge.to.name, edge_value))
