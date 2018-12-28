@@ -57,7 +57,6 @@ class TrieVisualizerBase(Visualizer):
             shape = "doublecircle"
         color = "black"
         for mark, color_ in self._marks:
-            print mark, vertex.name
             if mark == vertex.name:
                 color = color_
         dot.write("  node [shape = %s, color = %s];\n" % (shape, color))

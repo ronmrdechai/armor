@@ -68,6 +68,8 @@ def lldb_build_digraph(root):
             self._build_digraph(root)
 
         def _build_digraph(self, root):
+            if str(root.GetType()).endswith("*"):
+                root = root.Dereference()
             name = Pointer(str(root.GetAddress()))
             fields = {str(x.GetName()): str(x.GetValue())
                       for x in list(root)[1:] if x.GetValue() is not None}
@@ -84,6 +86,7 @@ def lldb_build_digraph(root):
             return vertex
 
     return DigraphBuilder(root).digraph
+
 
 def lldb_container_root(container):
     """

@@ -1,15 +1,15 @@
 """
-This file is sourced by the `lldb.sh' after starting LLDB. It installs a few new
-commands to LLDB to allow it to debug Armor types.
+This file is sourced by the `lldb.sh' after starting LLDB. It installs a few
+new commands to LLDB to allow it to debug Armor types.
 
 1. armor-quicklook <variable>
     This command will construct a graphviz drawing of a trie and open it in
     quicklook. Very useful for debugging trie structure and trie related bugs.
 
 2. armor-trace-iteration <bpid> <variable> <iterator>
-    Assuming <bpid> is a breakpoint inside of a loop iterating over a trie. This
-    command will modify breakpoint number <bpid> to display a graphviz diagram
-    and with the iterator location marked in it.
+    Assuming <bpid> is a breakpoint inside of a loop iterating over a trie.
+    This command will modify breakpoint number <bpid> to display a graphviz
+    diagram and with the iterator location marked in it.
 """
 
 
@@ -49,6 +49,7 @@ return False
 
 def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
-        'command script add -f lldb_commands.quicklook armor-quicklook')
+        "command script add -f lldb_commands.quicklook armor-quicklook")
     debugger.HandleCommand(
-        'command script add -f lldb_commands.trace_iteration armor-trace-iteration')
+        "command script add -f "
+        "lldb_commands.trace_iteration armor-trace-iteration")
