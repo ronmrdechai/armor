@@ -101,8 +101,8 @@ The following subcommands are supported:
 """
     width = max(map(lambda cls: len(cls.command_name), ArmorCommand))
     for cls in sorted(ArmorCommand, key=lambda cls: cls.command_name):
-        text += "    %% -%ds -- %%s\n" % width % \
-            (cls.command_name, cls.command_desc)
+        text += "    %% -%ds -- %%s\n" % width % (cls.command_name,
+                                                  cls.command_desc)
     return text
 
 
@@ -111,7 +111,7 @@ def armor_main(debugger, cmdline, result, _):
     try:
         command, args = args[0], args[1:]
     except IndexError:
-        print >>result, armor_main_help()
+        result.write(armor_main_help())
         return
     for cls in ArmorCommand:
         if cls.command_name == command:
@@ -119,10 +119,10 @@ def armor_main(debugger, cmdline, result, _):
                 cls.run(debugger, *args)
                 return
             except TypeError:
-                print >>result, cls.command_desc
-                print >>result, cls.command_help
+                result.write(cls.command_desc + "\n")
+                result.write(cls.command_help + "\n")
                 return
-    print >>result, "invalid command 'armor %s'." % command
+    result.write("invalid command 'armor %s'.\n" % command)
 
 
 def __lldb_init_module(debugger, _):
