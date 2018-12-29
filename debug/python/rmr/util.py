@@ -53,6 +53,6 @@ def lldb_iterator_to_pointer(arg):
         it = arg
     else:
         raise NotImplementedError("Invalid type for arg (type=%s)" % type(arg))
-    if it.GetName() != "node":  # Is an iterator
+    if "iterator" in it.GetType().GetName():  # Is an iterator
         it = it.GetChildMemberWithName("node")
     return rmr.parsers.Pointer(str(it.Dereference().GetAddress()))
