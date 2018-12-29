@@ -91,10 +91,17 @@ location marked in it."""
         """ % (t, it))
 
 
-def print_subcommands(result):
+def armor_main_help():
+    text = """    Armor debugging utilities.
+
+Syntax: armor <subcommand> [<subcommand-options>]
+
+The following subcommands are supported:
+
+"""
     width = max(map(lambda cls: len(cls.command_name), ArmorCommand))
     for cls in sorted(ArmorCommand, key=lambda cls: cls.command_name):
-        print >>result, "    %% -%ds -- %%s" % width % \
+        text += "    %% -%ds -- %%s\n" % width % \
             (cls.command_name, cls.command_desc)
 
 
@@ -103,13 +110,7 @@ def armor_main(debugger, cmdline, result, _):
     try:
         command, args = args[0], args[1:]
     except IndexError:
-        print >>result, """    Armor debugging utilities.
-
-Syntax: armor <subcommand> [<subcommand-options>]
-
-The following subcommands are supported:
-"""
-        print_subcommands(result)
+        print >>result, armor_main_help()
         return
     for cls in ArmorCommand:
         if cls.command_name == command:
