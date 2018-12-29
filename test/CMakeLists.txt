@@ -9,6 +9,7 @@ include(CTest)
 include(GoogleTest)
 
 find_package(GoogleTest 1.8.0)
+find_package(PyCodeStyle)
 
 file(GLOB test_sources CONFIGURE_DEPENDS "rmr/*.cc")
 
@@ -22,9 +23,8 @@ foreach(source ${test_sources})
     gtest_discover_tests(${target})
 endforeach()
 
-find_program(PYCODESTYLE_EXECUTABLE NAMES pycodestyle pep8)
-if(PYCODESTYLE_EXECUTABLE)
-    add_test(NAME pycodestyle
-        COMMAND ${PYCODESTYLE_EXECUTABLE} "${PROJECT_SOURCE_DIR}/debug/python"
+if(PyCodeStyle_FOUND)
+    pycodestyle_add_tests("${PROJECT_SOURCE_DIR}/*.py"
+        EXCLUDE __init__.py "${PROJECT_BINARY_DIR}"
     )
 endif()
