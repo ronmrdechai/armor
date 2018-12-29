@@ -103,6 +103,7 @@ The following subcommands are supported:
     for cls in sorted(ArmorCommand, key=lambda cls: cls.command_name):
         text += "    %% -%ds -- %%s\n" % width % \
             (cls.command_name, cls.command_desc)
+    return text
 
 
 def armor_main(debugger, cmdline, result, _):
