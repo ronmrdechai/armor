@@ -1,6 +1,6 @@
 """
 This file is sourced by the `lldb.sh' after starting LLDB. It installs a new
-command to LLDB to allow it to debug Armor types.
+command to allow LLDB to debug Armor types.
 """
 
 
