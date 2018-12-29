@@ -11,7 +11,10 @@ include(GoogleTest)
 find_package(GoogleTest 1.8.0)
 find_package(PyCodeStyle)
 
-file(GLOB test_sources CONFIGURE_DEPENDS "rmr/*.cc")
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.12)
+    set(configure_depends CONFIGURE_DEPENDS)
+endif()
+file(GLOB test_sources ${configure_depends} "rmr/*.cc")
 
 foreach(source ${test_sources})
     get_filename_component(source_name ${source} NAME_WE)

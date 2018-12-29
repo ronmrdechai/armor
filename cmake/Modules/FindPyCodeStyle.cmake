@@ -18,7 +18,13 @@ function(pycodestyle_add_tests glob)
     set(args EXCLUDE)
     cmake_parse_arguments(PARSE_ARGV 0 "" "" "" "${args}")
 
-    file(GLOB_RECURSE python_sources LIST_DIRECTORIES FALSE "${glob}")
+    if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.12)
+        set(configure_depends CONFIGURE_DEPENDS)
+    endif()
+
+    file(GLOB_RECURSE python_sources
+        ${configure_depends} LIST_DIRECTORIES FALSE "${glob}"
+    )
     if(_EXCLUDE)
         foreach(source ${python_sources})
             set(add TRUE)
