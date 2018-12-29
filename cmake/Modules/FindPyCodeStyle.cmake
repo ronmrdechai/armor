@@ -6,6 +6,13 @@
 # (See accompanying file LICENSE.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
 find_program(PYCODESTYLE_EXECUTABLE NAMES pycodestyle pep8)
+if(PYCODESTYLE_EXECUTABLE)
+    execute_process(COMMAND ${PYCODESTYLE_EXECUTABLE} --version
+        OUTPUT_VARIABLE PYCODESTYLE_VERSION_STRING
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+endif()
 
 function(pycodestyle_add_tests glob)
     set(args EXCLUDE)
@@ -41,4 +48,5 @@ endfunction()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(PyCodeStyle
     REQUIRED_VARS PYCODESTYLE_EXECUTABLE
+    VERSION_VAR PYCODESTYLE_VERSION_STRING
 )
