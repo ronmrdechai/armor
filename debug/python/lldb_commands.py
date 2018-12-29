@@ -6,6 +6,7 @@ command to LLDB to allow it to debug Armor types.
 
 import lldb
 import rmr
+import shlex
 
 
 class RegisterSubclasses(type):
@@ -90,25 +91,25 @@ location marked in it."""
         """ % (t, it))
 
 
-def print_subcommands():
+def print_subcommands(result):
     width = max(map(lambda cls: len(cls.command_name), ArmorCommand))
     for cls in sorted(ArmorCommand, key=lambda cls: cls.command_name):
-        print "    %% -%ds -- %%s" % width % \
+        print >>result, "    %% -%ds -- %%s" % width % \
             (cls.command_name, cls.command_desc)
 
 
-def armor_main(debugger, cmdline, result, internal_dict):
-    args = filter(lambda x: len(x) != 0, cmdline.strip().split(" "))
+def armor_main(debugger, cmdline, result, _):
+    args = shlex.split(cmdline)
     try:
         command, args = args[0], args[1:]
     except IndexError:
-        print """    Armor debugging utilities.
+        print >>result, """    Armor debugging utilities.
 
 Syntax: armor <subcommand> [<subcommand-options>]
 
 The following subcommands are supported:
 """
-        print_subcommands()
+        print_subcommands(result)
         return
     for cls in ArmorCommand:
         if cls.command_name == command:
@@ -116,12 +117,12 @@ The following subcommands are supported:
                 cls.run(debugger, *args)
                 return
             except TypeError:
-                print cls.command_desc
-                print cls.command_help
+                print >>result, cls.command_desc
+                print >>result, cls.command_help
                 return
-    print "invalid command 'armor %s'." % command
+    print >>result, "invalid command 'armor %s'." % command
 
 
-def __lldb_init_module(debugger, internal_dict):
+def __lldb_init_module(debugger, _):
     debugger.HandleCommand(
         "command script add -f lldb_commands.armor_main armor")
