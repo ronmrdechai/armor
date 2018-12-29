@@ -21,3 +21,10 @@ foreach(source ${test_sources})
     target_include_directories(${target} PRIVATE ${GTEST_INCLUDE_DIRS})
     gtest_discover_tests(${target})
 endforeach()
+
+find_program(PYCODESTYLE_EXECUTABLE NAMES pycodestyle pep8)
+if(PYCODESTYLE_EXECUTABLE)
+    add_test(NAME pycodestyle
+        COMMAND ${PYCODESTYLE_EXECUTABLE} "${PROJECT_SOURCE_DIR}/debug/python"
+    )
+endif()
