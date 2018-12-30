@@ -7,5 +7,6 @@ fi
 
 GIT_ROOT=$(git rev-parse --show-toplevel)
 export PATH="${GIT_ROOT}/debug/scripts:${PATH}"
+export GTEST_COLOR=1
 
 unset GIT_ROOT

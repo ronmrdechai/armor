@@ -64,7 +64,9 @@ add_subdirectory(include)
 option(ARMOR_INCLUDE_TESTS "Generate build targets for the Armor unit tests." OFF)
 if(ARMOR_INCLUDE_TESTS)
     enable_testing()
+
     add_subdirectory(test)
+    add_subdirectory(debug)
 endif()
 
 option(ARMOR_INCLUDE_BENCHMARKS "Generate build targets for the Armor benchmarks." OFF)

@@ -15,15 +15,19 @@ if(PYCODESTYLE_EXECUTABLE)
 endif()
 
 function(pycodestyle_add_tests glob)
-    set(args EXCLUDE)
+    set(args EXCLUDE RELATIVE)
     cmake_parse_arguments(PARSE_ARGV 0 "" "" "" "${args}")
 
     if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.12)
         set(configure_depends CONFIGURE_DEPENDS)
     endif()
 
+    if(_RELATIVE)
+        set(relative RELATIVE ${_RELATIVE})
+    endif()
+
     file(GLOB_RECURSE python_sources
-        ${configure_depends} LIST_DIRECTORIES FALSE "${glob}"
+        ${configure_depends} ${relative} LIST_DIRECTORIES FALSE "${glob}"
     )
     if(_EXCLUDE)
         foreach(source ${python_sources})
@@ -44,9 +48,12 @@ function(pycodestyle_add_tests glob)
 
     foreach(source ${python_sources_filtered})
         get_filename_component(source_name ${source} NAME_WE)
+        get_filename_component(source_path ${source} DIRECTORY)
+        set(test_name "${source_path}/${source_name}")
+        string(REGEX REPLACE "^/" "" test_name ${test_name})
 
-        add_test(NAME pycodestyle.${source_name}
-            COMMAND ${PYCODESTYLE_EXECUTABLE} ${source}
+        add_test(NAME pycodestyle.${test_name}
+            COMMAND ${PYCODESTYLE_EXECUTABLE} ${_RELATIVE}/${source}
         )
     endforeach()
 endfunction()

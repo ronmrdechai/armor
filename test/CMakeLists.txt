@@ -9,7 +9,6 @@ include(CTest)
 include(GoogleTest)
 
 find_package(GoogleTest 1.8.0)
-find_package(PyCodeStyle)
 
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.12)
     set(configure_depends CONFIGURE_DEPENDS)
@@ -25,9 +24,3 @@ foreach(source ${test_sources})
     target_include_directories(${target} PRIVATE ${GTEST_INCLUDE_DIRS})
     gtest_discover_tests(${target})
 endforeach()
-
-if(PyCodeStyle_FOUND)
-    pycodestyle_add_tests("${PROJECT_SOURCE_DIR}/*.py"
-        EXCLUDE __init__.py "${PROJECT_BINARY_DIR}"
-    )
-endif()
