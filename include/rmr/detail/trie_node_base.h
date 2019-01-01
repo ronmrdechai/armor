@@ -68,7 +68,7 @@ struct trie_iterator {
     trie_iterator(node_type n = nullptr) : node(n) {}
     trie_iterator(const trie_iterator&) = default;
 
-    template <typename = std::enable_if_t<Traits::is_const>>
+    template <typename _Traits = Traits, typename = std::enable_if_t<_Traits::is_const>>
     trie_iterator(const trie_iterator<non_const_traits_type>& other) :
         node(const_cast<node_type>(other.node))
     {}

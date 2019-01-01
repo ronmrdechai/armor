@@ -59,9 +59,11 @@ protected:
 
     typename alloc_traits::pointer ptr_;
 private:
+    struct empty_t{};
+
     union {
         allocator_type alloc_;
-        struct{} empty_;
+        empty_t empty_;
     };
 
     void destroy() noexcept {
