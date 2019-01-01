@@ -933,9 +933,6 @@ TYPED_TEST(assoc_common, bug$value_when_reverse_climbing_tree) {
     t.emplace(TestFixture::key_to_value("foobar"));
     t.emplace(TestFixture::key_to_value("foobarbaz"));
 
-    for (auto it = t.begin(); it != t.end(); ++it)
-        std::cout << TestFixture::value_to_key(*it) << std::endl;
-
     EXPECT_EQ(3u, t.size());
     EXPECT_EQ(3u, std::distance(t.rbegin(), t.rend()));
 }
