@@ -5,8 +5,20 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
-include(CTest)
-include(GoogleTest)
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.10)
+    include(GoogleTest)
+    function(armor_add_tests target)
+        gtest_discover_tests(${target})
+    endfunction()
+else()
+    message(WARNING
+        "CMake version is less than 3.10. "
+        "Armor tests will not be run individually"
+    )
+    function(armor_add_tests target)
+        add_test(NAME ${target} COMMAND $<TARGET_FILE:${target}>)
+    endfunction()
+endif()
 
 find_package(GoogleTest 1.8.0)
 
@@ -22,5 +34,10 @@ foreach(source ${test_sources})
     add_executable(${target} ${source})
     target_link_libraries(${target} PRIVATE Armor ${GTEST_BOTH_LIBRARIES})
     target_include_directories(${target} PRIVATE ${GTEST_INCLUDE_DIRS})
-    gtest_discover_tests(${target})
+    target_compile_options(${target} PRIVATE
+        -Wno-gnu-zero-variadic-macro-arguments
+        -Wno-dollar-in-identifier-extension
+    )
+
+    armor_add_tests(${target})
 endforeach()
