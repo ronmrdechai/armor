@@ -59,17 +59,26 @@ set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 include(CPack)
 
-add_subdirectory(include)
+option(ARMOR_INCLUDE_TESTS "Generate build targets for Armor unit tests." OFF)
+option(ARMOR_LINT_TESTS "Generate linting tests." OFF)
+option(ARMOR_INCLUDE_BENCHMARKS "Generate build targets for Armor benchmarks." OFF)
 
-option(ARMOR_INCLUDE_TESTS "Generate build targets for the Armor unit tests." OFF)
-if(ARMOR_INCLUDE_TESTS)
-    enable_testing()
+enable_testing()
+if(ARMOR_LINT_TESTS AND ARMOR_INCLUDE_TESTS)
+    include(LicenseHeaderCheck)
 
-    add_subdirectory(test)
-    add_subdirectory(debug)
+    license_header_add_tests("Boost Software License"
+        EXCLUDE .gitignore README.md
+    )
 endif()
 
-option(ARMOR_INCLUDE_BENCHMARKS "Generate build targets for the Armor benchmarks." OFF)
+add_subdirectory(include)
+add_subdirectory(debug)
+
+if(ARMOR_INCLUDE_TESTS)
+    add_subdirectory(test)
+endif()
+
 if(ARMOR_INCLUDE_BENCHMARKS)
     add_subdirectory(bench)
 endif()

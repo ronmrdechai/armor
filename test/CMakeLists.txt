@@ -34,10 +34,12 @@ foreach(source ${test_sources})
     add_executable(${target} ${source})
     target_link_libraries(${target} PRIVATE Armor ${GTEST_BOTH_LIBRARIES})
     target_include_directories(${target} PRIVATE ${GTEST_INCLUDE_DIRS})
-    target_compile_options(${target} PRIVATE
-        -Wno-gnu-zero-variadic-macro-arguments
-        -Wno-dollar-in-identifier-extension
-    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${target} PRIVATE
+            -Wno-gnu-zero-variadic-macro-arguments
+            -Wno-dollar-in-identifier-extension
+        )
+    endif()
 
     armor_add_tests(${target})
 endforeach()
