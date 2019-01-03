@@ -14,17 +14,18 @@ else()
 endif()
 
 ExternalProject_Add(googlebenchmark
-    GIT_REPOSITORY    "https://github.com/google/benchmark.git"
-    GIT_TAG           ${BENCHMARK_TAG}
-    UPDATE_COMMAND    ""
-    INSTALL_COMMAND   ""
-    CMAKE_ARGS        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                      -DCMAKE_BUILD_TYPE=Release
-                      -DBENCHMARK_ENABLE_TESTING:BOOL=OFF
-    LOG_DOWNLOAD      ON
-    LOG_CONFIGURE     ON
-    LOG_BUILD         ON
+    GIT_REPOSITORY   "https://github.com/google/benchmark.git"
+    GIT_TAG          ${BENCHMARK_TAG}
+    GIT_SHALLOW      TRUE
+    UPDATE_COMMAND   ""
+    INSTALL_COMMAND  ""
+    CMAKE_ARGS       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                     -DCMAKE_BUILD_TYPE=Release
+                     -DBENCHMARK_ENABLE_TESTING:BOOL=OFF
+    LOG_DOWNLOAD     ON
+    LOG_CONFIGURE    ON
+    LOG_BUILD        ON
     BUILD_BYPRODUCTS
         <BINARY_DIR>/src/${CMAKE_FIND_LIBRARY_PREFIXES}benchmark.a
         <BINARY_DIR>/src/${CMAKE_FIND_LIBRARY_PREFIXES}benchmark_main.a
