@@ -7,10 +7,10 @@
 
 include(ExternalProject)
 
-if(NOT PACKAGE_FIND_VERSION)
+if(NOT GoogleBenchmark_FIND_VERSION)
     set(BENCHMARK_TAG master)
 else()
-    set(BENCHMARK_TAG "v${PACKAGE_FIND_VERSION}")
+    set(BENCHMARK_TAG "v${GoogleBenchmark_FIND_VERSION}")
 endif()
 
 ExternalProject_Add(googlebenchmark
@@ -30,7 +30,7 @@ ExternalProject_Add(googlebenchmark
         <BINARY_DIR>/src/${CMAKE_FIND_LIBRARY_PREFIXES}benchmark.a
         <BINARY_DIR>/src/${CMAKE_FIND_LIBRARY_PREFIXES}benchmark_main.a
 )
-set(BENCHMARK_VERSION_STRING ${PACKAGE_FIND_VERSION})
+set(BENCHMARK_VERSION_STRING ${GoogleBenchmark_FIND_VERSION})
 
 ExternalProject_Get_Property(googlebenchmark source_dir)
 set(BENCHMARK_INCLUDE_DIRS ${source_dir}/include)
