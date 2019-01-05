@@ -27,6 +27,8 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.12)
 endif()
 file(GLOB test_sources ${configure_depends} "rmr/*.cc")
 
+include(CoverageReport)
+
 foreach(source ${test_sources})
     get_filename_component(source_name ${source} NAME_WE)
     set(target "test_${source_name}")
@@ -42,4 +44,11 @@ foreach(source ${test_sources})
     endif()
 
     armor_add_tests(${target})
+    if(ARMOR_COVERAGE_REPORT)
+        report_coverage(${target})
+    endif()
 endforeach()
+
+if(ARMOR_COVERAGE_REPORT)
+    generate_coverage_report(coverage-report DEFAULT_LCOV_EXCLUDES)
+endif()

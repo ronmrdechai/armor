@@ -60,8 +60,13 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 include(CPack)
 
 option(ARMOR_INCLUDE_TESTS "Generate build targets for Armor unit tests." OFF)
+option(ARMOR_COVERAGE_REPORT "Generate build targets for Armor coverage report." OFF)
 option(ARMOR_LINT_TESTS "Generate linting tests." OFF)
 option(ARMOR_INCLUDE_BENCHMARKS "Generate build targets for Armor benchmarks." OFF)
+
+if(ARMOR_COVERAGE_REPORT AND CMAKE_COMPILER_IS_GNUCXX AND CMAKE_BUILD_TYPE STREQUAL Debug)
+    set(ARMOR_COVERAGE_REPORT TRUE)
+endif()
 
 enable_testing()
 if(ARMOR_LINT_TESTS AND ARMOR_INCLUDE_TESTS)
