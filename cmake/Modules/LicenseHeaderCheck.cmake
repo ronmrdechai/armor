@@ -16,7 +16,7 @@ endif()
 function(license_header_add_tests license)
     cmake_parse_arguments(PARSE_ARGV 1 "" "" "" "EXCLUDE")
 
-    set(search_text_script "${CMAKE_CURRENT_BINARY_DIR}/_SearchText.cmake")
+    set(search_text_script "${CMAKE_CURRENT_BINARY_DIR}/search_text.cmake")
     file(WRITE ${search_text_script}
         "file(READ \"\${SEARCH_FILE}\" contents)\n"
         "if(NOT contents MATCHES \"\${SEARCH_TERM}\")\n"

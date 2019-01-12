@@ -45,10 +45,15 @@ foreach(source ${test_sources})
 
     armor_add_tests(${target})
     if(ARMOR_COVERAGE_REPORT)
-        report_coverage(${target})
+        coverage_report_add(TARGET ${target})
     endif()
 endforeach()
 
 if(ARMOR_COVERAGE_REPORT)
-    generate_coverage_report(coverage-report DEFAULT_LCOV_EXCLUDES)
+    coverage_report_generate(TARGET coverage-report OUTPUT_NAME "Armor"
+        ADD_TEST
+            NAME "armor"
+            PERCENTAGE 95
+        DEFAULT_LCOV_EXCLUDES
+    )
 endif()
