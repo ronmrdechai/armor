@@ -118,7 +118,7 @@ enable_testing()
 if(Armor_LINT_TESTS AND Armor_INCLUDE_TESTS)
     include(LicenseHeaderCheck)
 
-    license_header_add_tests("Boost Software License" EXCLUDE \..* README.md)
+    license_header_add_tests("Boost Software License" EXCLUDE \..* iwyu.imp README.md)
 endif()
 
 add_subdirectory(include)
