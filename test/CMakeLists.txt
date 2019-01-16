@@ -20,7 +20,7 @@ else()
     endfunction()
 endif()
 
-find_package(GoogleTest 1.8.0)
+find_package(ExternalGoogleTest 1.8.0)
 
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.12)
     set(configure_depends CONFIGURE_DEPENDS)
