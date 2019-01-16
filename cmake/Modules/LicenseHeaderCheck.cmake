@@ -12,7 +12,6 @@ if(NOT GIT_FOUND)
     return()
 endif()
 
-
 function(license_header_add_tests license)
     cmake_parse_arguments(PARSE_ARGV 1 "" "" "" "EXCLUDE")
 

@@ -27,7 +27,9 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.12)
 endif()
 file(GLOB test_sources ${configure_depends} "rmr/*.cc")
 
-include(CoverageReport)
+if(Armor_COVERAGE_REPORT)
+    include(CoverageReport)
+endif()
 
 foreach(source ${test_sources})
     get_filename_component(source_name ${source} NAME_WE)
@@ -36,24 +38,20 @@ foreach(source ${test_sources})
     add_executable(${target} ${source})
     target_link_libraries(${target} PRIVATE Armor ${GTEST_BOTH_LIBRARIES})
     target_include_directories(${target} PRIVATE ${GTEST_INCLUDE_DIRS})
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(${target} PRIVATE
-            -Wno-gnu-zero-variadic-macro-arguments
-            -Wno-dollar-in-identifier-extension
-        )
+    if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
+        target_compile_options(${target} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
     endif()
 
     armor_add_tests(${target})
-    if(ARMOR_COVERAGE_REPORT)
+    if(Armor_COVERAGE_REPORT)
         coverage_report_add(TARGET ${target})
     endif()
 endforeach()
 
-if(ARMOR_COVERAGE_REPORT)
+if(Armor_COVERAGE_REPORT)
     coverage_report_generate(TARGET coverage-report OUTPUT_NAME "Armor"
         ADD_TEST
-            NAME "armor"
-            PERCENTAGE 95
+            NAME "armor" PERCENTAGE 95
         DEFAULT_LCOV_EXCLUDES
     )
 endif()

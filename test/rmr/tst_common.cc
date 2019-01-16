@@ -36,7 +36,7 @@ TYPED_TEST(tst_common, key_comp) {
     EXPECT_TRUE((std::is_same_v<decltype(t.key_comp()), typename TypeParam::key_compare>));
 }
 
-TYPED_TEST(tst_common, bug$tree_root_has_no_right_child_reverse_iteration) {
+TYPED_TEST(tst_common, bugXX_tree_root_has_no_right_child_reverse_iteration) {
     TypeParam t;
 
     t.emplace(TestFixture::key_to_value("zap"));

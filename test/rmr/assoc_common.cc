@@ -64,7 +64,7 @@ TYPED_TEST(assoc_common, move_constructor) {
     TypeParam s(std::move(t));
 
     EXPECT_EQ(TestFixture::roman_trie, s);
-    EXPECT_TRUE(t.empty());
+    EXPECT_TRUE(t.empty()); // NOLINT(bugprone-use-after-move)
 }
 
 TYPED_TEST(assoc_common, iterator_constructor) {
@@ -133,7 +133,7 @@ TYPED_TEST(assoc_common, move_assignment) {
     s = std::move(t);
 
     EXPECT_EQ(TestFixture::roman_trie, s);
-    EXPECT_TRUE(t.empty());
+    EXPECT_TRUE(t.empty()); // NOLINT(bugprone-use-after-move)
 }
 
 TYPED_TEST(assoc_common, old_data_gone_after_move_assignment) {
@@ -181,14 +181,14 @@ TYPED_TEST(assoc_common, empty_after_move_construct) {
     TypeParam t = TestFixture::roman_trie;
     TypeParam(std::move(t));
 
-    TestFixture::assert_empty(t);
+    TestFixture::assert_empty(t); // NOLINT(bugprone-use-after-move)
 }
 
 TYPED_TEST(assoc_common, empty_after_move_assign) {
     TypeParam t = TestFixture::roman_trie;
     TypeParam{} = std::move(t);
 
-    TestFixture::assert_empty(t);
+    TestFixture::assert_empty(t); // NOLINT(bugprone-use-after-move)
 }
 
 TYPED_TEST(assoc_common, iteration_is_sorted) {
@@ -745,7 +745,7 @@ TYPED_TEST(assoc_common, merge_moved) {
     t.merge(std::move(s));
 
     EXPECT_EQ(5u, t.size());
-    EXPECT_EQ(0u, s.size());
+    EXPECT_EQ(0u, s.size()); // NOLINT(bugprone-use-after-move)
 }
 
 TYPED_TEST(assoc_common, prefixed_with) {
@@ -926,7 +926,7 @@ TYPED_TEST(assoc_common, does_not_leak) {
     EXPECT_EQ(0u, allocator::bytes_allocated);
 }
 
-TYPED_TEST(assoc_common, bug$value_when_reverse_climbing_tree) {
+TYPED_TEST(assoc_common, bugXX_value_when_reverse_climbing_tree) {
     TypeParam t;
 
     t.emplace(TestFixture::key_to_value("foo"));
