@@ -57,6 +57,7 @@ endforeach()
 set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -funroll-loops -march=native")
 
+# Options and subdirectories.
 option(Armor_ADDRESS_SANITIZER "Run tests using AddressSanitizer." OFF)
 if(Armor_ADDRESS_SANITIZER)
     cmake_policy(SET CMP0056 NEW)
@@ -79,16 +80,6 @@ if(Armor_ADDRESS_SANITIZER)
         add_compile_options(-fvisibility=hidden)
     endif()
 endif()
-
-# Configure CPack.
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "armor")
-set(CPACK_PACKAGE_VENDOR "armor")
-set(CPACK_PACKAGE_VERSION_MAJOR ${Armor_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${Armor_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${Armor_VERSION_PATCH})
-set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
-include(CPack)
 
 option(Armor_RUN_CLANG_TIDY "Run clang-tidy with the compiler." OFF)
 if(Armor_RUN_CLANG_TIDY)
@@ -132,3 +123,13 @@ option(Armor_INCLUDE_BENCHMARKS "Generate build targets for Armor benchmarks." O
 if(Armor_INCLUDE_BENCHMARKS)
     add_subdirectory(bench)
 endif()
+
+# Configure CPack.
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "armor")
+set(CPACK_PACKAGE_VENDOR "armor")
+set(CPACK_PACKAGE_VERSION_MAJOR ${Armor_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${Armor_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${Armor_VERSION_PATCH})
+set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+include(CPack)
