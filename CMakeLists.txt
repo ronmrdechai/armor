@@ -98,7 +98,7 @@ if(Armor_RUN_IWYU)
         message(FATAL_ERROR "Armor_RUN_IWYU is ON but include-what-you-use is not found!")
     endif()
     set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE "${IWYU_EXECUTABLE}"
-        -Xiwyu --mapping_file=${CMAKE_SOURCE_DIR}/iwyu.imp -w ${Armor_IWYU_OPTIONS}
+        -Xiwyu --mapping_file=${PROJECT_SOURCE_DIR}/.iwyu.imp -w ${Armor_IWYU_OPTIONS}
     )
 endif()
 
@@ -108,8 +108,13 @@ option(Armor_COVERAGE_REPORT "Generate build targets for Armor coverage report."
 enable_testing()
 if(Armor_LINT_TESTS AND Armor_INCLUDE_TESTS)
     include(LicenseHeaderCheck)
+    license_header_add_tests("Boost Software License" EXCLUDE "^\\\." README.md)
 
-    license_header_add_tests("Boost Software License" EXCLUDE \..* iwyu.imp README.md)
+    # TODO format code according to clang-format
+    # find_package(ClangFormat)
+    # if(ClangFormat_FOUND)
+    #     clang_format_add_tests("include/*.h" RELATIVE "${PROJECT_SOURCE_DIR}/include")
+    # endif()
 endif()
 
 add_subdirectory(include)

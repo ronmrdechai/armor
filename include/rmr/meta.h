@@ -14,7 +14,9 @@ namespace rmr {
 namespace detail {
 
 template <typename... Ts>
-struct make_void { using type = void; };
+struct make_void {
+    using type = void;
+};
 
 } // namespace detail
 
@@ -30,33 +32,33 @@ struct nonesuch {
 
 namespace detail {
 
-template <typename Default, typename AlwaysVoid, template <typename...> typename Op, typename... Args>
+template <typename Default, typename Void, template <typename...> typename Op, typename... Args>
 struct detector {
-  using value_t = std::false_type;
-  using type = Default;
+    using value_t = std::false_type;
+    using type = Default;
 };
- 
+
 template <typename Default, template <typename...> typename Op, typename... Args>
 struct detector<Default, void_t<Op<Args...>>, Op, Args...> {
-  using value_t = std::true_type;
-  using type = Op<Args...>;
+    using value_t = std::true_type;
+    using type = Op<Args...>;
 };
 
 } // namespace detail
 
 template <template <typename...> typename Op, typename... Args>
 using is_detected = typename detail::detector<nonesuch, void, Op, Args...>::value_t;
- 
+
 template <template <typename...> typename Op, typename... Args>
 using detected_t = typename detail::detector<nonesuch, void, Op, Args...>::type;
- 
+
 template <typename Default, template <typename...> typename Op, typename... Args>
 using detected_or = detail::detector<Default, void, Op, Args...>;
 
-template <template <typename...> typename Op, typename... Args >
+template <template <typename...> typename Op, typename... Args>
 constexpr bool is_detected_v = is_detected<Op, Args...>::value;
 
-template <typename Default, template <typename...> typename Op, typename... Args >
+template <typename Default, template <typename...> typename Op, typename... Args>
 using detected_or_t = typename detected_or<Default, Op, Args...>::type;
 
 template <typename Expected, template <typename...> typename Op, typename... Args>

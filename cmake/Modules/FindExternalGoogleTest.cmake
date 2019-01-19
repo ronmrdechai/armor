@@ -7,10 +7,10 @@
 
 include(ExternalProject)
 
-if(NOT GoogleTest_FIND_VERSION)
+if(NOT ExternalGoogleTest_FIND_VERSION)
     set(GTEST_TAG master)
 else()
-    set(GTEST_TAG "release-${GoogleTest_FIND_VERSION}")
+    set(GTEST_TAG "release-${ExternalGoogleTest_FIND_VERSION}")
 endif()
 
 ExternalProject_Add(googletest
@@ -31,7 +31,7 @@ ExternalProject_Add(googletest
         <BINARY_DIR>/googlemock/${CMAKE_FIND_LIBRARY_PREFIXES}gmock.a
         <BINARY_DIR>/googlemock/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main.a
 )
-set(GTEST_VERSION_STRING ${GoogleTest_FIND_VERSION})
+set(GTEST_VERSION_STRING ${ExternalGoogleTest_FIND_VERSION})
 
 ExternalProject_Get_Property(googletest source_dir)
 set(GTEST_INCLUDE_DIRS ${source_dir}/googletest/include)

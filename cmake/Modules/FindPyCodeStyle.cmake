@@ -30,15 +30,15 @@ function(pycodestyle_add_tests glob)
         set(_ARGS --show-source --show-pep8)
     endif()
 
-    file(GLOB_RECURSE python_sources
+    file(GLOB_RECURSE sources
         ${configure_depends} ${relative} LIST_DIRECTORIES FALSE "${glob}"
     )
     if(_EXCLUDE)
         list(JOIN _EXCLUDE "|" exclude_regex)
-        list(FILTER python_sources EXCLUDE REGEX ${exclude_regex})
+        list(FILTER sources EXCLUDE REGEX ${exclude_regex})
     endif()
 
-    foreach(source ${python_sources})
+    foreach(source ${sources})
         get_filename_component(source_name ${source} NAME_WE)
         get_filename_component(source_path ${source} DIRECTORY)
 
