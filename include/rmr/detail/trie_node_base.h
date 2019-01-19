@@ -95,7 +95,7 @@ struct trie_iterator {
 
     trie_iterator operator--(int) {
         trie_iterator tmp = *this;
-        ++(*this);
+        --(*this);
         return tmp;
     }
 
