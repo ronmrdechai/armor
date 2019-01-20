@@ -17,7 +17,7 @@ endif()
 if(NOT DEFINED Armor_VERSION_PATCH)
     set(Armor_VERSION_PATCH 0)
 endif()
-if (NOT PACKAGE_VERSION)
+if(NOT PACKAGE_VERSION)
     set(PACKAGE_VERSION
         "${Armor_VERSION_MAJOR}.${Armor_VERSION_MINOR}.${Armor_VERSION_PATCH}"
     )
@@ -28,7 +28,7 @@ project(Armor
     LANGUAGES CXX
 )
 
-if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type selected, default to Debug")
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (default Debug)" FORCE)
 endif()
@@ -104,9 +104,14 @@ endif()
 
 option(Armor_LINT_TESTS "Generate linting tests." OFF)
 option(Armor_INCLUDE_TESTS "Generate build targets for Armor unit tests." OFF)
-option(Armor_COVERAGE_REPORT "Generate build targets for Armor coverage report." OFF)
-enable_testing()
 if(Armor_LINT_TESTS AND Armor_INCLUDE_TESTS)
+    set(Armor_LINT_TESTS ON)
+else()
+    set(Armor_LINT_TESTS OFF)
+endif()
+
+enable_testing()
+if(Armor_LINT_TESTS)
     include(LicenseHeaderCheck)
     license_header_add_tests("Boost Software License" EXCLUDE "^\\\." README.md)
 
@@ -120,6 +125,7 @@ endif()
 add_subdirectory(include)
 add_subdirectory(debug)
 
+option(Armor_COVERAGE_REPORT "Generate build targets for Armor coverage report." OFF)
 if(Armor_INCLUDE_TESTS)
     add_subdirectory(test)
 endif()

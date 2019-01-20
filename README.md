@@ -31,16 +31,10 @@ All of _Armor's_ associative containers are fully STL compatible and satisfy the
 
 In addition to the `map` containers, _Armor_ provides the same containers in
 `set` form. For example, if you want to use a `trie_map` as a set, just use
-`trie_set` instead.
+`trie_set` instead. Additionally the following set based containers are also
+provided:
 
-### Strings
-
-_Armor_ provides additional datastuctures for processing of strings. Again, all
-of the following types satisfy the `AllocatorAwareContainer` concept
-requirements and are fully STL compatible.
-
-- [ ] `rope` - An implementation of a Rope-based string.
-- [ ] `gap_buffer` - An implementation of a Gap Buffer-base string.
+- [ ] `lev_set` - An implementation of a Levensthein Automation based set.
 
 ## Prerequisites
 
@@ -60,3 +54,21 @@ new directory and run `cmake`.
     cmake .. -G Ninja -DARMOR_INCLUDE_TESTS:BOOL=ON -DARMOR_INCLUDE_BENCHMARKS:BOOL=ON
     cmake --build .
     ctest
+
+## Building for development
+
+The way I build _Armor_ for development at the moment is like this:
+
+    mkdir build
+    cd build
+    cmake .. \
+        -G "Unix Makefiles" \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_C_COMPILER=${CC} \
+        -DCMAKE_CXX_COMPILER=${CXX} \
+        -DCMAKE_CXX_FLAGS=-fdiagnostics-color \
+        -DArmor_RUN_CLANG_TIDY:BOOL=ON \
+        -DArmor_RUN_IWYU:BOOL=ON \
+        -DArmor_LINT_TESTS:BOOL=ON \
+        -DArmor_INCLUDE_TESTS:BOOL=ON
+    cmake --build .

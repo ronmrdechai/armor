@@ -7,7 +7,7 @@
 
 find_package(PyCodeStyle)
 
-if(Armor_LINT_TESTS AND Armor_INCLUDE_TESTS)
+if(Armor_LINT_TESTS)
     if(PyCodeStyle_FOUND)
         pycodestyle_add_tests("python/*.py"
             RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/python"
