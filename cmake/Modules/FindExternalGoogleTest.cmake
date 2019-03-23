@@ -19,8 +19,7 @@ ExternalProject_Add(googletest
     GIT_SHALLOW      TRUE
     UPDATE_COMMAND   ""
     INSTALL_COMMAND  ""
-    CMAKE_ARGS       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    CMAKE_ARGS       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                      -DCMAKE_BUILD_TYPE=Release
     LOG_DOWNLOAD     ON
     LOG_CONFIGURE    ON
