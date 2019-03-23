@@ -100,8 +100,10 @@ private:
     using node_type             = ternary_search_tree_node<value_type, char_type>;
     using node_allocator_type   = typename alloc_traits::template rebind_alloc<node_type>;
     using node_alloc_traits     = typename alloc_traits::template rebind_traits<node_type>;
-    using iterator_traits       = ternary_search_tree_iterator_traits<node_type*>;
-    using const_iterator_traits = ternary_search_tree_iterator_traits<const node_type*>;
+    using node_pointer          = typename node_alloc_traits::pointer;
+    using node_const_pointer    = typename node_alloc_traits::const_pointer;
+    using iterator_traits       = ternary_search_tree_iterator_traits<node_pointer>;
+    using const_iterator_traits = ternary_search_tree_iterator_traits<node_const_pointer>;
 public:
     using iterator               = trie_iterator<iterator_traits>;
     using const_iterator         = trie_iterator<const_iterator_traits>;
@@ -259,7 +261,7 @@ public:
     iterator begin() noexcept { return remove_const(cbegin()); }
     const_iterator begin() const noexcept { return cbegin(); }
     const_iterator cbegin() const noexcept {
-        const node_type* n = const_iterator_traits::tree_min(&impl_.root);
+        node_const_pointer n = const_iterator_traits::tree_min(&impl_.root);
         if (n->value != nullptr) return n;
         return ++const_iterator(n);
     }
@@ -289,7 +291,7 @@ public:
     key_compare    key_comp()      const { return impl_; }
 
 private:
-    node_type* copy_nodes(const node_type* src, node_type* dst, node_type* parent) {
+    node_pointer copy_nodes(node_const_pointer src, node_pointer dst, node_pointer parent) {
         if (dst == nullptr) dst = make_node(parent, src->c);
         dst->c = src->c;
 
@@ -301,7 +303,7 @@ private:
         return dst;
     }
 
-    node_type* move_nodes(allocator_type& alloc, node_type* src, node_type* dst, node_type* parent) {
+    node_pointer move_nodes(allocator_type& alloc, node_pointer src, node_pointer dst, node_pointer parent) {
         if (dst == nullptr) dst = make_node(parent, src->c);
         dst->c = src->c;
 
@@ -317,30 +319,30 @@ private:
         return dst;
     }
 
-    node_type* insert_node(const node_type* hint, const key_type& key, pointer v) {
+    node_pointer insert_node(node_const_pointer hint, const key_type& key, pointer v) {
         size_type rank = 0;
-        const node_type* cur = hint;
+        node_const_pointer cur = hint;
 
         while (cur != &impl_.root) { if (cur == cur->parent->middle()) rank++; cur = cur->parent; }
 
         return insert_node(hint, rank, key, v);
     }
-    node_type* insert_node(const node_type* _hint, size_type rank, const key_type& key, pointer v) {
-        node_type* hint = const_cast<node_type*>(_hint);
+    node_pointer insert_node(node_const_pointer _hint, size_type rank, const key_type& key, pointer v) {
+        node_pointer hint = const_cast<node_pointer>(_hint);
 
         if (rank == 0 && impl_.size == 0) hint->c = key[0]; // fix root node character
 
-        node_type* ret;
+        node_pointer ret;
         insert_node(hint, hint->parent, key, rank, v, ret);
         return ret;
     }
-    node_type* insert_node(
-        node_type* root,
-        node_type* parent,
+    node_pointer insert_node(
+        node_pointer root,
+        node_pointer parent,
         const key_type& key,
         size_type i,
         pointer v,
-        node_type*& ret
+        node_pointer& ret
     ) {
         char_type c = key[i];
         key_compare cmp = key_comp();
@@ -363,9 +365,9 @@ private:
     const auto& get_node_allocator() const { return impl_; }
           auto& get_node_allocator()       { return impl_; }
 
-    node_type* make_node(node_type* parent, char_type c) {
+    node_pointer make_node(node_pointer parent, char_type c) {
         auto& node_alloc = get_node_allocator();
-        node_type* n = node_alloc_traits::allocate(node_alloc, 1);
+        node_pointer n = node_alloc_traits::allocate(node_alloc, 1);
         node_alloc_traits::construct(node_alloc, n);
 
         std::fill(std::begin(n->children), std::end(n->children), nullptr);
@@ -376,13 +378,13 @@ private:
         return n;
     }
  
-    const node_type* find_key(const node_type* root, const key_type& key) const {
-        const node_type* pos = find_key_unsafe(root, key, 0);
+    node_const_pointer find_key(node_const_pointer root, const key_type& key) const {
+        node_const_pointer pos = find_key_unsafe(root, key, 0);
         if (pos->value == nullptr) return &impl_.base;
         return pos;
     }
 
-    const node_type* find_key_unsafe(const node_type* root, const key_type& key, size_type i) const {
+    node_const_pointer find_key_unsafe(node_const_pointer root, const key_type& key, size_type i) const {
         if (root == nullptr) return &impl_.base;
 
         char_type c = key[i];
@@ -394,13 +396,13 @@ private:
         else                         return root;
     }
 
-    void erase_node(node_type* node) {
+    void erase_node(node_pointer node) {
         auto value_alloc = get_allocator();
         auto& node_alloc = get_node_allocator();
 
         delete_node_value(node, value_alloc);
         if (children_count(node) == 0) {
-            node_type* parent = node->parent;
+            node_pointer parent = node->parent;
             while (children_count(parent) == 1 && parent != &impl_.root && parent->value == nullptr) {
                 node   = node->parent;
                 parent = node->parent;
@@ -410,7 +412,7 @@ private:
         }
     }
 
-    pointer extract_value(node_type* node) {
+    pointer extract_value(node_pointer node) {
         pointer v(std::move(node->value));
         node->value = nullptr;
         erase_node(node);
@@ -418,13 +420,13 @@ private:
         return v;
     }
 
-    const node_type* longest_match(const node_type* root, const key_type& key) const {
+    node_const_pointer longest_match(node_const_pointer root, const key_type& key) const {
         auto pos = longest_match_candidate(root, root->parent, key, 0);
         while (pos->value == nullptr && pos->parent != nullptr) pos = pos->parent;
         return pos;
     }
-    const node_type* longest_match_candidate(
-        const node_type* node, const node_type* prev, const key_type& key, size_type i
+    node_const_pointer longest_match_candidate(
+        node_const_pointer node, node_const_pointer prev, const key_type& key, size_type i
     ) const {
         if (node == nullptr) return prev;
 
